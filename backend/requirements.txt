@@ -26,7 +26,7 @@ rdkit==2024.3.6
 biopython==1.85
 
 # HTTP Client
-httpx==0.28.0
+httpx==0.27.2
 
 # Utilities
 python-multipart==0.0.17
