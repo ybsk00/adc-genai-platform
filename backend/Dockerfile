@@ -1,7 +1,7 @@
 # ADC-GenAI Platform Backend
 # Cloud Run용 Docker 이미지
 
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 # WeasyPrint 의존성 설치
 RUN apt-get update && apt-get install -y \
