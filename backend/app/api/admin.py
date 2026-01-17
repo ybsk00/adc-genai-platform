@@ -1,0 +1,342 @@
+"""
+Admin API - 관리자 전용 엔드포인트
+KPI 조회, 크레딧 지급, Golden Set 관리 (Human-in-the-Loop), 프롬프트 관리
+"""
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime
+from uuid import uuid4
+
+from app.core.config import settings
+
+router = APIRouter()
+
+
+# ============================================================
+# Request/Response Models
+# ============================================================
+
+class CreditGrantRequest(BaseModel):
+    """크레딧 지급 요청"""
+    user_id: str
+    amount: int = Field(..., gt=0)
+    reason: str = Field(..., min_length=5, description="지급 사유 (매출 정산용)")
+
+
+class CreditGrantResponse(BaseModel):
+    """크레딧 지급 응답"""
+    status: str
+    user_id: str
+    amount: int
+    new_balance: int
+    transaction_id: str
+
+
+class GoldenSetDraft(BaseModel):
+    """Golden Set 검토 대기 항목"""
+    id: str
+    drug_name: str
+    target: str
+    payload: str
+    linker: Optional[str]
+    enrichment_source: str
+    created_at: str
+
+
+class ApproveRequest(BaseModel):
+    """승인 요청"""
+    note: Optional[str] = None
+
+
+class RejectRequest(BaseModel):
+    """반려 요청"""
+    reason: str = Field(..., min_length=5, description="반려 사유")
+
+
+class PromptUpdateRequest(BaseModel):
+    """프롬프트 업데이트 요청"""
+    system_prompt: str
+    version: Optional[str] = None  # 없으면 자동 생성
+
+
+# ============================================================
+# KPI Dashboard
+# ============================================================
+
+@router.get("/stats")
+async def get_admin_stats():
+    """
+    대시보드 KPI 조회
+    TODO: Supabase에서 실제 데이터 조회
+    """
+    # TODO: 실제 DB 쿼리
+    return {
+        "mrr": 12450,
+        "total_users": 1204,
+        "new_users_today": 15,
+        "active_simulations": 45,
+        "error_rate": 0.5,
+        "pending_drafts": 7,  # 검토 대기 중인 Golden Set
+    }
+
+
+# ============================================================
+# Credit Management
+# ============================================================
+
+@router.post("/credits/grant", response_model=CreditGrantResponse)
+async def grant_credits(req: CreditGrantRequest):
+    """
+    특정 유저 크레딧 지급
+    [Dev Note] 이 기록은 credit_transactions 테이블에 저장되어 매출 정산에 사용됨
+    """
+    # TODO: Supabase 트랜잭션으로 구현
+    # 1. profiles 테이블에서 현재 크레딧 조회
+    # 2. 크레딧 업데이트
+    # 3. credit_transactions에 기록
+    
+    transaction_id = f"txn_{uuid4().hex[:8]}"
+    
+    # Mock response
+    return CreditGrantResponse(
+        status="success",
+        user_id=req.user_id,
+        amount=req.amount,
+        new_balance=500 + req.amount,  # Mock
+        transaction_id=transaction_id
+    )
+
+
+# ============================================================
+# Golden Set Management (Human-in-the-Loop)
+# ============================================================
+
+@router.get("/goldenset/drafts", response_model=List[GoldenSetDraft])
+async def get_golden_set_drafts():
+    """
+    검토 대기 중인 Golden Set 목록 조회
+    
+    Worker가 수집한 데이터가 'draft' 상태로 저장되며,
+    관리자가 검토 후 승인해야 RAG에 반영됨
+    """
+    # TODO: Supabase 쿼리
+    # SELECT * FROM golden_set WHERE status = 'draft' ORDER BY created_at DESC
+    
+    # Mock data
+    drafts = [
+        GoldenSetDraft(
+            id="gs_001",
+            drug_name="MMAE-LIV1-ADC",
+            target="LIV-1",
+            payload="MMAE",
+            linker="Val-Cit",
+            enrichment_source="perplexity_sonar_medium",
+            created_at="2026-01-17T10:30:00Z"
+        ),
+        GoldenSetDraft(
+            id="gs_002",
+            drug_name="DXd-TROP2-Candidate",
+            target="TROP-2",
+            payload="DXd",
+            linker="GGFG",
+            enrichment_source="clinical_trials",
+            created_at="2026-01-17T09:15:00Z"
+        ),
+    ]
+    
+    return drafts
+
+
+@router.get("/goldenset/{golden_set_id}")
+async def get_golden_set_detail(golden_set_id: str):
+    """
+    Golden Set 상세 조회 (raw_data 포함)
+    관리자가 검토 시 원본 데이터 확인용
+    """
+    # TODO: Supabase 쿼리
+    
+    return {
+        "id": golden_set_id,
+        "drug_name": "MMAE-LIV1-ADC",
+        "target": "LIV-1",
+        "antibody": "Anti-LIV-1 mAb",
+        "payload": "MMAE",
+        "linker": "Val-Cit",
+        "dar": 4.0,
+        "company": "Research Corp",
+        "status": "draft",
+        "enrichment_source": "perplexity_sonar_medium",
+        "raw_data": {
+            "source": "ClinicalTrials.gov",
+            "nct_id": "NCT12345678",
+            "perplexity_response": {
+                "linker_type": "Val-Cit cleavable",
+                "mechanism": "Cathepsin-B sensitive"
+            }
+        },
+        "created_at": "2026-01-17T10:30:00Z"
+    }
+
+
+@router.post("/goldenset/{golden_set_id}/approve")
+async def approve_golden_set(golden_set_id: str, req: ApproveRequest):
+    """
+    Golden Set 승인 및 RAG 인덱싱
+    
+    Logic:
+    1. DB의 status를 'approved'로 변경
+    2. 해당 데이터의 description 텍스트를 OpenAI Embedding API로 벡터화
+    3. golden_set_embeddings 테이블에 벡터 저장
+    4. 완료 메시지 반환
+    
+    [IMPORTANT] 이 작업은 트랜잭션으로 처리해야 함
+    """
+    # TODO: 실제 구현
+    # async with transaction:
+    #     1. UPDATE golden_set SET status = 'approved', reviewer_id = ..., approved_at = NOW()
+    #     2. content = f"{drug_name} targets {target} using {payload} payload with {linker} linker..."
+    #     3. embedding = await openai.embeddings.create(model="text-embedding-ada-002", input=content)
+    #     4. INSERT INTO golden_set_embeddings (golden_set_id, content, embedding) VALUES (...)
+    
+    return {
+        "status": "approved",
+        "golden_set_id": golden_set_id,
+        "message": "Data approved and indexed to RAG",
+        "embedding_id": f"emb_{uuid4().hex[:8]}",
+        "indexed_at": datetime.utcnow().isoformat()
+    }
+
+
+@router.post("/goldenset/{golden_set_id}/reject")
+async def reject_golden_set(golden_set_id: str, req: RejectRequest):
+    """
+    Golden Set 반려
+    
+    Logic:
+    - status를 'rejected'로 변경
+    - reviewer_note에 반려 사유 기록
+    """
+    # TODO: Supabase 업데이트
+    # UPDATE golden_set SET status = 'rejected', reviewer_note = req.reason WHERE id = golden_set_id
+    
+    return {
+        "status": "rejected",
+        "golden_set_id": golden_set_id,
+        "reason": req.reason,
+        "message": "Data rejected and will not be indexed"
+    }
+
+
+@router.post("/goldenset/sync")
+async def trigger_golden_set_sync():
+    """
+    외부 데이터 소스 동기화 트리거
+    Worker가 PubMed/ClinicalTrials 데이터를 수집하고 draft로 저장
+    """
+    # TODO: Celery 태스크 또는 Cloud Run Job 트리거
+    
+    return {
+        "status": "started",
+        "message": "Data sync job triggered. New data will appear in drafts.",
+        "job_id": f"sync_{uuid4().hex[:8]}"
+    }
+
+
+@router.post("/goldenset/reindex")
+async def reindex_rag():
+    """
+    전체 RAG 재인덱싱
+    모든 approved 데이터의 임베딩을 재생성
+    
+    [WARNING] 비용과 시간이 많이 소요됨
+    """
+    # TODO: 백그라운드 태스크로 실행
+    
+    return {
+        "status": "started",
+        "message": "Re-indexing all approved golden set data",
+        "estimated_time": "30 minutes",
+        "estimated_cost": "$15"
+    }
+
+
+# ============================================================
+# Prompt Management
+# ============================================================
+
+@router.get("/prompts")
+async def get_all_prompts():
+    """모든 에이전트의 현재 프롬프트 조회"""
+    # TODO: Supabase 쿼리
+    
+    return {
+        "structure": {"version": "v1.2", "is_live": True},
+        "toxicology": {"version": "v1.0", "is_live": True, "draft": "v1.1"},
+        "patent": {"version": "v1.0", "is_live": True},
+        "competitor": {"version": "v1.0", "is_live": True},
+        "clinical": {"version": "v1.0", "is_live": True},
+        "report": {"version": "v2.0", "is_live": True},
+    }
+
+
+@router.get("/prompts/{agent_id}")
+async def get_prompt(agent_id: str):
+    """특정 에이전트의 프롬프트 조회 (버전 히스토리 포함)"""
+    # TODO: Supabase 쿼리
+    
+    return {
+        "agent_id": agent_id,
+        "current_version": "v1.0",
+        "system_prompt": "You are a Structure Analysis Agent...",
+        "versions": [
+            {"version": "v1.0", "is_live": True, "created_at": "2026-01-10"},
+            {"version": "v0.9", "is_live": False, "created_at": "2026-01-05"},
+        ]
+    }
+
+
+@router.put("/prompts/{agent_id}")
+async def update_prompt(agent_id: str, req: PromptUpdateRequest):
+    """
+    에이전트 프롬프트 수정 (Draft 저장)
+    Live 배포는 별도 publish 엔드포인트에서 처리
+    """
+    # TODO: agent_prompts 테이블에 새 버전 INSERT
+    
+    version = req.version or f"v{datetime.now().strftime('%Y%m%d%H%M')}"
+    
+    return {
+        "agent_id": agent_id,
+        "version": version,
+        "status": "draft_saved",
+        "message": f"Prompt draft {version} saved. Use /publish to go live."
+    }
+
+
+@router.post("/prompts/{agent_id}/publish")
+async def publish_prompt(agent_id: str, version: str):
+    """
+    프롬프트 Live 배포
+    기존 Live 버전은 is_live=False로 변경
+    """
+    # TODO: Transaction으로 처리
+    # 1. UPDATE agent_prompts SET is_live = FALSE WHERE agent_id = ? AND is_live = TRUE
+    # 2. UPDATE agent_prompts SET is_live = TRUE, published_at = NOW() WHERE agent_id = ? AND version = ?
+    
+    return {
+        "agent_id": agent_id,
+        "version": version,
+        "status": "published",
+        "message": f"Prompt {version} is now live"
+    }
+
+
+# ============================================================
+# Health Check
+# ============================================================
+
+@router.get("/health")
+async def admin_health():
+    """관리자 API 헬스 체크"""
+    return {"status": "healthy", "service": "admin-api"}

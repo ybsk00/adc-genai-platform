@@ -1,0 +1,57 @@
+# Google Cloud Build 설정
+# Cloud Run 자동 배포용
+
+steps:
+  # 1. Docker 이미지 빌드
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/adc-genai-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/adc-genai-backend:latest'
+      - './backend'
+
+  # 2. Container Registry에 푸시
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/adc-genai-backend:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/adc-genai-backend:latest'
+
+  # 3. Cloud Run 배포
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'adc-genai-backend'
+      - '--image=gcr.io/$PROJECT_ID/adc-genai-backend:$COMMIT_SHA'
+      - '--region=asia-northeast3'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--timeout=300s'
+      - '--concurrency=80'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-env-vars=ENVIRONMENT=production'
+      - '--set-secrets=OPENAI_API_KEY=openai-api-key:latest,SUPABASE_URL=supabase-url:latest,SUPABASE_KEY=supabase-key:latest,PERPLEXITY_API_KEY=perplexity-api-key:latest'
+
+# 이미지 저장
+images:
+  - 'gcr.io/$PROJECT_ID/adc-genai-backend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/adc-genai-backend:latest'
+
+# 타임아웃 (빌드 최대 시간)
+timeout: 1200s
+
+# 빌드 옵션
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

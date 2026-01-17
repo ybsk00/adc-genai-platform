@@ -1,0 +1,11 @@
+﻿src/components/admin/GoldenSetEditor.tsx(9,5): error TS1484: 'ColumnDef' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/components/admin/GoldenSetEditor.tsx(10,5): error TS1484: 'SortingState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/components/admin/GoldenSetEditor.tsx(11,5): error TS1484: 'ColumnFiltersState' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/components/admin/GoldenSetEditor.tsx(50,94): error TS2322: Type '"Withdrawn"' is not assignable to type '"Approved" | "Phase 3" | "Phase 2" | "Phase 1" | "Pre-clinical"'.
+src/pages/Admin/AITuning.tsx(17,5): error TS6133: 'CheckCircle' is declared but its value is never read.
+src/pages/Admin/AITuning.tsx(120,12): error TS6133: 'editedPrompt' is declared but its value is never read.
+src/pages/Admin/UserOperations.tsx(51,11): error TS6196: 'CreditGrantData' is declared but never used.
+src/pages/Admin/UserOperations.tsx(124,30): error TS6133: 'userId' is declared but its value is never read.
+src/pages/Admin/UserOperations.tsx(129,32): error TS6133: 'userId' is declared but its value is never read.
+src/pages/Dashboard/ADCBuilder.tsx(1,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/stores/adcBuilderStore.ts(50,65): error TS6133: 'get' is declared but its value is never read.
