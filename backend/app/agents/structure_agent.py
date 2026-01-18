@@ -3,10 +3,10 @@ Structure Agent - 3D 구조 분석
 AlphaFold/BioNeMo 연동하여 항체 구조 분석 및 접합 부위 식별
 """
 from typing import Optional
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.state import ADCState, StructureAnalysis
+from app.core.gemini import get_gemini_model
 from app.core.config import settings
 
 
@@ -35,7 +35,7 @@ Consider:
 
 async def run_structure_agent(state: ADCState) -> StructureAnalysis:
     """
-    구조 분석 에이전트 실행
+    구조 분석 에이전트 실행 (Gemini 2.0 Flash 사용)
     
     Args:
         state: 현재 ADC 분석 상태
@@ -43,11 +43,8 @@ async def run_structure_agent(state: ADCState) -> StructureAnalysis:
     Returns:
         StructureAnalysis: 구조 분석 결과
     """
-    llm = ChatOpenAI(
-        model="gpt-4o",
-        temperature=0,
-        api_key=settings.OPENAI_API_KEY
-    )
+    # Gemini 2.0 Flash 사용 (빠른 분석용)
+    llm = get_gemini_model(temperature=0)
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", STRUCTURE_SYSTEM_PROMPT),

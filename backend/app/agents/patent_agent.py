@@ -3,10 +3,10 @@ Patent Agent - 특허 분석
 Tavily/Google Patents 연동하여 IP 리스크 평가
 """
 from typing import List
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.state import ADCState, PatentInfo
+from app.core.gemini import get_gemini_model
 from app.core.config import settings
 
 
@@ -41,7 +41,7 @@ Output format (JSON array):
 
 async def run_patent_agent(state: ADCState) -> List[PatentInfo]:
     """
-    특허 분석 에이전트 실행
+    특허 분석 에이전트 실행 (Gemini 2.0 Flash 사용)
     
     Args:
         state: 현재 ADC 분석 상태
@@ -49,11 +49,8 @@ async def run_patent_agent(state: ADCState) -> List[PatentInfo]:
     Returns:
         List[PatentInfo]: 관련 특허 목록
     """
-    llm = ChatOpenAI(
-        model="gpt-4o",
-        temperature=0,
-        api_key=settings.OPENAI_API_KEY
-    )
+    # Gemini 2.0 Flash 사용 (빠른 분석용)
+    llm = get_gemini_model(temperature=0)
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", PATENT_SYSTEM_PROMPT),

@@ -3,10 +3,10 @@ Toxicology Agent - 독성 예측
 RAG + RDKit 기반 독성 분석 및 리스크 평가
 """
 from typing import List
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.state import ADCState, ToxicityRisk
+from app.core.gemini import get_gemini_model
 from app.core.config import settings
 
 
@@ -43,7 +43,7 @@ Consider:
 
 async def run_tox_agent(state: ADCState) -> List[ToxicityRisk]:
     """
-    독성 분석 에이전트 실행
+    독성 분석 에이전트 실행 (Gemini 2.0 Flash 사용)
     
     Args:
         state: 현재 ADC 분석 상태
@@ -51,11 +51,8 @@ async def run_tox_agent(state: ADCState) -> List[ToxicityRisk]:
     Returns:
         List[ToxicityRisk]: 독성 리스크 목록
     """
-    llm = ChatOpenAI(
-        model="gpt-4o",
-        temperature=0,
-        api_key=settings.OPENAI_API_KEY
-    )
+    # Gemini 2.0 Flash 사용 (빠른 분석용)
+    llm = get_gemini_model(temperature=0)
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", TOX_SYSTEM_PROMPT),
