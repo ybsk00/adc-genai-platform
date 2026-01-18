@@ -1,6 +1,3 @@
-# Firebase Hosting + Cloud Run 연동
-# 프론트엔드 정적 호스팅 + 백엔드 프록시
-
 {
     "hosting": {
         "public": "frontend/dist",
@@ -13,7 +10,7 @@
             {
                 "source": "/api/**",
                 "run": {
-                    "serviceId": "adc-genai-backend",
+                    "serviceId": "adc-backend",
                     "region": "asia-northeast3"
                 }
             },
