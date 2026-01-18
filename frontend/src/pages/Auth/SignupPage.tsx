@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FlaskConical, Mail, Lock, User, Building2, Loader2, ArrowRight, Chrome, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import { signUpWithEmail, signInWithGoogle } from '@/lib/supabase'
 
 export function SignupPage() {
     const navigate = useNavigate()
@@ -49,24 +50,21 @@ export function SignupPage() {
         setIsLoading(true)
 
         try {
-            // TODO: Supabase Auth 연동
-            // const { data, error } = await supabase.auth.signUp({
-            //   email: formData.email,
-            //   password: formData.password,
-            //   options: {
-            //     data: {
-            //       full_name: formData.name,
-            //       organization: formData.organization,
-            //     }
-            //   }
-            // })
+            const { data, error } = await signUpWithEmail(
+                formData.email,
+                formData.password,
+                formData.name
+            )
 
-            // Mock signup
-            await new Promise(resolve => setTimeout(resolve, 1500))
+            if (error) {
+                toast.error(error.message || '회원가입에 실패했습니다.')
+                return
+            }
 
-            toast.success('회원가입 완료! 이메일을 확인해주세요.')
-            navigate('/login')
-
+            if (data.user) {
+                toast.success('회원가입 완료! 이메일을 확인해주세요.')
+                navigate('/login')
+            }
         } catch (error) {
             toast.error('회원가입에 실패했습니다. 다시 시도해주세요.')
         } finally {
@@ -75,8 +73,10 @@ export function SignupPage() {
     }
 
     const handleGoogleSignup = async () => {
-        // TODO: Supabase Google OAuth
-        toast.info('Google 회원가입은 준비 중입니다.')
+        const { error } = await signInWithGoogle()
+        if (error) {
+            toast.error(error.message || 'Google 회원가입에 실패했습니다.')
+        }
     }
 
     // Password strength indicator

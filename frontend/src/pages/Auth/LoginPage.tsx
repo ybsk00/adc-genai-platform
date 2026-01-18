@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { FlaskConical, Mail, Lock, Loader2, ArrowRight, Chrome } from 'lucide-react'
 import { toast } from 'sonner'
+import { signInWithEmail, signInWithGoogle } from '@/lib/supabase'
 
 export function LoginPage() {
     const navigate = useNavigate()
@@ -20,18 +21,17 @@ export function LoginPage() {
         setIsLoading(true)
 
         try {
-            // TODO: Supabase Auth 연동
-            // const { data, error } = await supabase.auth.signInWithPassword({
-            //   email,
-            //   password,
-            // })
+            const { data, error } = await signInWithEmail(email, password)
 
-            // Mock login
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            if (error) {
+                toast.error(error.message || '로그인에 실패했습니다.')
+                return
+            }
 
-            toast.success('로그인 성공!')
-            navigate('/dashboard')
-
+            if (data.user) {
+                toast.success('로그인 성공!')
+                navigate('/dashboard')
+            }
         } catch (error) {
             toast.error('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.')
         } finally {
@@ -40,11 +40,10 @@ export function LoginPage() {
     }
 
     const handleGoogleLogin = async () => {
-        // TODO: Supabase Google OAuth
-        // const { data, error } = await supabase.auth.signInWithOAuth({
-        //   provider: 'google',
-        // })
-        toast.info('Google 로그인은 준비 중입니다.')
+        const { error } = await signInWithGoogle()
+        if (error) {
+            toast.error(error.message || 'Google 로그인에 실패했습니다.')
+        }
     }
 
     return (

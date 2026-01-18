@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # Tavily
     TAVILY_API_KEY: str = ""
     
+    # Google (Gemini)
+    GOOGLE_API_KEY: str = ""
+    GEMINI_MODEL_ID: str = "gemini-2.0-flash-exp"
+    
     # JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"

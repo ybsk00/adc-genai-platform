@@ -1,5 +1,43 @@
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
+from supabase import create_client, Client
+from app.core.config import settings
+
+# Supabase client
+supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+
+# HTTP Bearer security scheme
+security = HTTPBearer()
+
+
+async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """Supabase JWT 토큰 검증
+    
+    프론트엔드에서 받은 access_token을 검증하고 사용자 정보 반환
+    """
+    token = credentials.credentials
+    
+    try:
+        # Supabase에서 사용자 정보 가져오기
+        user_response = supabase.auth.get_user(token)
+        
+        if not user_response.user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired token"
+            )
+        
+        return {
+            "user_id": user_response.user.id,
+            "email": user_response.user.email,
+            "role": user_response.user.role
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Token verification failed: {str(e)}"
+        )
 
 
 async def verify_oidc_token(request: Request) -> None:
@@ -30,3 +68,4 @@ async def verify_oidc_token(request: Request) -> None:
     
     if not token:
         raise HTTPException(status_code=403, detail="Forbidden: Empty token")
+
