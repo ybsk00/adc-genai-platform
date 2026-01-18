@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { Beaker, Shield, FileSearch, Zap, Database, FileText } from 'lucide-react'
 
 const features = [
@@ -48,32 +47,23 @@ const features = [
 
 export function FeatureSection() {
     return (
-        <section id="features" className="py-32 bg-[#0F172A]">
+        <section id="features" className="py-20 bg-[#0F172A]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="text-center mb-20"
-                >
+                <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
                         Precision, Acceleration, Insight
                     </h2>
                     <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed tracking-wide">
                         6명의 AI 에이전트가 귀사의 ADC 개발을 가속화합니다.
                     </p>
-                </motion.div>
+                </div>
 
                 {/* Bento Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
-                    {features.map((feature, index) => (
-                        <motion.div
+                    {features.map((feature) => (
+                        <div
                             key={feature.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.1 }}
                             className={`group relative p-8 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-white/10 overflow-hidden ${feature.size || ''}`}
                         >
                             {/* Hover Gradient Effect */}
@@ -101,7 +91,7 @@ export function FeatureSection() {
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>
