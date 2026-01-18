@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
+import { Container } from '@/components/layout/Container'
 
 export function Footer() {
     return (
-        <footer className="bg-[#0A0F1C] text-gray-400 py-16 border-t border-white/10 flex justify-center">
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ margin: '0 auto' }}>
+        <footer className="bg-[#0A0F1C] text-gray-400 py-16 border-t border-white/10 flex justify-center" style={{ display: 'flex', justifyContent: 'center' }}>
+            <Container>
                 <div className="grid md:grid-cols-4 gap-8">
                     {/* Brand */}
                     <div className="col-span-1">
@@ -61,7 +62,7 @@ export function Footer() {
                         <a href="https://github.com" className="hover:text-white transition-colors">GitHub</a>
                     </div>
                 </div>
-            </div>
+            </Container>
         </footer>
     )
 }

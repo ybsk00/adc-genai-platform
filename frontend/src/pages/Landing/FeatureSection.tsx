@@ -1,4 +1,5 @@
 import { Beaker, Shield, FileSearch, Zap, Database, FileText } from 'lucide-react'
+import { Container } from '@/components/layout/Container'
 
 const features = [
     {
@@ -47,8 +48,8 @@ const features = [
 
 export function FeatureSection() {
     return (
-        <section id="features" className="py-32 bg-[#0F172A] flex justify-center">
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ margin: '0 auto' }}>
+        <section id="features" className="py-32 bg-[#0F172A] flex justify-center" style={{ display: 'flex', justifyContent: 'center' }}>
+            <Container>
                 {/* Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
@@ -64,7 +65,7 @@ export function FeatureSection() {
                     {features.map((feature) => (
                         <div
                             key={feature.title}
-                            className={`group relative p-8 rounded-3xl bg-slate-800/50 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-slate-700/50 overflow-hidden ${feature.size || ''}`}
+                            className={`group relative p-8 rounded-3xl bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-[#1E293B] overflow-hidden ${feature.size || ''}`}
                         >
                             {/* Hover Gradient Effect */}
                             <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
@@ -94,7 +95,7 @@ export function FeatureSection() {
                         </div>
                     ))}
                 </div>
-            </div>
+            </Container>
         </section>
     )
 }

@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Container } from '@/components/layout/Container'
 
 export function HeroSection() {
     return (
-        <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden bg-[#0F172A]">
+        <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden bg-[#0F172A]" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             {/* Background Video with Overlay */}
             <div className="absolute inset-0 overflow-hidden">
                 <video
@@ -12,74 +13,40 @@ export function HeroSection() {
                     loop
                     muted
                     playsInline
-                    className="absolute w-full h-full object-cover"
+                    className="w-full h-full object-cover opacity-30"
                 >
                     <source src="/1.mp4" type="video/mp4" />
                 </video>
-                {/* Black Overlay (Opacity 50%) */}
                 <div className="absolute inset-0 bg-black/50" />
             </div>
 
-            <div className="relative w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-32 md:py-40 text-center" style={{ margin: '0 auto' }}>
+            <Container className="relative py-32 md:py-40 text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8 }}
-                    className="flex flex-col items-center"
+                    className="max-w-4xl mx-auto"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full mb-8 backdrop-blur-sm border border-white/10">
-                        <Sparkles className="w-4 h-4 text-[#06B6D4]" />
-                        <span className="text-sm text-gray-200 tracking-wide">AstraForge: The Brain of ADC Discovery</span>
-                    </div>
-
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 tracking-tight">
-                        Accelerate ADC Discovery
-                        <br className="hidden md:block" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#06B6D4] to-[#10B981] ml-2">
-                            from Months to Minutes.
+                    <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-tight">
+                        Revolutionizing ADC Discovery <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                            with Generative AI
                         </span>
                     </h1>
-
-                    <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl font-light leading-relaxed tracking-wide">
-                        실험실의 시행착오를 AI 시뮬레이션으로 대체하십시오.
-                        <br />
-                        AstraForge는 FDA 승인 데이터를 학습한 6개의 AI 에이전트로 귀사의 링커-페이로드 최적화를 가속화합니다.
+                    <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
+                        From Target Identification to Toxicity Prediction. <br />
+                        Accelerate your research from months to minutes.
                     </p>
-
-                    <div className="flex flex-col sm:flex-row gap-6 mb-16">
-                        <Button
-                            size="lg"
-                            className="bg-[#06B6D4] hover:bg-[#0891B2] text-white font-semibold px-8 py-6 text-lg"
-                        >
-                            Start Research
-                            <ArrowRight className="w-5 h-5 ml-2" />
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <Button size="lg" className="bg-[#007AFF] hover:bg-[#0056b3] text-lg px-8 py-6 h-auto rounded-full shadow-lg shadow-blue-500/25 transition-all hover:scale-105" asChild>
+                            <Link to="/signup">Start Free Trial</Link>
                         </Button>
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg"
-                        >
-                            Request Demo
+                        <Button size="lg" variant="outline" className="text-white border-white/20 hover:bg-white/10 text-lg px-8 py-6 h-auto rounded-full backdrop-blur-sm transition-all hover:scale-105" asChild>
+                            <Link to="/demo">Watch Demo</Link>
                         </Button>
-                    </div>
-
-                    {/* Social Proof */}
-                    <div className="pt-10 border-t border-white/10 w-full max-w-3xl">
-                        <p className="text-sm text-gray-400 mb-6 font-semibold tracking-widest uppercase">TRUSTED DATA</p>
-                        <div className="flex flex-wrap justify-center gap-8 items-center text-gray-500 text-sm font-mono mb-6">
-                            <span>Trained on 2,000+ Clinical Trials</span>
-                            <span className="w-1.5 h-1.5 bg-gray-600 rounded-full" />
-                            <span>15+ FDA Approved ADCs</span>
-                        </div>
-                        <div className="flex justify-center gap-10 opacity-50 grayscale">
-                            <span className="text-white font-bold text-xl tracking-wider">FDA</span>
-                            <span className="text-white font-bold text-xl tracking-wider">PubMed</span>
-                            <span className="text-white font-bold text-xl tracking-wider">NIH</span>
-                            <span className="text-white font-bold text-xl tracking-wider">USPTO</span>
-                        </div>
                     </div>
                 </motion.div>
-            </div>
+            </Container>
         </section>
     )
 }
