@@ -48,19 +48,19 @@ const features = [
 
 export function FeatureSection() {
     return (
-        <section id="features" className="py-24 bg-[#0F172A]">
+        <section id="features" className="py-32 bg-[#0F172A]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-center mb-16"
+                    className="text-center mb-20"
                 >
-                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
                         Precision, Acceleration, Insight
                     </h2>
-                    <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+                    <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed tracking-wide">
                         6명의 AI 에이전트가 귀사의 ADC 개발을 가속화합니다.
                     </p>
                 </motion.div>
