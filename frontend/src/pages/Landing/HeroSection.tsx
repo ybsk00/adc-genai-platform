@@ -4,7 +4,7 @@ import { ArrowRight, Sparkles } from 'lucide-react'
 
 export function HeroSection() {
     return (
-        <section className="relative min-h-screen flex items-center pt-16 overflow-hidden bg-[#0F172A]">
+        <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden bg-[#0F172A]">
             {/* Background Video with Overlay */}
             <div className="absolute inset-0 overflow-hidden">
                 <video
