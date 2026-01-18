@@ -34,11 +34,11 @@ const steps = [
 
 export function HowItWorksSection() {
     return (
-        <section className="py-32 bg-[#0F172A] relative overflow-hidden">
+        <section className="py-24 bg-[#0F172A] relative overflow-hidden">
             {/* Background Elements */}
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -48,7 +48,7 @@ export function HowItWorksSection() {
                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
                         How AstraForge Works
                     </h2>
-                    <p className="text-lg md:text-xl text-gray-400 leading-relaxed tracking-wide">
+                    <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
                         데이터 입력부터 결과 도출까지, 단 4단계로 완료됩니다.
                     </p>
                 </motion.div>
