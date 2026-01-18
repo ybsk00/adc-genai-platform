@@ -60,12 +60,14 @@ const recentActivity = [
     { user: 'System', action: 'Clinical Data Synced', time: '6 hours ago', type: 'system' },
 ]
 
+import { API_BASE_URL } from '@/lib/api'
+
 // System services to monitor
 const systemServices = [
-    { id: 'api', name: 'API Server', endpoint: '/api/health' },
-    { id: 'agents', name: 'AI Agents', endpoint: '/api/agents/health' },
-    { id: 'rag', name: 'RAG Pipeline', endpoint: '/api/rag/health' },
-    { id: 'db', name: 'Supabase DB', endpoint: '/api/db/health' },
+    { id: 'api', name: 'API Server', endpoint: `${API_BASE_URL}/health` },
+    { id: 'agents', name: 'AI Agents', endpoint: `${API_BASE_URL}/api/agents/health` },
+    { id: 'rag', name: 'RAG Pipeline', endpoint: `${API_BASE_URL}/api/rag/health` },
+    { id: 'db', name: 'Supabase DB', endpoint: `${API_BASE_URL}/api/db/health` },
 ]
 
 type ServiceStatus = 'operational' | 'degraded' | 'down' | 'checking'
@@ -83,13 +85,12 @@ function useHealthCheck() {
     const checkHealth = useCallback(async () => {
         for (const service of systemServices) {
             try {
-                // TODO: 실제 API 호출로 대체
-                // const response = await fetch(service.endpoint)
-                // const isHealthy = response.ok
-
-                // Mock: 랜덤하게 상태 시뮬레이션
-                await new Promise(r => setTimeout(r, 100))
-                const isHealthy = Math.random() > 0.05 // 95% 확률로 정상
+                // 실제 API 호출
+                const response = await fetch(service.endpoint, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                })
+                const isHealthy = response.ok
 
                 setStatuses(prev => ({
                     ...prev,
@@ -224,9 +225,9 @@ export function AdminOverview() {
                                 {recentActivity.map((activity, index) => (
                                     <div key={index} className="flex items-center gap-3">
                                         <div className={`w-2 h-2 rounded-full ${activity.type === 'simulation' ? 'bg-blue-500' :
-                                                activity.type === 'report' ? 'bg-green-500' :
-                                                    activity.type === 'payment' ? 'bg-purple-500' :
-                                                        'bg-slate-500'
+                                            activity.type === 'report' ? 'bg-green-500' :
+                                                activity.type === 'payment' ? 'bg-purple-500' :
+                                                    'bg-slate-500'
                                             }`} />
                                         <div className="flex-1">
                                             <p className="text-sm text-white">
@@ -238,9 +239,9 @@ export function AdminOverview() {
                                         <Badge
                                             variant="outline"
                                             className={`text-xs ${activity.type === 'simulation' ? 'border-blue-500/30 text-blue-400' :
-                                                    activity.type === 'report' ? 'border-green-500/30 text-green-400' :
-                                                        activity.type === 'payment' ? 'border-purple-500/30 text-purple-400' :
-                                                            'border-slate-600 text-slate-400'
+                                                activity.type === 'report' ? 'border-green-500/30 text-green-400' :
+                                                    activity.type === 'payment' ? 'border-purple-500/30 text-purple-400' :
+                                                        'border-slate-600 text-slate-400'
                                                 }`}
                                         >
                                             {activity.type}
@@ -292,8 +293,8 @@ export function AdminOverview() {
                                         <div>
                                             <p className="text-sm font-medium text-white">{service.name}</p>
                                             <p className={`text-xs capitalize ${status === 'operational' ? 'text-green-400' :
-                                                    status === 'checking' ? 'text-slate-400' :
-                                                        'text-red-400'
+                                                status === 'checking' ? 'text-slate-400' :
+                                                    'text-red-400'
                                                 }`}>
                                                 {status}
                                             </p>
