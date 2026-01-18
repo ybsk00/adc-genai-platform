@@ -1,14 +1,19 @@
 """
 Admin API - 관리자 전용 엔드포인트
 KPI 조회, 크레딧 지급, Golden Set 관리 (Human-in-the-Loop), 프롬프트 관리
+PDF 업로드, PubMed 크롤러 트리거
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import uuid4
+import tempfile
+import os
 
 from app.core.config import settings
+from app.services.pdf_parser import pdf_parser_service
+from app.services.pubmed_crawler import pubmed_crawler
 
 router = APIRouter()
 
@@ -333,6 +338,124 @@ async def publish_prompt(agent_id: str, version: str):
 
 
 # ============================================================
+# PDF Upload & RAG Ingestion (Phase 3)
+# ============================================================
+
+class UploadResponse(BaseModel):
+    """PDF 업로드 응답"""
+    status: str
+    document_id: Optional[str] = None
+    parsed_data: Optional[dict] = None
+    error: Optional[str] = None
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_document(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    PDF 문서 업로드 및 Gemini 멀티모달 파싱
+    
+    지원 형식: PDF
+    Gemini Vision으로 테이블/그래프 포함 추출
+    """
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    
+    try:
+        # 임시 파일 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        # Gemini로 PDF 파싱
+        result = await pdf_parser_service.parse_pdf(tmp_path)
+        
+        # 임시 파일 삭제
+        os.unlink(tmp_path)
+        
+        if result.get("status") == "success":
+            doc_id = f"doc_{uuid4().hex[:8]}"
+            
+            # TODO: Supabase에 저장
+            # 1. golden_set_library에 draft로 저장
+            # 2. DOI 중복 체크
+            
+            return UploadResponse(
+                status="success",
+                document_id=doc_id,
+                parsed_data=result.get("data")
+            )
+        else:
+            return UploadResponse(
+                status="error",
+                error=result.get("error")
+            )
+            
+    except Exception as e:
+        return UploadResponse(
+            status="error",
+            error=str(e)
+        )
+
+
+# ============================================================
+# PubMed Crawler (Phase 4)
+# ============================================================
+
+class CrawlRequest(BaseModel):
+    """크롤러 요청"""
+    query: Optional[str] = None
+    max_results: int = Field(default=20, le=100)
+    days_back: int = Field(default=7, le=30)
+
+
+@router.post("/crawler/trigger")
+async def trigger_pubmed_crawler(req: CrawlRequest):
+    """
+    PubMed 크롤러 트리거
+    
+    ADC 관련 논문을 수집하고 AI Gatekeeper로 필터링
+    필터링 통과한 논문은 draft 상태로 저장
+    """
+    try:
+        result = await pubmed_crawler.crawl_and_filter(
+            query=req.query,
+            max_results=req.max_results,
+            days_back=req.days_back
+        )
+        
+        # TODO: 필터링 통과한 논문을 DB에 draft로 저장
+        # for article in result.get("relevant", []):
+        #     # DOI 중복 체크
+        #     existing = supabase.table("golden_set_library").select("id").eq("doi", article.get("doi")).execute()
+        #     if not existing.data:
+        #         supabase.table("golden_set_library").insert({...}).execute()
+        
+        return {
+            "status": "success",
+            "job_id": f"crawl_{uuid4().hex[:8]}",
+            **result
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/crawler/status/{job_id}")
+async def get_crawler_status(job_id: str):
+    """크롤러 작업 상태 조회"""
+    # TODO: Celery/Redis에서 작업 상태 조회
+    return {
+        "job_id": job_id,
+        "status": "completed",
+        "message": "Crawler job status (mock)"
+    }
+
+
+# ============================================================
 # Health Check
 # ============================================================
 
@@ -340,3 +463,4 @@ async def publish_prompt(agent_id: str, version: str):
 async def admin_health():
     """관리자 API 헬스 체크"""
     return {"status": "healthy", "service": "admin-api"}
+
