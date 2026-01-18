@@ -61,7 +61,7 @@ export function SignupPage() {
                 return
             }
 
-            if (data.user) {
+            if (data?.user) {
                 toast.success('회원가입 완료! 이메일을 확인해주세요.')
                 navigate('/login')
             }

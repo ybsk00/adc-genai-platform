@@ -56,7 +56,7 @@ const plans = [
 
 export function PricingSection() {
     return (
-        <section id="pricing" className="py-24 bg-gray-50">
+        <section id="pricing" className="py-24 bg-gradient-to-b from-[#0A0F1C] to-[#1A1F2E]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
@@ -65,10 +65,10 @@ export function PricingSection() {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                         투명한 가격 정책
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-lg text-gray-400 max-w-2xl mx-auto">
                         필요에 맞는 플랜을 선택하세요. 언제든지 업그레이드 가능합니다.
                     </p>
                 </motion.div>
@@ -83,33 +83,33 @@ export function PricingSection() {
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
                         >
-                            <Card className={`relative h-full ${plan.popular ? 'border-[#007AFF] border-2 shadow-lg' : ''}`}>
+                            <Card className={`relative h-full bg-white/5 border-white/10 ${plan.popular ? 'border-[#007AFF] border-2 shadow-lg shadow-[#007AFF]/20' : ''}`}>
                                 {plan.popular && (
                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#007AFF] text-white text-sm rounded-full">
                                         Most Popular
                                     </div>
                                 )}
                                 <CardHeader>
-                                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                                    <CardDescription>{plan.description}</CardDescription>
+                                    <CardTitle className="text-xl text-white">{plan.name}</CardTitle>
+                                    <CardDescription className="text-gray-400">{plan.description}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="mb-6">
-                                        <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                                        <span className="text-gray-500 ml-1">{plan.period}</span>
+                                        <span className="text-4xl font-bold text-white">{plan.price}</span>
+                                        <span className="text-gray-400 ml-1">{plan.period}</span>
                                     </div>
                                     <ul className="space-y-3">
                                         {plan.features.map((feature) => (
                                             <li key={feature} className="flex items-center gap-2">
                                                 <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                                <span className="text-gray-600">{feature}</span>
+                                                <span className="text-gray-300">{feature}</span>
                                             </li>
                                         ))}
                                     </ul>
                                 </CardContent>
                                 <CardFooter>
                                     <Button
-                                        className={`w-full ${plan.popular ? 'bg-[#007AFF] hover:bg-[#0056b3]' : ''}`}
+                                        className={`w-full ${plan.popular ? 'bg-[#007AFF] hover:bg-[#0056b3]' : 'bg-white/10 hover:bg-white/20 text-white border-white/20'}`}
                                         variant={plan.popular ? 'default' : 'outline'}
                                         asChild
                                     >
@@ -124,3 +124,4 @@ export function PricingSection() {
         </section>
     )
 }
+

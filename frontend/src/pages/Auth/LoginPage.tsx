@@ -28,7 +28,7 @@ export function LoginPage() {
                 return
             }
 
-            if (data.user) {
+            if (data?.user) {
                 toast.success('로그인 성공!')
                 navigate('/dashboard')
             }
