@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingPage } from './pages/Landing'
 import { DashboardLayout, DashboardHome, ADCBuilder, ResultViewer, GoldenSetLibrary } from './pages/Dashboard'
-import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning } from './pages/Admin'
+import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage } from './pages/Admin'
 import { LoginPage, SignupPage } from './pages/Auth'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -31,6 +31,7 @@ function App() {
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<UserOperations />} />
             <Route path="data" element={<DataOperations />} />
+            <Route path="upload" element={<UploadPage />} />
             <Route path="ai" element={<AITuning />} />
           </Route>
         </Routes>

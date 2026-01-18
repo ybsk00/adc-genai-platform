@@ -4,45 +4,51 @@ import { Beaker, Shield, FileSearch, Zap, Database, FileText } from 'lucide-reac
 const features = [
     {
         icon: Beaker,
-        title: '3D 구조 분석',
-        description: 'AlphaFold/BioNeMo로 항체-약물 접합 구조를 실시간 예측하고 시각화합니다.',
-        color: 'from-blue-500 to-cyan-500'
+        title: 'In Silico 3D Modeling',
+        description: 'AlphaFold 기반 항체-약물 결합 구조 시뮬레이션 및 안정성 예측',
+        color: 'from-blue-500 to-cyan-500',
+        size: 'lg:col-span-2'
     },
     {
         icon: Shield,
-        title: '독성 예측',
-        description: 'RAG 기반 유사 약물 분석으로 Ocular Toxicity, Neutropenia 등 위험을 사전에 감지합니다.',
-        color: 'from-red-500 to-orange-500'
+        title: 'Predictive Toxicology',
+        description: '오프타겟(Off-target) 효과 및 독성 리스크 사전 감지 (Ocular/Neutropenia)',
+        color: 'from-red-500 to-orange-500',
+        size: 'lg:col-span-1'
     },
     {
         icon: FileSearch,
-        title: '특허 분석',
-        description: '4대 플랫폼(엔허투, 시젠 등) 특허 침해 여부를 자동으로 판단합니다.',
-        color: 'from-green-500 to-emerald-500'
+        title: 'IP Landscape Analysis',
+        description: '엔허투, 시젠 등 주요 경쟁 약물의 특허 침해 가능성(FTO) 실시간 검토',
+        color: 'from-green-500 to-emerald-500',
+        size: 'lg:col-span-1'
     },
     {
         icon: Zap,
-        title: '경쟁사 분석',
-        description: '실시간 웹 검색으로 동일 타겟 연구 중인 경쟁사를 모니터링합니다.',
-        color: 'from-purple-500 to-pink-500'
+        title: 'Market Intelligence',
+        description: '글로벌 파이프라인 실시간 추적 및 타겟 약물 개발 현황 모니터링',
+        color: 'from-purple-500 to-pink-500',
+        size: 'lg:col-span-2'
     },
     {
         icon: Database,
-        title: 'Golden Set',
-        description: 'FDA 승인 ADC 15종 + 임상 데이터 2,000건의 검증된 데이터베이스를 제공합니다.',
-        color: 'from-yellow-500 to-amber-500'
+        title: 'Golden Set Library',
+        description: 'FDA 승인 약물(Reference Drug)의 기전 데이터와 당사 실험 데이터의 비교 분석',
+        color: 'from-yellow-500 to-amber-500',
+        size: 'lg:col-span-1'
     },
     {
         icon: FileText,
-        title: 'PDF 리포트',
-        description: '투자심사용 프리미엄 리포트를 자동 생성하여 의사결정을 지원합니다.',
-        color: 'from-indigo-500 to-violet-500'
+        title: 'Automated IND Report',
+        description: '의사결정을 위한 임상시험계획승인(IND) 수준의 프리미엄 리포트 자동 생성',
+        color: 'from-indigo-500 to-violet-500',
+        size: 'lg:col-span-2' // Adjusted to fill grid nicely if needed, or keep 1
     }
 ]
 
 export function FeatureSection() {
     return (
-        <section id="features" className="py-24 bg-[#0A0F1C]">
+        <section id="features" className="py-24 bg-[#0F172A]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
@@ -52,15 +58,15 @@ export function FeatureSection() {
                     className="text-center mb-16"
                 >
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                        성공 확률을 높이는 6가지 핵심 기능
+                        Precision, Acceleration, Insight
                     </h2>
                     <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                        6명의 AI 에이전트가 동시에 분석하여 연구원의 시간을 절약합니다.
+                        6명의 AI 에이전트가 귀사의 ADC 개발을 가속화합니다.
                     </p>
                 </motion.div>
 
-                {/* Feature Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Bento Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
                     {features.map((feature, index) => (
                         <motion.div
                             key={feature.title}
@@ -68,17 +74,33 @@ export function FeatureSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
-                            className="group p-6 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20"
+                            className={`group relative p-8 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-white/10 overflow-hidden ${feature.size || ''}`}
                         >
-                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                                <feature.icon className="w-6 h-6 text-white" />
+                            {/* Hover Gradient Effect */}
+                            <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+
+                            <div className="relative z-10 h-full flex flex-col justify-between">
+                                <div>
+                                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
+                                        <feature.icon className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-white mb-3">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-gray-400 leading-relaxed">
+                                        {feature.description}
+                                    </p>
+                                </div>
+
+                                {/* Decorative Arrow */}
+                                <div className="mt-6 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-2 group-hover:translate-x-0">
+                                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-semibold text-white mb-2">
-                                {feature.title}
-                            </h3>
-                            <p className="text-gray-400">
-                                {feature.description}
-                            </p>
                         </motion.div>
                     ))}
                 </div>

@@ -12,6 +12,7 @@ import tempfile
 import os
 
 from app.core.config import settings
+from app.core.supabase import supabase
 from app.services.pdf_parser import pdf_parser_service
 from app.services.pubmed_crawler import pubmed_crawler
 
@@ -125,32 +126,30 @@ async def get_golden_set_drafts():
     Worker가 수집한 데이터가 'draft' 상태로 저장되며,
     관리자가 검토 후 승인해야 RAG에 반영됨
     """
-    # TODO: Supabase 쿼리
-    # SELECT * FROM golden_set WHERE status = 'draft' ORDER BY created_at DESC
-    
-    # Mock data
-    drafts = [
-        GoldenSetDraft(
-            id="gs_001",
-            drug_name="MMAE-LIV1-ADC",
-            target="LIV-1",
-            payload="MMAE",
-            linker="Val-Cit",
-            enrichment_source="perplexity_sonar_medium",
-            created_at="2026-01-17T10:30:00Z"
-        ),
-        GoldenSetDraft(
-            id="gs_002",
-            drug_name="DXd-TROP2-Candidate",
-            target="TROP-2",
-            payload="DXd",
-            linker="GGFG",
-            enrichment_source="clinical_trials",
-            created_at="2026-01-17T09:15:00Z"
-        ),
-    ]
-    
-    return drafts
+    try:
+        # Supabase 쿼리: status가 'draft'인 항목 조회, 최신순 정렬
+        response = supabase.table("golden_set") \
+            .select("*") \
+            .eq("status", "draft") \
+            .order("created_at", desc=True) \
+            .execute()
+            
+        drafts = []
+        for item in response.data:
+            drafts.append(GoldenSetDraft(
+                id=item.get("id"),
+                drug_name=item.get("drug_name") or "Unknown",
+                target=item.get("target") or "Unknown",
+                payload=item.get("payload"),
+                linker=item.get("linker"),
+                enrichment_source=item.get("enrichment_source") or "unknown",
+                created_at=item.get("created_at")
+            ))
+            
+        return drafts
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/goldenset/{golden_set_id}")
@@ -159,29 +158,21 @@ async def get_golden_set_detail(golden_set_id: str):
     Golden Set 상세 조회 (raw_data 포함)
     관리자가 검토 시 원본 데이터 확인용
     """
-    # TODO: Supabase 쿼리
-    
-    return {
-        "id": golden_set_id,
-        "drug_name": "MMAE-LIV1-ADC",
-        "target": "LIV-1",
-        "antibody": "Anti-LIV-1 mAb",
-        "payload": "MMAE",
-        "linker": "Val-Cit",
-        "dar": 4.0,
-        "company": "Research Corp",
-        "status": "draft",
-        "enrichment_source": "perplexity_sonar_medium",
-        "raw_data": {
-            "source": "ClinicalTrials.gov",
-            "nct_id": "NCT12345678",
-            "perplexity_response": {
-                "linker_type": "Val-Cit cleavable",
-                "mechanism": "Cathepsin-B sensitive"
-            }
-        },
-        "created_at": "2026-01-17T10:30:00Z"
-    }
+    try:
+        response = supabase.table("golden_set") \
+            .select("*") \
+            .eq("id", golden_set_id) \
+            .execute()
+            
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Golden Set not found")
+            
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/goldenset/{golden_set_id}/approve")
@@ -191,26 +182,36 @@ async def approve_golden_set(golden_set_id: str, req: ApproveRequest):
     
     Logic:
     1. DB의 status를 'approved'로 변경
-    2. 해당 데이터의 description 텍스트를 OpenAI Embedding API로 벡터화
-    3. golden_set_embeddings 테이블에 벡터 저장
-    4. 완료 메시지 반환
-    
-    [IMPORTANT] 이 작업은 트랜잭션으로 처리해야 함
+    2. (TODO) 해당 데이터의 description 텍스트를 OpenAI Embedding API로 벡터화 및 저장
     """
-    # TODO: 실제 구현
-    # async with transaction:
-    #     1. UPDATE golden_set SET status = 'approved', reviewer_id = ..., approved_at = NOW()
-    #     2. content = f"{drug_name} targets {target} using {payload} payload with {linker} linker..."
-    #     3. embedding = await openai.embeddings.create(model="text-embedding-ada-002", input=content)
-    #     4. INSERT INTO golden_set_embeddings (golden_set_id, content, embedding) VALUES (...)
+    try:
+        # 1. 상태 업데이트
+        update_data = {
+            "status": "approved",
+            "approved_at": datetime.utcnow().isoformat()
+            # reviewer_id는 현재 인증된 사용자 ID를 넣어야 하지만, 일단 생략
+        }
+        
+        response = supabase.table("golden_set") \
+            .update(update_data) \
+            .eq("id", golden_set_id) \
+            .execute()
+            
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Golden Set not found")
+            
+        # TODO: RAG 인덱싱 로직 추가 (Phase 5.2)
+        # 현재는 상태 변경만 수행
     
-    return {
-        "status": "approved",
-        "golden_set_id": golden_set_id,
-        "message": "Data approved and indexed to RAG",
-        "embedding_id": f"emb_{uuid4().hex[:8]}",
-        "indexed_at": datetime.utcnow().isoformat()
-    }
+        return {
+            "status": "approved",
+            "golden_set_id": golden_set_id,
+            "message": "Data approved (RAG indexing pending)",
+            "indexed_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/goldenset/{golden_set_id}/reject")
@@ -222,15 +223,30 @@ async def reject_golden_set(golden_set_id: str, req: RejectRequest):
     - status를 'rejected'로 변경
     - reviewer_note에 반려 사유 기록
     """
-    # TODO: Supabase 업데이트
-    # UPDATE golden_set SET status = 'rejected', reviewer_note = req.reason WHERE id = golden_set_id
+    try:
+        update_data = {
+            "status": "rejected",
+            "reviewer_note": req.reason,
+            "rejected_at": datetime.utcnow().isoformat()
+        }
+        
+        response = supabase.table("golden_set") \
+            .update(update_data) \
+            .eq("id", golden_set_id) \
+            .execute()
+            
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Golden Set not found")
     
-    return {
-        "status": "rejected",
-        "golden_set_id": golden_set_id,
-        "reason": req.reason,
-        "message": "Data rejected and will not be indexed"
-    }
+        return {
+            "status": "rejected",
+            "golden_set_id": golden_set_id,
+            "reason": req.reason,
+            "message": "Data rejected"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/goldenset/sync")
@@ -378,15 +394,41 @@ async def upload_document(
         
         if result.get("status") == "success":
             doc_id = f"doc_{uuid4().hex[:8]}"
+            data = result.get("data", {})
             
-            # TODO: Supabase에 저장
-            # 1. golden_set_library에 draft로 저장
-            # 2. DOI 중복 체크
+            # 1. DOI 중복 체크 (Phase 3.3)
+            doi = data.get("doi")
+            if doi:
+                existing = supabase.table("golden_set").select("id").eq("raw_data->>doi", doi).execute()
+                if existing.data:
+                    return UploadResponse(
+                        status="skipped",
+                        error="Duplicate DOI found",
+                        document_id=existing.data[0]['id']
+                    )
+            
+            # 2. DB 저장 (Draft 상태)
+            drug_info = data.get("drug_info", {})
+            
+            new_record = {
+                "drug_name": drug_info.get("drug_name") or "Unknown",
+                "target": drug_info.get("target") or "Unknown",
+                "antibody": drug_info.get("antibody"),
+                "payload": drug_info.get("payload"),
+                "linker": drug_info.get("linker"),
+                "dar": float(drug_info.get("dar")) if drug_info.get("dar") and str(drug_info.get("dar")).replace('.','',1).isdigit() else None,
+                "status": "draft",
+                "enrichment_source": "pdf_upload",
+                "raw_data": data
+            }
+            
+            # Supabase Insert
+            db_res = supabase.table("golden_set").insert(new_record).execute()
             
             return UploadResponse(
                 status="success",
-                document_id=doc_id,
-                parsed_data=result.get("data")
+                document_id=db_res.data[0]['id'] if db_res.data else doc_id,
+                parsed_data=data
             )
         else:
             return UploadResponse(
@@ -427,17 +469,42 @@ async def trigger_pubmed_crawler(req: CrawlRequest):
             days_back=req.days_back
         )
         
-        # TODO: 필터링 통과한 논문을 DB에 draft로 저장
-        # for article in result.get("relevant", []):
-        #     # DOI 중복 체크
-        #     existing = supabase.table("golden_set_library").select("id").eq("doi", article.get("doi")).execute()
-        #     if not existing.data:
-        #         supabase.table("golden_set_library").insert({...}).execute()
+        saved_count = 0
+        skipped_count = 0
+        
+        # 필터링 통과한 논문을 DB에 draft로 저장
+        for article in result.get("relevant", []):
+            doi = article.get("doi")
+            
+            # 1. 중복 체크 (Phase 4.3)
+            if doi:
+                existing = supabase.table("golden_set").select("id").eq("raw_data->>doi", doi).execute()
+                if existing.data:
+                    skipped_count += 1
+                    continue
+            
+            # 2. DB 저장
+            new_record = {
+                "drug_name": "Unknown (Auto-crawled)",
+                "target": "Unknown",
+                "antibody": None,
+                "payload": None,
+                "status": "draft",
+                "enrichment_source": "pubmed_crawler",
+                "raw_data": article
+            }
+            
+            supabase.table("golden_set").insert(new_record).execute()
+            saved_count += 1
         
         return {
             "status": "success",
             "job_id": f"crawl_{uuid4().hex[:8]}",
-            **result
+            "total_found": result.get("total_found"),
+            "processed": result.get("total_processed"),
+            "saved": saved_count,
+            "skipped_duplicate": skipped_count,
+            "details": result
         }
         
     except Exception as e:

@@ -6,47 +6,47 @@ import { Link } from 'react-router-dom'
 
 const plans = [
     {
-        name: 'Researcher',
-        price: '$0',
-        period: '무료',
-        description: '바이오 연구자를 위한 기본 플랜',
+        name: 'Starter',
+        price: 'Free',
+        period: '/ month',
+        description: '개인 연구자를 위한 기본 플랜',
         features: [
-            'LIV-1 기본 분석',
-            'Golden Set 라이브러리 열람',
-            '월 3회 분석',
-            '기본 PDF 리포트'
+            '기본 구조 분석',
+            'Golden Set 열람 (제한적)',
+            '월 3회 시뮬레이션',
+            '커뮤니티 지원'
         ],
-        cta: 'Sign Up Free',
+        cta: 'Start Research',
         popular: false,
         href: '/signup'
     },
     {
-        name: 'Developer',
+        name: 'Researcher',
         price: '$499',
-        period: '/ 리포트',
-        description: 'CDMO 및 개발팀을 위한 프로 플랜',
+        period: '/ report',
+        description: '소규모 랩 및 바이오 벤처',
         features: [
-            '전체 독성 예측',
-            '특허 침해 검토',
-            'Linker 최적화 제안',
-            '6-Agent 풀가동 분석',
-            '우선 처리 지원'
+            '심층 독성 예측 (Toxicity)',
+            '전체 AI 에이전트 사용',
+            '특허 침해 분석 (FTO)',
+            '상세 PDF 리포트 생성',
+            '이메일 지원'
         ],
-        cta: 'Buy Credits',
+        cta: 'Get Started',
         popular: true,
         href: '/pricing'
     },
     {
-        name: 'Organization',
+        name: 'Enterprise',
         price: 'Custom',
-        period: '문의',
-        description: '대규모 팀을 위한 엔터프라이즈',
+        period: '',
+        description: '제약사 및 대규모 연구 기관',
         features: [
-            'API 접근 권한',
-            '전용 서버',
-            '무제한 시트',
-            '전담 지원',
-            '커스텀 통합'
+            'API 연동 및 통합',
+            '전용 클라우드 서버 (Private)',
+            'SLA 및 보안 계약',
+            '전담 매니저 배정',
+            'On-premise 옵션'
         ],
         cta: 'Contact Sales',
         popular: false,
@@ -56,7 +56,7 @@ const plans = [
 
 export function PricingSection() {
     return (
-        <section id="pricing" className="py-24 bg-gradient-to-b from-[#0A0F1C] to-[#1A1F2E]">
+        <section id="pricing" className="py-24 bg-[#0F172A]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
@@ -66,10 +66,10 @@ export function PricingSection() {
                     className="text-center mb-16"
                 >
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                        투명한 가격 정책
+                        Flexible Research Plans
                     </h2>
                     <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                        필요에 맞는 플랜을 선택하세요. 언제든지 업그레이드 가능합니다.
+                        연구 단계에 맞는 최적의 플랜을 선택하세요.
                     </p>
                 </motion.div>
 
@@ -83,9 +83,9 @@ export function PricingSection() {
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
                         >
-                            <Card className={`relative h-full bg-white/5 border-white/10 ${plan.popular ? 'border-[#007AFF] border-2 shadow-lg shadow-[#007AFF]/20' : ''}`}>
+                            <Card className={`relative h-full bg-white/5 backdrop-blur-md border-white/10 ${plan.popular ? 'border-[#06B6D4] border-2 shadow-lg shadow-[#06B6D4]/20' : 'border'}`}>
                                 {plan.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#007AFF] text-white text-sm rounded-full">
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#06B6D4] text-white text-sm rounded-full font-medium">
                                         Most Popular
                                     </div>
                                 )}
@@ -96,20 +96,20 @@ export function PricingSection() {
                                 <CardContent>
                                     <div className="mb-6">
                                         <span className="text-4xl font-bold text-white">{plan.price}</span>
-                                        <span className="text-gray-400 ml-1">{plan.period}</span>
+                                        <span className="text-gray-400 ml-1 text-sm">{plan.period}</span>
                                     </div>
-                                    <ul className="space-y-3">
+                                    <ul className="space-y-4">
                                         {plan.features.map((feature) => (
-                                            <li key={feature} className="flex items-center gap-2">
-                                                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                                <span className="text-gray-300">{feature}</span>
+                                            <li key={feature} className="flex items-start gap-3">
+                                                <Check className="w-5 h-5 text-[#10B981] flex-shrink-0 mt-0.5" />
+                                                <span className="text-gray-300 text-sm">{feature}</span>
                                             </li>
                                         ))}
                                     </ul>
                                 </CardContent>
-                                <CardFooter>
+                                <CardFooter className="mt-auto">
                                     <Button
-                                        className={`w-full ${plan.popular ? 'bg-[#007AFF] hover:bg-[#0056b3]' : 'bg-white/10 hover:bg-white/20 text-white border-white/20'}`}
+                                        className={`w-full ${plan.popular ? 'bg-[#06B6D4] hover:bg-[#0891B2] text-white' : 'bg-white/10 hover:bg-white/20 text-white border-white/20'}`}
                                         variant={plan.popular ? 'default' : 'outline'}
                                         asChild
                                     >
