@@ -5,6 +5,7 @@ import { DashboardLayout, DashboardHome, ADCBuilder, ResultViewer, GoldenSetLibr
 import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage } from './pages/Admin'
 import { LoginPage, SignupPage } from './pages/Auth'
 import { Toaster } from '@/components/ui/sonner'
+import { Layout } from '@/components/layout/Layout'
 
 const queryClient = new QueryClient()
 
@@ -13,8 +14,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          {/* Public Routes with Layout */}
+          <Route element={<Layout />}>
+            <Route path="/" element={<LandingPage />} />
+          </Route>
+
+          {/* Auth Routes (No Layout or separate layout if needed) */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
