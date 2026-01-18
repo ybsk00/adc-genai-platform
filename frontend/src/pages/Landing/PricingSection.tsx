@@ -56,8 +56,8 @@ const plans = [
 
 export function PricingSection() {
     return (
-        <section id="pricing" className="py-32 bg-[#0F172A]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="pricing" className="py-32 bg-[#0F172A] flex justify-center">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ margin: '0 auto' }}>
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -83,7 +83,7 @@ export function PricingSection() {
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
                         >
-                            <Card className={`relative h-full bg-white/10 backdrop-blur-md border-white/20 ${plan.popular ? 'border-[#06B6D4] border-2 shadow-lg shadow-[#06B6D4]/20' : 'border'}`}>
+                            <Card className={`relative h-full bg-slate-800/50 backdrop-blur-xl border-white/10 ${plan.popular ? 'border-[#06B6D4] border-2 shadow-lg shadow-[#06B6D4]/20' : 'border'}`}>
                                 {plan.popular && (
                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#06B6D4] text-white text-sm rounded-full font-medium">
                                         Most Popular
