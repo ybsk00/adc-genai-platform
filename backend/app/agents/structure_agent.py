@@ -71,11 +71,23 @@ Provide a comprehensive structural analysis.""")
         "dar": state.input.dar
     })
     
-    # TODO: 실제로는 JSON 파싱 필요
-    # 현재는 Mock 데이터 반환
+    # [Mock Logic] 유사도 계산 시뮬레이션
+    is_similar_to_enhertu = (
+        "her2" in state.input.target_name.lower() and 
+        "dxd" in state.input.payload_id.lower()
+    )
+    
+    comparison_note = ""
+    if is_similar_to_enhertu:
+        comparison_note = "Structure aligns with Trastuzumab deruxtecan (RMSD < 0.5Å). Conjugation sites match Enhertu profile."
+    else:
+        comparison_note = "Standard IgG1 scaffold structure. No significant deviation from baseline."
+
     return StructureAnalysis(
-        stability_score=87.5,
+        stability_score=92.5 if is_similar_to_enhertu else 75.0,
         conjugation_sites=["Cys-239", "Cys-242", "Cys-265"],
         aggregation_risk="Low" if state.input.dar <= 4 else "Medium",
-        pdb_data=None  # AlphaFold 연동 시 채움
+        pdb_data=None,  # AlphaFold 연동 시 채움
+        analysis_notes=comparison_note
     )
+

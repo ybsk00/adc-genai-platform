@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: str = ""
+
+    # [Model Strategy] 가성비 전략
+    # 리포트 작성, 심층 구조 분석용 (Brain)
+    SMART_LLM: str = "gpt-4o"
+    
+    # 단순 검색, 데이터 정리, 분류용 (Worker) - 10배 저렴
+    FAST_LLM: str = "gpt-4o-mini"
+
     
     # Perplexity
     PERPLEXITY_API_KEY: str = ""

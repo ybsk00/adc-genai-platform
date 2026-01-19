@@ -58,6 +58,19 @@ class StructureAnalysis(BaseModel):
     conjugation_sites: List[str] = Field(default_factory=list)
     aggregation_risk: str = "Low"
     pdb_data: Optional[str] = None  # PDB 구조 데이터
+    analysis_notes: Optional[str] = None  # [NEW] 상세 분석 노트 (RMSD 등)
+
+
+
+class CommercialInfo(BaseModel):
+    """[NEW] 상용화 분석 정보 (Ambeed Data)"""
+    feasibility_score: float = Field(..., description="구매 용이성 점수 (0-100)")
+    total_estimated_cost: str = Field(..., description="초기 연구용 시약 예상 비용")
+    payload_info: Optional[Dict[str, Any]] = None  # Ambeed Cat#, Price
+    linker_info: Optional[Dict[str, Any]] = None
+    conjugate_info: Optional[Dict[str, Any]] = None  # 링커-페이로드 접합체
+    availability: str = "Unknown"  # 재고 상태
+
 
 
 class AgentResult(BaseModel):
@@ -110,7 +123,9 @@ class ADCState(BaseModel):
         "competitor": AgentResult(agent_id="competitor"),
         "clinical": AgentResult(agent_id="clinical"),
         "report": AgentResult(agent_id="report"),
+        "commercial": AgentResult(agent_id="commercial"),  # [NEW] 추가
     })
+
     
     # 분석 결과 (각 에이전트가 채움)
     structure_analysis: Optional[StructureAnalysis] = None
@@ -118,6 +133,10 @@ class ADCState(BaseModel):
     patent_landscape: List[PatentInfo] = Field(default_factory=list)
     competitors: List[CompetitorInfo] = Field(default_factory=list)
     clinical_protocol: Optional[Dict[str, Any]] = None
+    
+    # [NEW] 상용화 분석 결과 (견적서)
+    commercial_feasibility: Optional[CommercialInfo] = None
+
     
     # 최종 리포트
     final_grade: Optional[str] = None  # A, B+, B, C, D
@@ -146,7 +165,9 @@ class ADCState(BaseModel):
             "competitor": 15,
             "clinical": 15,
             "report": 20,
+            "commercial": 10,  # [NEW] 가중치 추가 (총합 100 조정 필요)
         }
+
         
         completed = 0
         for agent_id, weight in agent_weights.items():

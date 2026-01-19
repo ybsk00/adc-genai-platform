@@ -16,7 +16,9 @@ from app.agents.patent_agent import run_patent_agent
 from app.agents.competitor_agent import run_competitor_agent
 from app.agents.clinical_agent import run_clinical_agent
 from app.agents.report_agent import run_report_agent
+from app.agents.commercial_agent import run_commercial_agent
 from app.core.config import settings
+
 
 
 def create_orchestrator() -> StateGraph:
@@ -72,6 +74,8 @@ async def parallel_analysis_node(state: ADCState) -> ADCState:
     state.update_agent_status("toxicology", AgentStatus.RUNNING)
     state.update_agent_status("patent", AgentStatus.RUNNING)
     state.update_agent_status("competitor", AgentStatus.RUNNING)
+    state.update_agent_status("commercial", AgentStatus.RUNNING)
+
     
     # 병렬 실행
     async def run_with_error_handling(agent_func, agent_id: str):
@@ -85,7 +89,9 @@ async def parallel_analysis_node(state: ADCState) -> ADCState:
         run_with_error_handling(run_tox_agent, "toxicology"),
         run_with_error_handling(run_patent_agent, "patent"),
         run_with_error_handling(run_competitor_agent, "competitor"),
+        run_with_error_handling(run_commercial_agent, "commercial"),
         return_exceptions=True
+
     )
     
     # 결과 적용
@@ -100,6 +106,11 @@ async def parallel_analysis_node(state: ADCState) -> ADCState:
     if results[2] and not isinstance(results[2], Exception):
         state.competitors = results[2]
         state.update_agent_status("competitor", AgentStatus.DONE)
+
+    if results[3] and not isinstance(results[3], Exception):
+        state.commercial_feasibility = results[3]
+        state.update_agent_status("commercial", AgentStatus.DONE)
+
     
     return state
 
