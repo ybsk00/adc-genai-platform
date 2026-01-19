@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,58 +21,76 @@ interface DataSource {
     status: 'synced' | 'syncing' | 'error'
     recordCount: number
     estimatedTime: string
+    endpoint?: string
 }
-
-const dataSources: DataSource[] = [
-    {
-        id: 'clinical',
-        name: 'ClinicalTrials.gov',
-        description: '임상시험 데이터',
-        lastSync: '2026-01-17 03:00',
-        status: 'synced',
-        recordCount: 2847,
-        estimatedTime: '5분'
-    },
-    {
-        id: 'pubmed',
-        name: 'PubMed/BioRxiv',
-        description: '논문 데이터',
-        lastSync: '2026-01-17 02:00',
-        status: 'synced',
-        recordCount: 15420,
-        estimatedTime: '15분'
-    },
-    {
-        id: 'news',
-        name: 'Perplexity News',
-        description: 'ADC 관련 뉴스',
-        lastSync: '2026-01-17 08:00',
-        status: 'synced',
-        recordCount: 892,
-        estimatedTime: '3분'
-    },
-    {
-        id: 'goldenset',
-        name: 'Golden Set Library',
-        description: 'FDA 승인 ADC 데이터',
-        lastSync: '2026-01-15 10:00',
-        status: 'synced',
-        recordCount: 15,
-        estimatedTime: '1분'
-    },
-]
 
 export function DataSourcesTab() {
     const [syncingIds, setSyncingIds] = useState<string[]>([])
+    const [sources, setSources] = useState<DataSource[]>([
+        {
+            id: 'clinical',
+            name: 'ClinicalTrials.gov',
+            description: 'Clinical trial data',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '5 min',
+            endpoint: '/api/scheduler/sync/clinical'
+        },
+        {
+            id: 'pubmed',
+            name: 'PubMed/BioRxiv',
+            description: 'Scientific literature',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '15 min',
+            endpoint: '/api/scheduler/sync/pubmed'
+        },
+        {
+            id: 'news',
+            name: 'Perplexity News',
+            description: 'ADC related news',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '3 min'
+        },
+        {
+            id: 'goldenset',
+            name: 'Golden Set Library',
+            description: 'FDA approved ADC data',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '1 min'
+        },
+    ])
 
-    const handleSync = async (sourceId: string) => {
+    const handleSync = async (sourceId: string, endpoint?: string) => {
+        if (!endpoint) {
+            toast.info('This source does not support manual sync yet.')
+            return
+        }
+
         setSyncingIds(prev => [...prev, sourceId])
 
-        // TODO: API 호출
-        await new Promise(resolve => setTimeout(resolve, 3000))
+        try {
+            const response = await fetch(endpoint, { method: 'POST' })
+            if (!response.ok) throw new Error('Sync failed')
 
-        toast.success(`${dataSources.find(d => d.id === sourceId)?.name} 동기화 완료`)
-        setSyncingIds(prev => prev.filter(id => id !== sourceId))
+            const result = await response.json()
+            toast.success(`${result.message}`)
+
+            // In a real app, we would poll for status here using result.job_id
+        } catch (error) {
+            console.error(error)
+            toast.error('Failed to start sync')
+        } finally {
+            setTimeout(() => {
+                setSyncingIds(prev => prev.filter(id => id !== sourceId))
+            }, 2000)
+        }
     }
 
     return (
@@ -82,7 +100,7 @@ export function DataSourcesTab() {
             transition={{ delay: 0.1 }}
             className="grid gap-4"
         >
-            {dataSources.map((source, index) => {
+            {sources.map((source, index) => {
                 const isSyncing = syncingIds.includes(source.id) || source.status === 'syncing'
 
                 return (
@@ -148,7 +166,7 @@ export function DataSourcesTab() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="border-slate-700 text-slate-300 hover:text-white"
-                                                onClick={() => handleSync(source.id)}
+                                                onClick={() => handleSync(source.id, source.endpoint)}
                                                 disabled={isSyncing}
                                             >
                                                 {isSyncing ? (

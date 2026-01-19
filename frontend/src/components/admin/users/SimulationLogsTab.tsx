@@ -31,35 +31,10 @@ export function SimulationLogsTab() {
     const fetchLogs = async () => {
         setLoading(true)
         try {
-            // Mock Data for now as API might not be fully ready or populated
-            // const response = await fetch('/api/admin/simulations')
-            // const result = await response.json()
-
-            await new Promise(r => setTimeout(r, 1000))
-            const mockLogs: SimulationLog[] = [
-                {
-                    id: 'sim_1',
-                    name: 'HER2-DXd Analysis',
-                    status: 'completed',
-                    created_at: '2026-01-18T10:00:00Z',
-                    profiles: { email: 'kim@biolab.kr' }
-                },
-                {
-                    id: 'sim_2',
-                    name: 'TROP2 Linker Optimization',
-                    status: 'processing',
-                    created_at: '2026-01-18T11:30:00Z',
-                    profiles: { email: 'lee@university.edu' }
-                },
-                {
-                    id: 'sim_3',
-                    name: 'CD30 Payload Screen',
-                    status: 'failed',
-                    created_at: '2026-01-17T15:00:00Z',
-                    profiles: { email: 'park@pharma.com' }
-                }
-            ]
-            setLogs(mockLogs)
+            const response = await fetch('/api/admin/simulations')
+            if (!response.ok) throw new Error('Failed to fetch logs')
+            const result = await response.json()
+            setLogs(result)
         } catch (error) {
             console.error(error)
             toast.error('Failed to load simulation logs')
