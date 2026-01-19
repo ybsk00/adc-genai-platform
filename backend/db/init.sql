@@ -114,3 +114,78 @@ drop policy if exists "Public read approved golden set" on golden_set_library;
 create policy "Public read approved golden set"
 on golden_set_library for select
 using (status = 'approved');
+
+-- ==========================================
+-- 2026-01-19 Admin Page Overhaul Updates
+-- ==========================================
+
+-- 9. Knowledge Base (비정형 데이터)
+create table if not exists public.knowledge_base (
+  id bigint primary key generated always as identity,
+  source_type text,
+  title text,
+  summary text,
+  content text,
+  relevance_score float,
+  source_tier int,
+  ai_reasoning text,
+  rag_status text default 'pending',
+  created_at timestamptz default now()
+);
+
+-- 10. Knowledge Base Embeddings
+create table if not exists public.kb_embeddings (
+  id bigint primary key generated always as identity,
+  kb_id bigint references public.knowledge_base(id) on delete cascade,
+  embedding vector(1536)
+);
+
+-- 11. Agent Prompts (AI Tuning)
+create table if not exists public.agent_prompts (
+  id uuid default gen_random_uuid() primary key,
+  agent_id text not null,
+  version text not null,
+  system_prompt text not null,
+  is_active boolean default false,
+  is_live boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 12. Schema Updates for Existing Tables
+-- (Note: In a fresh init, these could be part of the CREATE TABLE, but keeping as ALTER for compatibility)
+do $$
+begin
+  -- Golden Set Library Columns
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'outcome_type') then
+    alter table public.golden_set_library add column outcome_type text check (outcome_type in ('Success', 'Failure', 'Terminated'));
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'failure_reason') then
+    alter table public.golden_set_library add column failure_reason text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'ip_status') then
+    alter table public.golden_set_library add column ip_status text default 'Unknown';
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'smiles_code') then
+    alter table public.golden_set_library add column smiles_code text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'patent_id') then
+    alter table public.golden_set_library add column patent_id text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name = 'golden_set_library' and column_name = 'patent_expiry') then
+    alter table public.golden_set_library add column patent_expiry date;
+  end if;
+
+  -- Projects Columns
+  if not exists (select 1 from information_schema.columns where table_name = 'projects' and column_name = 'error_detail') then
+    alter table public.projects add column error_detail text;
+  end if;
+end $$;
+
+-- 13. RLS for New Tables
+alter table knowledge_base enable row level security;
+alter table agent_prompts enable row level security;
+
+create policy "Public read indexed knowledge base" on knowledge_base for select using (rag_status = 'indexed');
+create policy "Public read active prompts" on agent_prompts for select using (is_active = true or is_live = true);
+

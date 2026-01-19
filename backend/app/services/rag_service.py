@@ -1,48 +1,71 @@
 import os
 from typing import List, Dict, Any
 from pydantic import BaseModel
-
-# Placeholder for LlamaParse
-# from llama_parse import LlamaParse
+from openai import AsyncOpenAI
+from app.core.supabase import supabase
 
 class RAGService:
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
-        # self.parser = LlamaParse(result_type="markdown")
+        self.client = AsyncOpenAI(api_key=self.api_key)
 
-    async def ingest_document(self, file_path: str) -> Dict[str, Any]:
+    async def generate_embedding(self, text: str) -> List[float]:
+        """Generate embedding for text using OpenAI"""
+        response = await self.client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+
+    async def index_golden_set_item(self, item_id: str, description: str, properties: Dict[str, Any]):
         """
-        [Placeholder] Ingests a document (PDF) and chunks it for RAG.
-        Actual implementation would use LlamaParse to extract text/tables.
+        Index a Golden Set item into the vector database.
         """
-        print(f"Ingesting document: {file_path}")
-        
-        # Mock Result
-        return {
-            "status": "success",
-            "chunks_created": 15,
-            "document_id": "doc_12345"
-        }
+        try:
+            # 1. Generate Embedding
+            # Combine description and key properties for better retrieval
+            content = f"{description}\n"
+            for k, v in properties.items():
+                if v and isinstance(v, (str, int, float)):
+                    content += f"{k}: {v}\n"
+            
+            embedding = await self.generate_embedding(content)
+            
+            # 2. Store in Supabase
+            data = {
+                "source_id": item_id,
+                "chunk_content": content,
+                "embedding": embedding
+            }
+            
+            supabase.table("golden_set_embeddings").insert(data).execute()
+            print(f"Successfully indexed golden set item: {item_id}")
+            
+        except Exception as e:
+            print(f"Error indexing golden set item {item_id}: {str(e)}")
+            # TODO: Log error to DB
 
     async def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        [Placeholder] Searches the vector database for relevant chunks.
-        Actual implementation would use Supabase vector search (match_golden_set).
+        Search the vector database for relevant chunks.
         """
-        print(f"Searching for: {query}")
-
-        # Mock Result
-        return [
-            {
-                "content": "Trastuzumab deruxtecan (T-DXd) is an HER2-directed ADC...",
-                "similarity": 0.92,
-                "source": "Enhertu Clinical Trial.pdf"
-            },
-            {
-                "content": "The drug-to-antibody ratio (DAR) is approximately 8...",
-                "similarity": 0.88,
-                "source": "Enhertu Structure Analysis.pdf"
-            }
-        ]
+        try:
+            embedding = await self.generate_embedding(query)
+            
+            # Call the RPC function defined in init.sql
+            response = supabase.rpc(
+                "match_golden_set",
+                {
+                    "query_embedding": embedding,
+                    "match_threshold": 0.5,
+                    "match_count": top_k
+                }
+            ).execute()
+            
+            return response.data
+            
+        except Exception as e:
+            print(f"Error searching vector DB: {str(e)}")
+            return []
 
 rag_service = RAGService()

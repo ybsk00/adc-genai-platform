@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Google (Gemini)
     GOOGLE_API_KEY: str = ""
     GEMINI_MODEL_ID: str = "gemini-2.0-flash-exp"
+
+    # PubMed
+    ENTREZ_EMAIL: str = "your-email@example.com"
     
     # JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"

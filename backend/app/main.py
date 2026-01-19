@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, jobs, admin, library, payment, scheduler
+from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base
 from app.core.config import settings
 
 app = FastAPI(
@@ -25,7 +25,9 @@ app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(library.router, prefix="/api/library", tags=["library"])
 app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
+app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
+app.include_router(knowledge_base.router, prefix="/api/knowledge-base", tags=["knowledge-base"])
 
 
 @app.get("/health")

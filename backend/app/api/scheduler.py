@@ -4,18 +4,25 @@ ClinicalTrials.gov, PubMed 등에서 데이터 수집 후 draft 상태로 저장
 """
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
 from uuid import uuid4
+import httpx
+import asyncio
+from Bio import Entrez
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.services.perplexity_service import enrich_drug_data
 from app.core.config import settings
+from app.core.supabase import supabase
 
 router = APIRouter()
 
+# Entrez 설정
+Entrez.email = settings.ENTREZ_EMAIL
 
 # In-memory 동기화 상태 추적 (TODO: Redis로 대체)
-sync_jobs: dict = {}
+sync_jobs: Dict[str, Dict[str, Any]] = {}
 
 
 class SyncJobResponse(BaseModel):
@@ -37,81 +44,172 @@ class SyncJobStatus(BaseModel):
     errors: List[str] = []
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+async def fetch_clinical_trials(query: str = "ADC OR Antibody-Drug Conjugate"):
+    """ClinicalTrials.gov API v2 호출"""
+    url = "https://clinicaltrials.gov/api/v2/studies"
+    params = {
+        "query.term": query,
+        "pageSize": 20,
+        "format": "json"
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params, timeout=30.0)
+        response.raise_for_status()
+        return response.json()
+
+
 async def process_clinical_trials_data(job_id: str):
     """
     ClinicalTrials.gov 데이터 수집 및 처리
-    
-    [Human-in-the-Loop] 모든 데이터는 'draft' 상태로 저장
     """
     sync_jobs[job_id]["status"] = "running"
     
     try:
-        # TODO: ClinicalTrials.gov API 호출
-        # Mock data
-        raw_records = [
-            {
-                "nct_id": "NCT12345678",
-                "drug_name": "ADC-LIV1-001",
-                "target": "LIV-1",
-                "antibody": "Anti-LIV-1 mAb",
-                "payload": None,  # 비어있음 -> Perplexity로 보강
-                "linker": None,   # 비어있음 -> Perplexity로 보강
-                "phase": "Phase 1"
-            },
-            {
-                "nct_id": "NCT87654321",
-                "drug_name": "HER2-DXd-Candidate",
-                "target": "HER2",
-                "antibody": "Trastuzumab",
-                "payload": "DXd",
-                "linker": "GGFG",
-                "phase": "Phase 2"
-            }
-        ]
+        # 1. Fetch Data
+        data = await fetch_clinical_trials()
+        studies = data.get("studies", [])
         
-        sync_jobs[job_id]["records_found"] = len(raw_records)
+        sync_jobs[job_id]["records_found"] = len(studies)
         drafted = 0
         
-        for record in raw_records:
+        for study in studies:
             try:
-                # Perplexity로 데이터 보강
-                enriched = await enrich_drug_data(record)
+                protocol = study.get("protocolSection", {})
+                id_module = protocol.get("identificationModule", {})
+                nct_id = id_module.get("nctId")
                 
-                # TODO: Supabase에 draft 상태로 저장
-                # supabase.table("golden_set").insert({
-                #     **enriched,
-                #     "status": "draft",  # [IMPORTANT] draft로 저장!
-                #     "raw_data": record
-                # }).execute()
+                # 중복 체크
+                existing = supabase.table("golden_set_library").select("id").eq("raw_data->>nct_id", nct_id).execute()
+                if existing.data:
+                    continue
+
+                # 기본 정보 추출
+                conditions = protocol.get("conditionsModule", {}).get("conditions", [])
+                interventions = protocol.get("armsInterventionsModule", {}).get("interventions", [])
+                
+                drug_name = "Unknown"
+                for intervention in interventions:
+                    if intervention.get("type") == "DRUG":
+                        drug_name = intervention.get("name")
+                        break
+                
+                record = {
+                    "nct_id": nct_id,
+                    "title": id_module.get("officialTitle"),
+                    "conditions": conditions,
+                    "drug_name": drug_name,
+                    "phase": protocol.get("designModule", {}).get("phases", ["Unknown"])[0]
+                }
+                
+                # 2. Perplexity Enrichment (Optional - 비용 절감을 위해 일부만 수행하거나 생략 가능)
+                # enriched = await enrich_drug_data(record) 
+                # 일단 Raw Data 위주로 저장
+                
+                new_entry = {
+                    "name": drug_name,
+                    "category": "clinical_trial",
+                    "description": f"Clinical Trial {nct_id}: {record['title']}",
+                    "properties": record,
+                    "status": "draft",
+                    "enrichment_source": "clinical_trials",
+                    "raw_data": study # 전체 데이터 저장
+                }
+
+                supabase.table("golden_set_library").insert(new_entry).execute()
                 
                 drafted += 1
                 sync_jobs[job_id]["records_drafted"] = drafted
                 
+                # Rate Limiting
+                await asyncio.sleep(0.5)
+                
             except Exception as e:
-                sync_jobs[job_id]["errors"].append(f"{record.get('drug_name')}: {str(e)}")
+                sync_jobs[job_id]["errors"].append(f"{nct_id}: {str(e)}")
         
         sync_jobs[job_id]["status"] = "completed"
         sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
-        
-        # TODO: data_sync_logs 테이블에 기록
         
     except Exception as e:
         sync_jobs[job_id]["status"] = "failed"
         sync_jobs[job_id]["errors"].append(str(e))
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def fetch_pubmed_ids(term: str = "Antibody-Drug Conjugate", max_results: int = 20):
+    """PubMed ID 검색"""
+    handle = Entrez.esearch(db="pubmed", term=term, retmax=max_results)
+    record = Entrez.read(handle)
+    handle.close()
+    return record["IdList"]
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def fetch_pubmed_details(id_list: List[str]):
+    """PubMed 상세 정보 조회"""
+    ids = ",".join(id_list)
+    handle = Entrez.efetch(db="pubmed", id=ids, retmode="xml")
+    records = Entrez.read(handle)
+    handle.close()
+    return records
+
+
 async def process_pubmed_data(job_id: str):
     """
-    PubMed/BioRxiv 논문 데이터 수집
+    PubMed 데이터 수집
     """
     sync_jobs[job_id]["status"] = "running"
     
     try:
-        # TODO: PubMed API 호출
-        # Mock implementation
+        # 1. Search IDs
+        id_list = fetch_pubmed_ids()
+        sync_jobs[job_id]["records_found"] = len(id_list)
         
-        sync_jobs[job_id]["records_found"] = 150
-        sync_jobs[job_id]["records_drafted"] = 142
+        if not id_list:
+            sync_jobs[job_id]["status"] = "completed"
+            return
+
+        # 2. Fetch Details
+        # Entrez는 동기 함수이므로, 별도 스레드나 비동기 래퍼 없이 호출하면 블로킹됨.
+        # 여기서는 간단히 호출 (BackgroundTasks 내에서 실행되므로 메인 스레드 차단 안함)
+        papers = fetch_pubmed_details(id_list)
+        
+        drafted = 0
+        if 'PubmedArticle' in papers:
+            for article in papers['PubmedArticle']:
+                try:
+                    medline = article['MedlineCitation']
+                    article_data = medline['Article']
+                    
+                    pmid = str(medline['PMID'])
+                    title = article_data.get('ArticleTitle', 'No Title')
+                    abstract_list = article_data.get('Abstract', {}).get('AbstractText', [])
+                    abstract = " ".join(abstract_list) if abstract_list else "No Abstract"
+                    
+                    # 중복 체크
+                    existing = supabase.table("knowledge_base").select("id").eq("source_type", "PubMed").eq("title", title).execute()
+                    if existing.data:
+                        continue
+                        
+                    # Knowledge Base에 저장
+                    new_kb = {
+                        "source_type": "PubMed",
+                        "title": title,
+                        "summary": abstract[:500] + "...", # 요약은 나중에 AI로
+                        "content": abstract,
+                        "relevance_score": 0.0, # 초기값
+                        "source_tier": 1, # PubMed는 Tier 1
+                        "rag_status": "pending"
+                    }
+                    
+                    supabase.table("knowledge_base").insert(new_kb).execute()
+                    
+                    drafted += 1
+                    sync_jobs[job_id]["records_drafted"] = drafted
+                    
+                except Exception as e:
+                    sync_jobs[job_id]["errors"].append(f"PMID {pmid}: {str(e)}")
+
         sync_jobs[job_id]["status"] = "completed"
         sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
         
@@ -122,10 +220,7 @@ async def process_pubmed_data(job_id: str):
 
 @router.post("/sync/clinical", response_model=SyncJobResponse)
 async def sync_clinical_trials(background_tasks: BackgroundTasks):
-    """
-    ClinicalTrials.gov 데이터 동기화 트리거
-    백그라운드에서 실행되며, 수집된 데이터는 draft 상태로 저장
-    """
+    """ClinicalTrials.gov 데이터 동기화"""
     job_id = f"sync_clinical_{uuid4().hex[:8]}"
     
     sync_jobs[job_id] = {
@@ -143,13 +238,13 @@ async def sync_clinical_trials(background_tasks: BackgroundTasks):
     return SyncJobResponse(
         job_id=job_id,
         status="queued",
-        message="ClinicalTrials.gov sync started. Data will be saved as draft."
+        message="ClinicalTrials.gov sync started."
     )
 
 
 @router.post("/sync/pubmed", response_model=SyncJobResponse)
 async def sync_pubmed(background_tasks: BackgroundTasks):
-    """PubMed/BioRxiv 데이터 동기화 트리거"""
+    """PubMed 데이터 동기화"""
     job_id = f"sync_pubmed_{uuid4().hex[:8]}"
     
     sync_jobs[job_id] = {
@@ -167,7 +262,7 @@ async def sync_pubmed(background_tasks: BackgroundTasks):
     return SyncJobResponse(
         job_id=job_id,
         status="queued",
-        message="PubMed sync started. Data will be saved as draft."
+        message="PubMed sync started."
     )
 
 
@@ -178,11 +273,7 @@ async def get_sync_status(job_id: str):
         raise HTTPException(status_code=404, detail="Sync job not found")
     
     job = sync_jobs[job_id]
-    
-    return SyncJobStatus(
-        job_id=job_id,
-        **job
-    )
+    return SyncJobStatus(job_id=job_id, **job)
 
 
 @router.get("/health")
