@@ -175,8 +175,8 @@ export function AdminOverview() {
                                     <span className="font-medium text-white">{service.name}</span>
                                 </div>
                                 <Badge variant="outline" className={`capitalize ${status === 'operational' ? 'border-green-500/30 text-green-400' :
-                                        status === 'checking' ? 'border-slate-600 text-slate-400' :
-                                            'border-red-500/30 text-red-400'
+                                    status === 'checking' ? 'border-slate-600 text-slate-400' :
+                                        'border-red-500/30 text-red-400'
                                     }`}>
                                     {status}
                                 </Badge>
@@ -186,165 +186,23 @@ export function AdminOverview() {
                 })}
             </motion.div>
 
-            {/* KPI Cards */}
+            {/* Placeholder for Real Metrics */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
             >
-                {kpiData.map((kpi) => (
-                    <Card key={kpi.label} className="bg-slate-900 border-slate-800">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-400">{kpi.label}</p>
-                                    <p className="text-3xl font-bold text-white mt-1">{kpi.value}</p>
-                                    <div className="flex items-center gap-1 mt-2">
-                                        {kpi.trend === 'up' ? (
-                                            <TrendingUp className="w-4 h-4 text-green-500" />
-                                        ) : (
-                                            <TrendingDown className="w-4 h-4 text-red-500" />
-                                        )}
-                                        <span className={kpi.trend === 'up' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>
-                                            {kpi.change}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center`}>
-                                    <kpi.icon className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </motion.div>
-
-            {/* Charts Row */}
-            <div className="grid lg:grid-cols-2 gap-6">
-                {/* User Growth Chart */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                >
-                    <Card className="bg-slate-900 border-slate-800 h-full">
-                        <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
-                                <Users className="w-5 h-5" />
-                                User Growth
-                            </CardTitle>
-                            <CardDescription className="text-slate-400">
-                                Weekly new user registrations
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={userGrowthData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                        <XAxis dataKey="name" stroke="#94a3b8" />
-                                        <YAxis stroke="#94a3b8" />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                                            itemStyle={{ color: '#fff' }}
-                                        />
-                                        <Line type="monotone" dataKey="users" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6' }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Top Targets Pie Chart */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                >
-                    <Card className="bg-slate-900 border-slate-800 h-full">
-                        <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
-                                <Activity className="w-5 h-5" />
-                                Top Targets
-                            </CardTitle>
-                            <CardDescription className="text-slate-400">
-                                Most analyzed targets this month
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[300px] w-full flex items-center justify-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={topTargetsData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            fill="#8884d8"
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {topTargetsData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                                            itemStyle={{ color: '#fff' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="space-y-2">
-                                    {topTargetsData.map((entry, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                            <span className="text-sm text-slate-300">{entry.name} ({entry.value})</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            </div>
-
-            {/* Live Feed */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-            >
-                <Card className="bg-slate-900 border-slate-800">
-                    <CardHeader>
-                        <CardTitle className="text-white flex items-center gap-2">
-                            <Activity className="w-5 h-5" />
-                            Live Feed
-                        </CardTitle>
-                        <CardDescription className="text-slate-400">
-                            Real-time system events and logs
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {liveFeed.map((item) => (
-                                <div key={item.id} className="flex items-start gap-4 p-3 rounded-lg bg-slate-800/30 border border-slate-800 hover:bg-slate-800/50 transition-colors">
-                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${item.type === 'error' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                            item.type === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
-                                                'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
-                                        }`} />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-slate-200">{item.message}</p>
-                                        <p className="text-xs text-slate-500 mt-1">{item.time}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                <Card className="bg-slate-900 border-slate-800 border-dashed">
+                    <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+                        <Activity className="w-12 h-12 text-slate-600 mb-4" />
+                        <h3 className="text-lg font-medium text-slate-300">Real-time Metrics Coming Soon</h3>
+                        <p className="text-slate-500 mt-2 max-w-md">
+                            We are currently integrating real-time analytics for user growth, simulation stats, and system performance.
+                        </p>
                     </CardContent>
                 </Card>
             </motion.div>
         </div>
     )
 }
+

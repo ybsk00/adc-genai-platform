@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,17 +38,21 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
+import { API_BASE_URL } from '@/lib/api'
 
-// Mock User Data
-const users = [
-    { id: 'u_1', name: 'Dr. Kim', email: 'kim@biolab.kr', plan: 'pro', credits: 450, status: 'active', lastActive: '2 hours ago' },
-    { id: 'u_2', name: 'Prof. Lee', email: 'lee@university.edu', plan: 'enterprise', credits: 2000, status: 'active', lastActive: '1 day ago' },
-    { id: 'u_3', name: 'Dr. Park', email: 'park@pharma.com', plan: 'free', credits: 10, status: 'active', lastActive: '3 days ago' },
-    { id: 'u_4', name: 'Dr. Choi', email: 'choi@research.org', plan: 'pro', credits: 0, status: 'suspended', lastActive: '1 week ago' },
-    { id: 'u_5', name: 'Dr. Jung', email: 'jung@biotech.io', plan: 'free', credits: 50, status: 'active', lastActive: '5 hours ago' },
-]
+// User Interface
+interface User {
+    id: string
+    email: string
+    full_name?: string
+    credits: number
+    created_at: string
+    role?: string
+}
 
 export function UserManagementTab() {
+    const [users, setUsers] = useState<User[]>([])
+    const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
 
     // Credit Grant Modal State
@@ -59,8 +63,28 @@ export function UserManagementTab() {
     const [isGranting, setIsGranting] = useState(false)
     const [grantSuccess, setGrantSuccess] = useState(false)
 
+    // Fetch Users
+    const fetchUsers = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch(`${API_BASE_URL}/api/admin/users`)
+            if (!response.ok) throw new Error('Failed to fetch users')
+            const data = await response.json()
+            setUsers(data)
+        } catch (error) {
+            console.error('Error fetching users:', error)
+            toast.error('사용자 목록을 불러오는데 실패했습니다.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchUsers()
+    }, [])
+
     const filteredUsers = users.filter(user =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
@@ -78,11 +102,23 @@ export function UserManagementTab() {
         setIsGranting(true)
 
         try {
-            // TODO: API Call
-            await new Promise(resolve => setTimeout(resolve, 1500))
+            const response = await fetch(`${API_BASE_URL}/api/admin/credits/grant`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: selectedUser.id,
+                    amount: parseInt(creditAmount),
+                    reason: creditReason
+                })
+            })
+
+            if (!response.ok) throw new Error('Failed to grant credits')
 
             setGrantSuccess(true)
             toast.success(`${selectedUser.name}님에게 ${creditAmount} 크레딧이 지급되었습니다.`)
+
+            // Refresh users to show updated credits
+            fetchUsers()
 
             setTimeout(() => {
                 setCreditModalOpen(false)
@@ -162,80 +198,89 @@ export function UserManagementTab() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredUsers.map((user) => (
-                                    <TableRow key={user.id} className="border-slate-800 hover:bg-slate-800/50">
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium text-white">{user.name}</p>
-                                                <p className="text-sm text-slate-400">{user.email}</p>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center text-slate-400">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Loading users...
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className={
-                                                    user.plan === 'enterprise' ? 'border-purple-500/30 text-purple-400' :
-                                                        user.plan === 'pro' ? 'border-blue-500/30 text-blue-400' :
-                                                            'border-slate-600 text-slate-400'
-                                                }
-                                            >
-                                                {user.plan}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`font-medium ${user.credits > 0 ? 'text-white' : 'text-red-400'}`}>
-                                                {user.credits}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className={
-                                                    user.status === 'active'
-                                                        ? 'border-green-500/30 text-green-400'
-                                                        : 'border-red-500/30 text-red-400'
-                                                }
-                                            >
-                                                {user.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-slate-400">
-                                            {user.lastActive}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleOpenCreditModal(user.id, user.name)}
-                                                        className="text-slate-200 focus:bg-slate-700 focus:text-white"
-                                                    >
-                                                        <CreditCard className="w-4 h-4 mr-2" />
-                                                        Grant Credits
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleSendEmail(user.id)}
-                                                        className="text-slate-200 focus:bg-slate-700 focus:text-white"
-                                                    >
-                                                        <Mail className="w-4 h-4 mr-2" />
-                                                        Send Email
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleSuspendUser(user.id)}
-                                                        className="text-red-400 focus:bg-red-500/20 focus:text-red-400"
-                                                    >
-                                                        <Ban className="w-4 h-4 mr-2" />
-                                                        Suspend Account
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                    </TableRow>
+                                ) : filteredUsers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center text-slate-400">
+                                            No users found.
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : (
+                                    filteredUsers.map((user) => (
+                                        <TableRow key={user.id} className="border-slate-800 hover:bg-slate-800/50">
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium text-white">{user.full_name || 'No Name'}</p>
+                                                    <p className="text-sm text-slate-400">{user.email}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-slate-600 text-slate-400"
+                                                >
+                                                    Standard
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={`font-medium ${user.credits > 0 ? 'text-white' : 'text-red-400'}`}>
+                                                    {user.credits}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-green-500/30 text-green-400"
+                                                >
+                                                    Active
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-slate-400">
+                                                {new Date(user.created_at).toLocaleDateString()}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+                                                            <MoreHorizontal className="w-4 h-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleOpenCreditModal(user.id, user.full_name || user.email)}
+                                                            className="text-slate-200 focus:bg-slate-700 focus:text-white"
+                                                        >
+                                                            <CreditCard className="w-4 h-4 mr-2" />
+                                                            Grant Credits
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleSendEmail(user.id)}
+                                                            className="text-slate-200 focus:bg-slate-700 focus:text-white"
+                                                        >
+                                                            <Mail className="w-4 h-4 mr-2" />
+                                                            Send Email
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleSuspendUser(user.id)}
+                                                            className="text-red-400 focus:bg-red-500/20 focus:text-red-400"
+                                                        >
+                                                            <Ban className="w-4 h-4 mr-2" />
+                                                            Suspend Account
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>

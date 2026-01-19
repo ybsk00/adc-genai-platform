@@ -154,6 +154,23 @@ async def grant_credits(req: CreditGrantRequest):
 
 
 # ============================================================
+# User Management
+# ============================================================
+
+@router.get("/users")
+async def get_all_users():
+    """
+    전체 사용자 목록 조회 (프로필 정보 포함)
+    """
+    try:
+        # profiles 테이블 조회
+        res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # Golden Set Management (Human-in-the-Loop)
 # ============================================================
 
