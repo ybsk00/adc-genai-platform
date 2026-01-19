@@ -22,7 +22,7 @@ import {
 
 /**
  * [Dev Note: Adaptive Polling]
- * 초기엔 3초, 5분 뒤엔 10초로 간격을 늘려 서버 부하 감소
+ * Increase interval to 10s after 5 mins to reduce server load (initially 3s)
  */
 function useAdaptivePolling(callback: () => void, isPolling: boolean) {
     const startTimeRef = useRef(Date.now())
@@ -33,7 +33,7 @@ function useAdaptivePolling(callback: () => void, isPolling: boolean) {
         const getInterval = () => {
             const elapsed = Date.now() - startTimeRef.current
             const fiveMinutes = 5 * 60 * 1000
-            return elapsed > fiveMinutes ? 10000 : 3000 // 5분 후 10초, 이전엔 3초
+            return elapsed > fiveMinutes ? 10000 : 3000 // 10s after 5 mins, 3s before
         }
 
         const tick = () => {
@@ -46,7 +46,7 @@ function useAdaptivePolling(callback: () => void, isPolling: boolean) {
     }, [callback, isPolling])
 }
 
-// Agent 타입 정의
+// Agent Type Definition
 type AgentStatus = 'pending' | 'running' | 'done' | 'error'
 
 interface AgentInfo {
@@ -59,12 +59,12 @@ interface AgentInfo {
 }
 
 const initialAgents: Omit<AgentInfo, 'status' | 'errorMessage'>[] = [
-    { id: 'structure', name: 'Structure Agent', icon: Dna, description: '3D 구조 분석' },
-    { id: 'toxicology', name: 'Toxicology Agent', icon: Shield, description: '독성 예측' },
-    { id: 'patent', name: 'Patent Agent', icon: FileSearch, description: '특허 분석' },
-    { id: 'competitor', name: 'Competitor Agent', icon: Users, description: '경쟁사 분석' },
-    { id: 'clinical', name: 'Clinical Agent', icon: Stethoscope, description: '임상 설계' },
-    { id: 'report', name: 'Report Agent', icon: FileText, description: '리포트 생성' },
+    { id: 'structure', name: 'Structure Agent', icon: Dna, description: '3D Structure Analysis' },
+    { id: 'toxicology', name: 'Toxicology Agent', icon: Shield, description: 'Toxicity Prediction' },
+    { id: 'patent', name: 'Patent Agent', icon: FileSearch, description: 'Patent Analysis' },
+    { id: 'competitor', name: 'Competitor Agent', icon: Users, description: 'Competitor Analysis' },
+    { id: 'clinical', name: 'Clinical Agent', icon: Stethoscope, description: 'Clinical Design' },
+    { id: 'report', name: 'Report Agent', icon: FileText, description: 'Report Generation' },
 ]
 
 export function ResultViewer() {
@@ -76,28 +76,28 @@ export function ResultViewer() {
     )
     const [isDownloading, setIsDownloading] = useState(false)
 
-    // 폴링 콜백
+    // Polling Callback
     const pollStatus = useCallback(() => {
-        // TODO: 실제 API 호출로 대체
+        // TODO: Replace with actual API call
         // const response = await fetch(`/api/jobs/${jobId}/status`)
         setProgress(prev => Math.min(prev + 5, 100))
     }, [])
 
-    // Adaptive Polling 적용
+    // Apply Adaptive Polling
     useAdaptivePolling(pollStatus, status === 'processing')
 
-    // Mock: Progress에 따른 Agent 상태 업데이트
+    // Mock: Update Agent Status based on Progress
     useEffect(() => {
         if (progress >= 100) {
-            // 시뮬레이션: Competitor Agent가 실패한 경우
-            const hasError = Math.random() > 0.7 // 30% 확률로 부분 실패
+            // Simulation: Competitor Agent Failed
+            const hasError = Math.random() > 0.7 // 30% chance of partial failure
 
             setAgents(prev => prev.map(agent => {
                 if (agent.id === 'competitor' && hasError) {
                     return {
                         ...agent,
                         status: 'error' as const,
-                        errorMessage: '네트워크 오류 - 외부 API 응답 없음'
+                        errorMessage: 'Network Error - No response from external API'
                     }
                 }
                 return { ...agent, status: 'done' as const }
@@ -105,7 +105,7 @@ export function ResultViewer() {
 
             setStatus(hasError ? 'partial' : 'completed')
         } else {
-            // 진행 중 상태 업데이트
+            // Update status while processing
             const thresholds = [
                 { progress: 15, agentId: 'structure' },
                 { progress: 35, agentId: 'toxicology' },
@@ -129,7 +129,7 @@ export function ResultViewer() {
         }
     }, [progress])
 
-    // 부분 실패한 Agent 재시도
+    // Retry partially failed Agent
     const handleRetryAgent = async (agentId: string) => {
         setAgents(prev => prev.map(agent =>
             agent.id === agentId
@@ -137,7 +137,7 @@ export function ResultViewer() {
                 : agent
         ))
 
-        // TODO: API 호출로 특정 Agent 재실행
+        // TODO: Rerun specific Agent via API call
         await new Promise(resolve => setTimeout(resolve, 2000))
 
         setAgents(prev => prev.map(agent =>
@@ -146,7 +146,7 @@ export function ResultViewer() {
                 : agent
         ))
 
-        // 모든 Agent가 완료되면 상태 업데이트
+        // Update status when all Agents are done
         setAgents(prev => {
             const allDone = prev.every(a => a.status === 'done')
             if (allDone) setStatus('completed')
@@ -155,28 +155,28 @@ export function ResultViewer() {
     }
 
     /**
-     * [Dev Note: PDF 다운로드 보안]
-     * Pre-signed URL (유효기간 5분)을 받아 다운로드
-     * 링크 유출되어도 5분 후 만료됨
+     * [Dev Note: PDF Download Security]
+     * Download via Pre-signed URL (valid for 5 mins)
+     * Link expires after 5 mins even if leaked
      */
     const handleDownloadPDF = async () => {
         setIsDownloading(true)
         try {
-            // TODO: API 호출로 Pre-signed URL 획득
+            // TODO: Get Pre-signed URL via API call
             // const response = await fetch(`/api/jobs/${jobId}/report-url`)
             // const { url } = await response.json()
 
             await new Promise(resolve => setTimeout(resolve, 1000))
             const mockPresignedUrl = `https://s3.amazonaws.com/adc-reports/${jobId}.pdf?X-Amz-Expires=300&X-Amz-Signature=xxx`
 
-            // 다운로드 트리거
+            // Trigger Download
             window.open(mockPresignedUrl, '_blank')
         } finally {
             setIsDownloading(false)
         }
     }
 
-    // 처리 중 화면
+    // Processing Screen
     if (status === 'processing') {
         return (
             <div className="max-w-3xl mx-auto">
@@ -222,10 +222,10 @@ export function ResultViewer() {
         )
     }
 
-    // 완료 또는 부분 완료 화면
+    // Completed or Partially Completed Screen
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            {/* 부분 실패 경고 */}
+            {/* Partial Failure Warning */}
             {status === 'partial' && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -235,8 +235,8 @@ export function ResultViewer() {
                         <CardContent className="p-4 flex items-center gap-3">
                             <AlertTriangle className="w-5 h-5 text-amber-600" />
                             <div className="flex-1">
-                                <p className="font-medium text-amber-800">일부 분석이 완료되지 않았습니다</p>
-                                <p className="text-sm text-amber-600">아래에서 실패한 Agent를 재시도할 수 있습니다. 크레딧은 차감되지 않습니다.</p>
+                                <p className="font-medium text-amber-800">Some analyses were not completed</p>
+                                <p className="text-sm text-amber-600">You can retry failed Agents below. Credits will not be deducted.</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -260,8 +260,8 @@ export function ResultViewer() {
                                             Conditional Go
                                         </Badge>
                                         <p className="text-gray-600 mt-2 max-w-md">
-                                            효능은 탁월하나 독성 리스크가 발견됨.
-                                            추가 in-vitro 테스트 권장.
+                                            Excellent efficacy but toxicity risk detected.
+                                            Additional in-vitro testing recommended.
                                         </p>
                                     </div>
                                 </div>
@@ -289,7 +289,7 @@ export function ResultViewer() {
                 </Card>
             </motion.div>
 
-            {/* 부분 실패 Agent 표시 */}
+            {/* Show Partially Failed Agents */}
             {status === 'partial' && (
                 <Card>
                     <CardHeader>
@@ -314,7 +314,7 @@ export function ResultViewer() {
                 <Card>
                     <CardHeader>
                         <CardTitle>3D Structure View</CardTitle>
-                        <CardDescription>MolStar 3D 뷰어 - 마우스로 회전, 확대 가능</CardDescription>
+                        <CardDescription>MolStar 3D Viewer - Rotate and zoom with mouse</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg flex items-center justify-center">
@@ -344,11 +344,11 @@ export function ResultViewer() {
                         <CardContent>
                             <div className="space-y-4">
                                 {[
-                                    { label: '효능 (Efficacy)', score: 85, color: 'bg-green-500' },
-                                    { label: '독성 (Toxicity)', score: 60, color: 'bg-red-500' },
-                                    { label: '물성 (Properties)', score: 75, color: 'bg-blue-500' },
-                                    { label: '특허 (Patent)', score: 90, color: 'bg-purple-500' },
-                                    { label: '사업성 (Market)', score: 70, color: 'bg-amber-500' },
+                                    { label: 'Efficacy', score: 85, color: 'bg-green-500' },
+                                    { label: 'Toxicity', score: 60, color: 'bg-red-500' },
+                                    { label: 'Properties', score: 75, color: 'bg-blue-500' },
+                                    { label: 'Patent', score: 90, color: 'bg-purple-500' },
+                                    { label: 'Marketability', score: 70, color: 'bg-amber-500' },
                                 ].map((item) => (
                                     <div key={item.label}>
                                         <div className="flex justify-between text-sm mb-1">
@@ -386,8 +386,8 @@ export function ResultViewer() {
                                         <Shield className="w-4 h-4 text-red-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">독성 리스크 발견</p>
-                                        <p className="text-sm text-gray-500">Neutropenia 위험 (LogP: 3.8)</p>
+                                        <p className="font-medium text-gray-900">Toxicity Risk Detected</p>
+                                        <p className="text-sm text-gray-500">Neutropenia Risk (LogP: 3.8)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
@@ -395,8 +395,8 @@ export function ResultViewer() {
                                         <FileSearch className="w-4 h-4 text-green-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">특허 안전</p>
-                                        <p className="text-sm text-gray-500">주요 특허 만료됨 (2024)</p>
+                                        <p className="font-medium text-gray-900">Patent Safe</p>
+                                        <p className="text-sm text-gray-500">Major patents expired (2024)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
@@ -404,7 +404,7 @@ export function ResultViewer() {
                                         <Users className="w-4 h-4 text-blue-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">경쟁사 현황</p>
+                                        <p className="font-medium text-gray-900">Competitor Status</p>
                                         <p className="text-sm text-gray-500">Merck (Phase 2), Seagen (Phase 1)</p>
                                     </div>
                                 </div>
@@ -424,7 +424,7 @@ export function ResultViewer() {
     )
 }
 
-// Agent 상태 표시 컴포넌트
+// Agent Status Display Component
 function AgentStatusRow({
     agent,
     onRetry

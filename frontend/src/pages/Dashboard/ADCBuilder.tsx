@@ -78,9 +78,9 @@ const payloadOptions = [
 ]
 
 const linkerOptions = [
-    { value: 'val-cit', label: 'Val-Cit (Cleavable)', desc: '프로테아제 민감' },
-    { value: 'mcc', label: 'MCC (Non-cleavable)', desc: '안정성 우수' },
-    { value: 'ggfg', label: 'GGFG (Peptide)', desc: '차세대 링커' },
+    { value: 'val-cit', label: 'Val-Cit (Cleavable)', desc: 'Protease sensitive' },
+    { value: 'mcc', label: 'MCC (Non-cleavable)', desc: 'Excellent stability' },
+    { value: 'ggfg', label: 'GGFG (Peptide)', desc: 'Next-gen linker' },
 ]
 
 export function ADCBuilder() {
@@ -165,7 +165,7 @@ export function ADCBuilder() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Step 1: Target & Antibody</CardTitle>
-                                <CardDescription>분석할 항체를 선택하거나 직접 입력하세요</CardDescription>
+                                <CardDescription>Select an antibody for analysis or enter manually</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
@@ -173,7 +173,7 @@ export function ADCBuilder() {
                                         Target Name
                                     </label>
                                     <Input
-                                        placeholder="예: HER2, TROP-2, LIV-1..."
+                                        placeholder="e.g., HER2, TROP-2, LIV-1..."
                                         value={targetName}
                                         onChange={(e) => setField('targetName', e.target.value)}
                                     />
@@ -213,7 +213,7 @@ export function ADCBuilder() {
                                             className={sequenceError ? 'border-red-500 focus:ring-red-500' : ''}
                                         />
 
-                                        {/* 실시간 유효성 검사 에러 표시 */}
+                                        {/* Real-time validation error display */}
                                         {sequenceError && (
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
@@ -224,7 +224,7 @@ export function ADCBuilder() {
                                                 <div>
                                                     <p className="text-sm font-medium text-red-700">{sequenceError}</p>
                                                     <p className="text-xs text-red-500 mt-1">
-                                                        유효한 Amino Acid 코드: A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W, Y
+                                                        Valid Amino Acid Codes: A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W, Y
                                                     </p>
                                                 </div>
                                             </motion.div>
@@ -237,14 +237,14 @@ export function ADCBuilder() {
                                                 className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2"
                                             >
                                                 <Check className="w-4 h-4 text-green-500" />
-                                                <span className="text-sm text-green-700">유효한 서열입니다</span>
+                                                <span className="text-sm text-green-700">Valid sequence</span>
                                             </motion.div>
                                         )}
 
                                         <div className="mt-3">
                                             <Button variant="outline" size="sm">
                                                 <Upload className="w-4 h-4 mr-2" />
-                                                .pdb / .fasta 파일 업로드
+                                                Upload .pdb / .fasta file
                                             </Button>
                                         </div>
                                     </div>
@@ -257,14 +257,14 @@ export function ADCBuilder() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Step 2: Payload & Linker</CardTitle>
-                                <CardDescription>약물(Payload)과 링커를 선택하세요</CardDescription>
+                                <CardDescription>Select Payload and Linker</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Payload Selection
                                     </label>
-                                    {/* 2D 화학 구조 미리보기 포함 카드 */}
+                                    {/* Card with 2D chemical structure preview */}
                                     <div className="grid grid-cols-3 gap-4">
                                         {payloadOptions.map((option) => (
                                             <div
@@ -275,7 +275,7 @@ export function ADCBuilder() {
                                                     : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                                                     }`}
                                             >
-                                                {/* 2D 화학 구조 SVG */}
+                                                {/* 2D Chemical Structure SVG */}
                                                 <div
                                                     className="mb-3 p-2 bg-white rounded-lg border"
                                                     dangerouslySetInnerHTML={{ __html: option.structure }}
@@ -340,7 +340,7 @@ export function ADCBuilder() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Step 3: Configuration</CardTitle>
-                                <CardDescription>시뮬레이션 설정을 확인하고 실행하세요</CardDescription>
+                                <CardDescription>Review simulation settings and run</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
@@ -359,7 +359,7 @@ export function ADCBuilder() {
                                                 <span className="font-medium text-gray-900">Fast Scan</span>
                                                 <Badge variant="outline">1 Credit</Badge>
                                             </div>
-                                            <p className="text-sm text-gray-500">3D 구조만 빠르게 확인</p>
+                                            <p className="text-sm text-gray-500">Quickly check 3D structure only</p>
                                         </div>
                                         <div
                                             onClick={() => setField('mode', 'deep')}
@@ -372,7 +372,7 @@ export function ADCBuilder() {
                                                 <span className="font-medium text-gray-900">Deep Analysis</span>
                                                 <Badge className="bg-[#007AFF]">10 Credits</Badge>
                                             </div>
-                                            <p className="text-sm text-gray-500">독성, 특허, 경쟁사 분석 포함</p>
+                                            <p className="text-sm text-gray-500">Includes toxicity, patent, and competitor analysis</p>
                                         </div>
                                     </div>
                                 </div>
@@ -382,7 +382,7 @@ export function ADCBuilder() {
                                         Job Name
                                     </label>
                                     <Input
-                                        placeholder="예: LIV-1_MMAE_Test_01"
+                                        placeholder="e.g., LIV-1_MMAE_Test_01"
                                         value={jobName}
                                         onChange={(e) => setField('jobName', e.target.value)}
                                     />

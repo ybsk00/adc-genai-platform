@@ -176,7 +176,7 @@ export function GoldenSetLibrary() {
                 animate={{ opacity: 1, y: 0 }}
             >
                 <h1 className="text-2xl font-bold text-gray-900">Golden Set Library</h1>
-                <p className="text-gray-500 mt-1">FDA 승인 ADC 데이터베이스 - 15개의 검증된 ADC 정보</p>
+                <p className="text-gray-500 mt-1">FDA Approved ADC Database - 15 Verified ADC Entries</p>
             </motion.div>
 
             {/* Search & Filters */}
@@ -192,7 +192,7 @@ export function GoldenSetLibrary() {
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <Input
-                                    placeholder="약물명, 회사명으로 검색..."
+                                    placeholder="Search by drug name, company..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10"
@@ -203,10 +203,10 @@ export function GoldenSetLibrary() {
                             <Select value={targetFilter} onValueChange={setTargetFilter}>
                                 <SelectTrigger className="w-full md:w-[180px]">
                                     <Target className="w-4 h-4 mr-2" />
-                                    <SelectValue placeholder="타겟" />
+                                    <SelectValue placeholder="Target" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">모든 타겟</SelectItem>
+                                    <SelectItem value="all">All Targets</SelectItem>
                                     {targets.map(t => (
                                         <SelectItem key={t} value={t}>{t}</SelectItem>
                                     ))}
@@ -217,10 +217,10 @@ export function GoldenSetLibrary() {
                             <Select value={payloadFilter} onValueChange={setPayloadFilter}>
                                 <SelectTrigger className="w-full md:w-[180px]">
                                     <Pill className="w-4 h-4 mr-2" />
-                                    <SelectValue placeholder="페이로드" />
+                                    <SelectValue placeholder="Payload" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">모든 페이로드</SelectItem>
+                                    <SelectItem value="all">All Payloads</SelectItem>
                                     {payloads.map(p => (
                                         <SelectItem key={p} value={p}>{p}</SelectItem>
                                     ))}
@@ -234,11 +234,11 @@ export function GoldenSetLibrary() {
             {/* Results Count */}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">
-                    {filteredData.length}개의 결과
+                    {filteredData.length} results
                 </p>
                 <Button variant="outline" size="sm">
                     <Filter className="w-4 h-4 mr-2" />
-                    고급 필터
+                    Advanced Filter
                 </Button>
             </div>
 
@@ -299,7 +299,7 @@ export function GoldenSetLibrary() {
 
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                     <Calendar className="w-4 h-4" />
-                                    <span>승인일: {item.approvalDate}</span>
+                                    <span>Approval Date: {item.approvalDate}</span>
                                 </div>
 
                                 <div className="flex gap-2 pt-2">
@@ -309,14 +309,14 @@ export function GoldenSetLibrary() {
                                         className="flex-1"
                                         onClick={() => handleViewDetail(item)}
                                     >
-                                        상세보기
+                                        View Details
                                     </Button>
                                     <Button
                                         size="sm"
                                         className="flex-1 bg-[#007AFF] hover:bg-[#0066DD]"
                                         onClick={() => handleUseAsTemplate(item)}
                                     >
-                                        템플릿 사용
+                                        Use Template
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
@@ -340,19 +340,19 @@ export function GoldenSetLibrary() {
                                 {/* Basic Info */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-500">타겟</p>
+                                        <p className="text-sm text-gray-500">Target</p>
                                         <p className="font-medium">{selectedItem.target}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">페이로드</p>
+                                        <p className="text-sm text-gray-500">Payload</p>
                                         <p className="font-medium">{selectedItem.payload}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">항체</p>
+                                        <p className="text-sm text-gray-500">Antibody</p>
                                         <p className="font-medium">{selectedItem.antibody}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">링커</p>
+                                        <p className="text-sm text-gray-500">Linker</p>
                                         <p className="font-medium">{selectedItem.linker}</p>
                                     </div>
                                     <div>
@@ -360,14 +360,14 @@ export function GoldenSetLibrary() {
                                         <p className="font-medium">{selectedItem.dar}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">개발사</p>
+                                        <p className="text-sm text-gray-500">Developer</p>
                                         <p className="font-medium">{selectedItem.company}</p>
                                     </div>
                                 </div>
 
                                 {/* Indications */}
                                 <div>
-                                    <p className="text-sm text-gray-500 mb-2">승인 적응증</p>
+                                    <p className="text-sm text-gray-500 mb-2">Approved Indications</p>
                                     <div className="flex flex-wrap gap-2">
                                         {selectedItem.indications.map((ind, i) => (
                                             <Badge key={i} variant="outline">{ind}</Badge>
@@ -394,13 +394,13 @@ export function GoldenSetLibrary() {
 
                             <div className="flex justify-end gap-3">
                                 <Button variant="outline" onClick={() => setDetailOpen(false)}>
-                                    닫기
+                                    Close
                                 </Button>
                                 <Button
                                     className="bg-[#007AFF] hover:bg-[#0066DD]"
                                     onClick={() => handleUseAsTemplate(selectedItem)}
                                 >
-                                    이 ADC를 템플릿으로 사용
+                                    Use this ADC as Template
                                 </Button>
                             </div>
                         </>

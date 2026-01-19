@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     LayoutDashboard,
     Users,
@@ -9,11 +9,14 @@ import {
     ChevronLeft,
     ChevronRight,
     LogOut,
-    Shield
+    Shield,
+    Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const menuItems = [
     { icon: LayoutDashboard, label: 'Overview', href: '/admin' },
@@ -30,7 +33,50 @@ const menuItems = [
  */
 export function AdminLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const location = useLocation()
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        const checkAdmin = async () => {
+            if (!supabase) {
+                toast.error('인증 시스템이 설정되지 않았습니다.')
+                navigate('/dashboard')
+                return
+            }
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+
+                if (!user) {
+                    toast.error('로그인이 필요합니다.')
+                    navigate('/login')
+                    return
+                }
+
+                if (user.email !== 'admin@admin.com') {
+                    toast.error('관리자 권한이 없습니다.')
+                    navigate('/dashboard')
+                    return
+                }
+
+                setIsLoading(false)
+            } catch (error) {
+                console.error('Admin check error:', error)
+                navigate('/dashboard')
+            }
+        }
+
+        checkAdmin()
+    }, [navigate])
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 flex">

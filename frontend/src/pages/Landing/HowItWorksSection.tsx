@@ -5,28 +5,28 @@ const steps = [
     {
         id: '01',
         title: 'Sequence Input',
-        description: '타겟 항체 서열 입력',
+        description: 'Input Target Antibody Sequence',
         icon: Database,
         color: 'text-blue-400'
     },
     {
         id: '02',
         title: 'Multi-Agent Reasoning',
-        description: 'AI 에이전트 6종 동시 분석',
+        description: 'Simultaneous Analysis by 6 AI Agents',
         icon: Cpu,
         color: 'text-purple-400'
     },
     {
         id: '03',
         title: 'Linker-Payload Matching',
-        description: '최적 링커/페이로드 추천',
+        description: 'Optimal Linker/Payload Recommendation',
         icon: FlaskConical,
         color: 'text-cyan-400'
     },
     {
         id: '04',
         title: 'Top-Tier Candidates',
-        description: '최종 후보 물질 도출',
+        description: 'Final Candidate Derivation',
         icon: CheckCircle,
         color: 'text-green-400'
     }
@@ -34,13 +34,13 @@ const steps = [
 
 export function HowItWorksSection() {
     return (
-        <section className="relative">
+        <section className="relative py-24">
             <div className="text-center mb-24">
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
                     How AstraForge Works
                 </h2>
                 <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                    데이터 입력부터 결과 도출까지, 단 4단계로 완료됩니다.
+                    From data input to results, complete in just 4 steps.
                 </p>
             </div>
 

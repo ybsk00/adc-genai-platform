@@ -115,7 +115,7 @@ export function DashboardHome() {
                     Good Morning, {userName}. Ready to discover?
                 </h1>
                 <p className="text-gray-500 mt-1">
-                    오늘도 새로운 ADC 후보를 분석해보세요.
+                    Analyze new ADC candidates today.
                 </p>
             </motion.div>
 
@@ -134,7 +134,7 @@ export function DashboardHome() {
                             </div>
                             <div>
                                 <h3 className="font-semibold text-gray-900 text-lg">New Simulation</h3>
-                                <p className="text-gray-500 text-sm">AI 기반 ADC 분석 시작하기</p>
+                                <p className="text-gray-500 text-sm">Start AI-based ADC analysis</p>
                             </div>
                         </CardContent>
                     </Link>
@@ -148,7 +148,7 @@ export function DashboardHome() {
                             </div>
                             <div>
                                 <h3 className="font-semibold text-gray-900 text-lg">Browse Golden Set</h3>
-                                <p className="text-gray-500 text-sm">FDA 승인 ADC 데이터베이스 검색</p>
+                                <p className="text-gray-500 text-sm">Search FDA-approved ADC database</p>
                             </div>
                         </CardContent>
                     </Link>
@@ -167,7 +167,7 @@ export function DashboardHome() {
                             <Clock className="w-5 h-5" />
                             Recent Activity
                         </CardTitle>
-                        <CardDescription>최근 시뮬레이션 현황</CardDescription>
+                        <CardDescription>Recent Simulation Status</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">

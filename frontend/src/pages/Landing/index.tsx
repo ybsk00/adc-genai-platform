@@ -1,15 +1,23 @@
 import { HeroSection } from './HeroSection'
+import { ProblemSolutionSection } from './ProblemSolutionSection'
 import { FeatureSection } from './FeatureSection'
 import { HowItWorksSection } from './HowItWorksSection'
-import { PricingSection } from './PricingSection'
+import { UseCaseSection } from './UseCaseSection'
+import { TechStackSection } from './TechStackSection'
+import { TrustedBySection } from './TrustedBySection'
+import { CTASection } from './CTASection'
 
 export function LandingPage() {
     return (
-        <div className="space-y-32 pb-32">
+        <div className="flex flex-col gap-0">
             <HeroSection />
+            <ProblemSolutionSection />
             <FeatureSection />
             <HowItWorksSection />
-            <PricingSection />
+            <UseCaseSection />
+            <TechStackSection />
+            <TrustedBySection />
+            <CTASection />
         </div>
     )
 }

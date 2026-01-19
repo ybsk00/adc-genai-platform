@@ -4,10 +4,10 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
-import { FlaskConical, Mail, Lock, User, Building2, Loader2, ArrowRight, Chrome, Check } from 'lucide-react'
+import { Loader2, ArrowLeft, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { signUpWithEmail, signInWithGoogle } from '@/lib/supabase'
 
@@ -31,7 +31,6 @@ export function SignupPage() {
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Validation
         if (formData.password !== formData.confirmPassword) {
             toast.error('비밀번호가 일치하지 않습니다.')
             return
@@ -83,153 +82,100 @@ export function SignupPage() {
     const getPasswordStrength = () => {
         const password = formData.password
         if (password.length === 0) return { level: 0, text: '', color: '' }
-        if (password.length < 6) return { level: 1, text: '약함', color: 'bg-red-500' }
-        if (password.length < 8) return { level: 2, text: '보통', color: 'bg-yellow-500' }
+        if (password.length < 6) return { level: 1, text: 'Weak', color: 'bg-red-500' }
+        if (password.length < 8) return { level: 2, text: 'Fair', color: 'bg-yellow-500' }
         if (password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)) {
-            return { level: 4, text: '강함', color: 'bg-green-500' }
+            return { level: 4, text: 'Strong', color: 'bg-green-500' }
         }
-        return { level: 3, text: '양호', color: 'bg-blue-500' }
+        return { level: 3, text: 'Good', color: 'bg-blue-500' }
     }
 
     const passwordStrength = getPasswordStrength()
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-[400px]"
             >
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <Link to="/" className="inline-flex items-center gap-2">
-                        <div className="w-10 h-10 bg-[#007AFF] rounded-xl flex items-center justify-center">
-                            <FlaskConical className="w-6 h-6 text-white" />
+                <Card className="bg-[#1E293B] border-slate-800 shadow-2xl">
+                    <CardHeader className="space-y-1 pb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Link to="/" className="text-slate-400 hover:text-white transition-colors">
+                                <ArrowLeft className="w-5 h-5" />
+                            </Link>
                         </div>
-                        <span className="text-2xl font-bold text-gray-900">ADC-GenAI</span>
-                    </Link>
-                </div>
-
-                <Card className="shadow-xl">
-                    <CardHeader className="text-center">
-                        <CardTitle className="text-2xl">회원가입</CardTitle>
-                        <CardDescription>
-                            무료로 시작하고 50 크레딧을 받으세요
-                        </CardDescription>
+                        <CardTitle className="text-2xl font-bold text-center text-white">Sign up</CardTitle>
+                        <p className="text-center text-slate-400 text-sm">
+                            Start for free and get 50 credits
+                        </p>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* Google Signup */}
-                        <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={handleGoogleSignup}
-                        >
-                            <Chrome className="w-5 h-5 mr-2" />
-                            Google로 시작하기
-                        </Button>
-
-                        <div className="relative">
-                            <Separator />
-                            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
-                                또는
-                            </span>
-                        </div>
-
-                        {/* Signup Form */}
+                    <CardContent className="space-y-6">
                         <form onSubmit={handleSignup} className="space-y-4">
-                            {/* Name */}
                             <div className="space-y-2">
-                                <Label htmlFor="name">이름</Label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        placeholder="홍길동"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        className="pl-10"
-                                        required
-                                    />
-                                </div>
+                                <Label htmlFor="name" className="text-slate-300">Name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    placeholder="John Doe"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    className="bg-[#0F172A] border-slate-700 text-white placeholder:text-slate-600 h-12"
+                                    required
+                                />
                             </div>
 
-                            {/* Email */}
                             <div className="space-y-2">
-                                <Label htmlFor="email">이메일</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <Input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        placeholder="your@email.com"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        className="pl-10"
-                                        required
-                                    />
-                                </div>
+                                <Label htmlFor="email" className="text-slate-300">Email</Label>
+                                <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    className="bg-[#0F172A] border-slate-700 text-white placeholder:text-slate-600 h-12"
+                                    required
+                                />
                             </div>
 
-                            {/* Organization */}
                             <div className="space-y-2">
-                                <Label htmlFor="organization">소속 (선택)</Label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <Input
-                                        id="organization"
-                                        name="organization"
-                                        placeholder="회사/연구기관"
-                                        value={formData.organization}
-                                        onChange={handleChange}
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Password */}
-                            <div className="space-y-2">
-                                <Label htmlFor="password">비밀번호</Label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <Input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        placeholder="8자 이상"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        className="pl-10"
-                                        required
-                                    />
-                                </div>
+                                <Label htmlFor="password" className="text-slate-300">Password</Label>
+                                <Input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    placeholder="8+ characters"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className="bg-[#0F172A] border-slate-700 text-white placeholder:text-slate-600 h-12"
+                                    required
+                                />
                                 {formData.password && (
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full ${passwordStrength.color} transition-all`}
                                                 style={{ width: `${passwordStrength.level * 25}%` }}
                                             />
                                         </div>
-                                        <span className="text-xs text-gray-500">{passwordStrength.text}</span>
+                                        <span className="text-xs text-slate-400">{passwordStrength.text}</span>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Confirm Password */}
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">비밀번호 확인</Label>
+                                <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Password</Label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <Input
                                         id="confirmPassword"
                                         name="confirmPassword"
                                         type="password"
-                                        placeholder="비밀번호 재입력"
+                                        placeholder="Re-enter password"
                                         value={formData.confirmPassword}
                                         onChange={handleChange}
-                                        className="pl-10"
+                                        className="bg-[#0F172A] border-slate-700 text-white placeholder:text-slate-600 h-12"
                                         required
                                     />
                                     {formData.confirmPassword && formData.password === formData.confirmPassword && (
@@ -238,57 +184,80 @@ export function SignupPage() {
                                 </div>
                             </div>
 
-                            {/* Terms */}
-                            <div className="flex items-start gap-2">
+                            <div className="flex items-start gap-2 pt-2">
                                 <Checkbox
                                     id="agreeTerms"
                                     checked={formData.agreeTerms}
                                     onCheckedChange={(checked) =>
                                         setFormData(prev => ({ ...prev, agreeTerms: checked as boolean }))
                                     }
+                                    className="border-slate-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                 />
-                                <label htmlFor="agreeTerms" className="text-sm text-gray-600 leading-tight">
-                                    <Link to="/terms" className="text-[#007AFF] hover:underline">이용약관</Link> 및{' '}
-                                    <Link to="/privacy" className="text-[#007AFF] hover:underline">개인정보처리방침</Link>에
-                                    동의합니다.
+                                <label htmlFor="agreeTerms" className="text-sm text-slate-400 leading-tight">
+                                    I agree to the <Link to="/terms" className="text-blue-400 hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-blue-400 hover:underline">Privacy Policy</Link>.
                                 </label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="w-full bg-[#007AFF] hover:bg-[#0066DD]"
+                                className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white h-12 text-base font-medium"
                                 disabled={isLoading}
                             >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        가입 처리 중...
-                                    </>
-                                ) : (
-                                    <>
-                                        회원가입
-                                        <ArrowRight className="w-4 h-4 ml-2" />
-                                    </>
-                                )}
+                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign up'}
                             </Button>
                         </form>
 
-                        {/* Benefits */}
-                        <div className="bg-blue-50 rounded-lg p-3 space-y-1">
-                            <p className="text-sm font-medium text-blue-900">🎁 가입 혜택</p>
-                            <ul className="text-xs text-blue-700 space-y-1">
-                                <li>• 50 무료 크레딧 (Deep 분석 5회)</li>
-                                <li>• Golden Set 라이브러리 열람</li>
-                                <li>• PDF 리포트 다운로드</li>
-                            </ul>
+                        <div className="text-center text-sm">
+                            <span className="text-slate-500">Already have an account? </span>
+                            <Link to="/login" className="text-[#3B82F6] hover:underline font-medium">
+                                Log in
+                            </Link>
                         </div>
 
-                        <p className="text-center text-sm text-gray-500">
-                            이미 계정이 있으신가요?{' '}
-                            <Link to="/login" className="text-[#007AFF] hover:underline font-medium">
-                                로그인
-                            </Link>
-                        </p>
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <Separator className="bg-slate-800" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-[#1E293B] px-2 text-slate-500">Or sign up with</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Button
+                                variant="outline"
+                                className="w-full bg-white hover:bg-gray-50 text-slate-700 border border-slate-200 h-12 font-medium transition-all hover:shadow-md"
+                                onClick={handleGoogleSignup}
+                            >
+                                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                                    <path
+                                        fill="#4285F4"
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    />
+                                    <path
+                                        fill="#34A853"
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    />
+                                    <path
+                                        fill="#FBBC05"
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    />
+                                    <path
+                                        fill="#EA4335"
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    />
+                                </svg>
+                                <span className="text-slate-500 mr-1">Sign up with</span>
+                                <span className="font-bold">
+                                    <span className="text-[#4285F4]">G</span>
+                                    <span className="text-[#EA4335]">o</span>
+                                    <span className="text-[#FBBC05]">o</span>
+                                    <span className="text-[#4285F4]">g</span>
+                                    <span className="text-[#34A853]">l</span>
+                                    <span className="text-[#EA4335]">e</span>
+                                </span>
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </motion.div>

@@ -1,96 +1,106 @@
-import { Beaker, Shield, FileSearch, Zap, Database, FileText } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Beaker, Database, FileText, Globe, Layers, Zap } from 'lucide-react'
 
 const features = [
     {
-        icon: Beaker,
-        title: 'In Silico 3D Modeling',
-        description: 'AlphaFold 기반 항체-약물 결합 구조 시뮬레이션 및 안정성 예측',
-        color: 'bg-blue-500',
-        size: 'lg:col-span-2'
-    },
-    {
-        icon: Shield,
-        title: 'Predictive Toxicology',
-        description: '오프타겟(Off-target) 효과 및 독성 리스크 사전 감지 (Ocular/Neutropenia)',
-        color: 'bg-red-500',
-        size: 'lg:col-span-1'
-    },
-    {
-        icon: FileSearch,
-        title: 'IP Landscape Analysis',
-        description: '엔허투, 시젠 등 주요 경쟁 약물의 특허 침해 가능성(FTO) 실시간 검토',
-        color: 'bg-green-500',
-        size: 'lg:col-span-1'
+        icon: Layers,
+        title: "In Silico 3D Modeling",
+        description: "AlphaFold3-based antibody-drug binding structure simulation and binding affinity prediction",
+        color: "from-blue-500 to-cyan-500"
     },
     {
         icon: Zap,
-        title: 'Market Intelligence',
-        description: '글로벌 파이프라인 실시간 추적 및 타겟 약물 개발 현황 모니터링',
-        color: 'bg-purple-500',
-        size: 'lg:col-span-2'
+        title: "Predictive Toxicology",
+        description: "Off-target toxicity heatmap analysis and early detection of ocular/blood toxicity risks",
+        color: "from-purple-500 to-pink-500"
     },
     {
-        icon: Database,
-        title: 'Golden Set Library',
-        description: 'FDA 승인 약물(Reference Drug)의 기전 데이터와 당사 실험 데이터의 비교 분석',
-        color: 'bg-yellow-500',
-        size: 'lg:col-span-1'
+        icon: Globe,
+        title: "IP Landscape Analysis",
+        description: "Real-time FTO traffic light system integrated with global patent databases",
+        color: "from-green-500 to-emerald-500"
     },
     {
         icon: FileText,
-        title: 'Automated IND Report',
-        description: '의사결정을 위한 임상시험계획승인(IND) 수준의 프리미엄 리포트 자동 생성',
-        color: 'bg-indigo-500',
-        size: 'lg:col-span-2'
+        title: "Clinical Strategy",
+        description: "Automated Phase 1 protocol generation based on FDA guidelines and clinical success probability reports",
+        color: "from-indigo-500 to-violet-500"
+    },
+    {
+        icon: Database,
+        title: "Market Intelligence",
+        description: "Real-time tracking of global pipelines and competitor development status dashboard",
+        color: "from-orange-500 to-red-500"
+    },
+    {
+        icon: Beaker,
+        title: "Golden Set Library",
+        description: "Comparative analysis library of FDA-approved reference drug mechanism data vs. in-house experimental data",
+        color: "from-yellow-500 to-amber-500"
     }
 ]
 
 export function FeatureSection() {
     return (
-        <section id="features">
-            {/* Header */}
-            <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
-                    Precision, Acceleration, Insight
+        <section id="features" className="py-32 relative">
+            <div className="text-center mb-20">
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+                    Powerful AI Agents
                 </h2>
-                <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                    6명의 AI 에이전트가 귀사의 ADC 개발을 가속화합니다.
+                <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                    6 Core Engines Accelerating Every Stage of Research
                 </p>
             </div>
 
-            {/* Bento Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {features.map((feature) => (
-                    <div
-                        key={feature.title}
-                        className={`group relative p-8 rounded-3xl bg-[#1E293B]/50 border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-[#1E293B] overflow-hidden ${feature.size || ''}`}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {features.map((feature, index) => (
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.1 }}
+                        className="group relative h-[320px] perspective-1000"
                     >
-                        <div className="relative z-10 h-full flex flex-col justify-between">
-                            <div>
-                                <div className={`w-12 h-12 rounded-2xl ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
-                                    <feature.icon className="w-6 h-6 text-white" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-3">
-                                    {feature.title}
-                                </h3>
-                                <p className="text-gray-400 leading-relaxed">
-                                    {feature.description}
-                                </p>
-                            </div>
+                        <div className="relative h-full w-full transition-all duration-500 transform-style-3d group-hover:rotate-x-2 group-hover:-translate-y-4">
+                            {/* Card Background with Glassmorphism & Gradient Border */}
+                            <div className="absolute inset-0 rounded-2xl bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
+                                {/* Top Gradient Bar */}
+                                <div className={`h-2 w-full bg-gradient-to-r ${feature.color}`} />
 
-                            {/* Decorative Arrow */}
-                            <div className="mt-6 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-2 group-hover:translate-x-0">
-                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
+                                <div className="p-8 h-full flex flex-col">
+                                    {/* Icon Container - Floats on hover */}
+                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} p-0.5 mb-6 shadow-lg transform transition-transform duration-500 group-hover:scale-110 group-hover:translate-z-10`}>
+                                        <div className="w-full h-full bg-[#0F172A] rounded-[14px] flex items-center justify-center">
+                                            <feature.icon className="w-8 h-8 text-white" />
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <h3 className="text-xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 transition-colors">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-gray-400 leading-relaxed text-sm">
+                                        {feature.description}
+                                    </p>
+
+                                    {/* Bottom Action Hint - Removed as per request */}
+                                    {/* <div className="mt-auto pt-6 flex items-center text-sm font-medium text-gray-500 group-hover:text-white transition-colors">
+                                        <span>View Details</span>
+                                        <div className={`ml-2 w-8 h-[1px] bg-gradient-to-r ${feature.color}`} />
+                                    </div> */}
                                 </div>
+
+                                {/* Hover Glow Effect */}
+                                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 pointer-events-none`} />
                             </div>
                         </div>
-                    </div>
+
+                        {/* Shadow for 3D effect */}
+                        <div className="absolute -bottom-4 left-4 right-4 h-4 bg-black/40 blur-xl rounded-[100%] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </motion.div>
                 ))}
             </div>
         </section>
     )
 }
-

@@ -10,7 +10,7 @@ export function Footer() {
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
                                 A
                             </div>
-                            <span className="text-xl font-bold text-white tracking-tight">ADC-GenAI</span>
+                            <span className="text-xl font-bold text-white tracking-tight">AstraForge</span>
                         </Link>
                         <p className="text-sm leading-relaxed mb-4">
                             AI-driven simulation for ADC discovery. <br />

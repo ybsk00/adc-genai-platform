@@ -24,7 +24,7 @@ export function GNB() {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
                             A
                         </div>
-                        <span className="text-xl font-bold text-white tracking-tight">ADC-GenAI</span>
+                        <span className="text-xl font-bold text-white tracking-tight">AstraForge</span>
                     </Link>
 
                     {/* Desktop Menu */}
@@ -40,7 +40,7 @@ export function GNB() {
                             Log in
                         </Link>
                         <Button size="sm" className="bg-[#007AFF] hover:bg-[#0056b3] text-white rounded-lg" asChild>
-                            <Link to="/signup">Start for Free</Link>
+                            <Link to="/signup">Sign up</Link>
                         </Button>
                     </div>
 
@@ -62,7 +62,7 @@ export function GNB() {
                             <Link to="/library" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Golden Set</Link>
                             <div className="h-px bg-white/10 my-2" />
                             <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-                            <Link to="/signup" className="text-sm font-medium text-[#007AFF] hover:text-[#0056b3] px-2" onClick={() => setIsMenuOpen(false)}>Start for Free</Link>
+                            <Link to="/signup" className="text-sm font-medium text-[#007AFF] hover:text-[#0056b3] px-2" onClick={() => setIsMenuOpen(false)}>Sign up</Link>
                         </div>
                     </div>
                 )}
