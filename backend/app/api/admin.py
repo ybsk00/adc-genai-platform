@@ -16,6 +16,7 @@ from app.core.supabase import supabase
 from app.services.pdf_parser import pdf_parser_service
 from app.services.pubmed_crawler import pubmed_crawler
 from app.services.rag_service import rag_service
+from app.services.crawler_stealth import AmbeedStealthScraper
 
 router = APIRouter()
 
@@ -409,4 +410,30 @@ async def get_simulation_logs(limit: int = 50):
 async def admin_health():
     """관리자 API 헬스 체크"""
     return {"status": "healthy", "service": "admin-api"}
+
+
+# ============================================================
+# Crawler Triggers
+# ============================================================
+
+class CrawlerRunRequest(BaseModel):
+    category: str = "Payload" # Payload, Linker, Conjugate
+    max_pages: int = 1
+
+@router.post("/crawler/ambeed/run")
+async def run_ambeed_crawler(req: CrawlerRunRequest, background_tasks: BackgroundTasks):
+    """
+    Ambeed Stealth Crawler 실행 (Background)
+    """
+    try:
+        scraper = AmbeedStealthScraper()
+        background_tasks.add_task(scraper.run, req.category, req.max_pages)
+        
+        return {
+            "status": "started",
+            "message": f"Ambeed crawler started for category: {req.category}",
+            "mode": "stealth"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

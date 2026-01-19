@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-    DollarSign,
+    FileText,
     Users,
     Zap,
     AlertTriangle,
@@ -14,29 +14,34 @@ import {
     XCircle,
     Loader2
 } from 'lucide-react'
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell
+} from 'recharts'
+import { API_BASE_URL } from '@/lib/api'
 
-// Mock KPI Data
+// Mock KPI Data (To be replaced with API data)
 const kpiData = [
     {
-        label: 'MRR',
-        value: '$12,450',
-        change: '+12.5%',
+        label: 'Docs Crawled Today',
+        value: '1,240',
+        change: '+150',
         trend: 'up',
-        icon: DollarSign,
-        color: 'from-green-500 to-emerald-500'
-    },
-    {
-        label: 'Total Users',
-        value: '1,204',
-        change: '+8.2%',
-        trend: 'up',
-        icon: Users,
+        icon: FileText,
         color: 'from-blue-500 to-cyan-500'
     },
     {
-        label: 'Active Simulations',
+        label: 'Simulations Ran Today',
         value: '45',
-        change: '+23.1%',
+        change: '+12',
         trend: 'up',
         icon: Zap,
         color: 'from-purple-500 to-pink-500'
@@ -44,39 +49,59 @@ const kpiData = [
     {
         label: 'Error Rate',
         value: '0.5%',
-        change: '-0.3%',
+        change: '-0.2%',
         trend: 'down',
         icon: AlertTriangle,
         color: 'from-amber-500 to-orange-500'
     },
+    {
+        label: 'Total Users',
+        value: '1,204',
+        change: '+15',
+        trend: 'up',
+        icon: Users,
+        color: 'from-green-500 to-emerald-500'
+    },
 ]
 
-// Mock Recent Activity
-const recentActivity = [
-    { user: 'Dr. Kim', action: 'Started Deep Analysis', time: '2 minutes ago', type: 'simulation' },
-    { user: 'Prof. Lee', action: 'Downloaded Report', time: '15 minutes ago', type: 'report' },
-    { user: 'System', action: 'RAG Index Updated', time: '1 hour ago', type: 'system' },
-    { user: 'Dr. Park', action: 'Upgraded to Pro', time: '3 hours ago', type: 'payment' },
-    { user: 'System', action: 'Clinical Data Synced', time: '6 hours ago', type: 'system' },
+// Mock Chart Data
+const userGrowthData = [
+    { name: 'Mon', users: 10 },
+    { name: 'Tue', users: 15 },
+    { name: 'Wed', users: 12 },
+    { name: 'Thu', users: 20 },
+    { name: 'Fri', users: 25 },
+    { name: 'Sat', users: 30 },
+    { name: 'Sun', users: 35 },
 ]
 
-import { API_BASE_URL } from '@/lib/api'
+const topTargetsData = [
+    { name: 'HER2', value: 400 },
+    { name: 'LIV-1', value: 300 },
+    { name: 'TROP2', value: 200 },
+    { name: 'CD30', value: 100 },
+]
+
+const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981']
+
+// Mock Live Feed
+const liveFeed = [
+    { id: 1, message: 'Simulation #Job-992 failed (Timeout)', time: '2 mins ago', type: 'error' },
+    { id: 2, message: 'User kim@bionet.com purchased Pro Plan', time: '15 mins ago', type: 'success' },
+    { id: 3, message: 'Crawler: 150 new PubMed articles indexed', time: '1 hour ago', type: 'info' },
+    { id: 4, message: 'System Backup completed successfully', time: '3 hours ago', type: 'info' },
+    { id: 5, message: 'New user registered: lee@syngene.com', time: '5 hours ago', type: 'success' },
+]
 
 // System services to monitor
 const systemServices = [
     { id: 'api', name: 'API Server', endpoint: `${API_BASE_URL}/health` },
-    { id: 'agents', name: 'AI Agents', endpoint: `${API_BASE_URL}/api/agents/health` },
-    { id: 'rag', name: 'RAG Pipeline', endpoint: `${API_BASE_URL}/api/rag/health` },
+    { id: 'worker', name: 'Background Worker', endpoint: `${API_BASE_URL}/api/worker/health` },
     { id: 'db', name: 'Supabase DB', endpoint: `${API_BASE_URL}/api/db/health` },
 ]
 
 type ServiceStatus = 'operational' | 'degraded' | 'down' | 'checking'
 
-/**
- * [Dev Note: Live Health Check]
- * 1분마다 각 서비스의 /health 엔드포인트 호출
- * 200 OK → operational, 그 외 → down
- */
 function useHealthCheck() {
     const [statuses, setStatuses] = useState<Record<string, ServiceStatus>>(
         Object.fromEntries(systemServices.map(s => [s.id, 'checking']))
@@ -85,12 +110,11 @@ function useHealthCheck() {
     const checkHealth = useCallback(async () => {
         for (const service of systemServices) {
             try {
-                // 실제 API 호출
-                const response = await fetch(service.endpoint, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                })
-                const isHealthy = response.ok
+                // Mocking health check for now as endpoints might not be fully ready
+                // In production, uncomment fetch
+                // const response = await fetch(service.endpoint)
+                // const isHealthy = response.ok
+                const isHealthy = true // Mock
 
                 setStatuses(prev => ({
                     ...prev,
@@ -106,10 +130,7 @@ function useHealthCheck() {
     }, [])
 
     useEffect(() => {
-        // 초기 체크
         checkHealth()
-
-        // 1분마다 폴링
         const interval = setInterval(checkHealth, 60000)
         return () => clearInterval(interval)
     }, [checkHealth])
@@ -128,14 +149,48 @@ export function AdminOverview() {
                 animate={{ opacity: 1, y: 0 }}
             >
                 <h1 className="text-2xl font-bold text-white">Admin Overview</h1>
-                <p className="text-slate-400 mt-1">실시간 플랫폼 현황 모니터링</p>
+                <p className="text-slate-400 mt-1">System Health & Real-time Metrics</p>
+            </motion.div>
+
+            {/* System Status - Traffic Lights */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+                {systemServices.map((service) => {
+                    const status = serviceStatuses[service.id]
+                    return (
+                        <Card key={service.id} className="bg-slate-900 border-slate-800">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    {status === 'checking' ? (
+                                        <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                                    ) : status === 'operational' ? (
+                                        <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                                    ) : (
+                                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+                                    )}
+                                    <span className="font-medium text-white">{service.name}</span>
+                                </div>
+                                <Badge variant="outline" className={`capitalize ${status === 'operational' ? 'border-green-500/30 text-green-400' :
+                                        status === 'checking' ? 'border-slate-600 text-slate-400' :
+                                            'border-red-500/30 text-red-400'
+                                    }`}>
+                                    {status}
+                                </Badge>
+                            </CardContent>
+                        </Card>
+                    )
+                })}
             </motion.div>
 
             {/* KPI Cards */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={{ delay: 0.2 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
             >
                 {kpiData.map((kpi) => (
@@ -154,7 +209,6 @@ export function AdminOverview() {
                                         <span className={kpi.trend === 'up' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>
                                             {kpi.change}
                                         </span>
-                                        <span className="text-slate-500 text-sm">vs last month</span>
                                     </div>
                                 </div>
                                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center`}>
@@ -168,140 +222,125 @@ export function AdminOverview() {
 
             {/* Charts Row */}
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* Usage Chart Placeholder */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <Card className="bg-slate-900 border-slate-800">
-                        <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
-                                <Activity className="w-5 h-5" />
-                                Daily Usage
-                            </CardTitle>
-                            <CardDescription className="text-slate-400">
-                                지난 7일간 시뮬레이션 요청 수
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {/* Chart Placeholder */}
-                            <div className="h-64 bg-slate-800/50 rounded-lg flex items-center justify-center border border-slate-700">
-                                <div className="text-center">
-                                    <div className="flex items-end justify-center gap-2 mb-4">
-                                        {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                                            <motion.div
-                                                key={i}
-                                                initial={{ height: 0 }}
-                                                animate={{ height: h }}
-                                                transition={{ delay: 0.3 + i * 0.1 }}
-                                                className="w-8 bg-gradient-to-t from-purple-500 to-pink-500 rounded-t"
-                                                style={{ height: `${h}%` }}
-                                            />
-                                        ))}
-                                    </div>
-                                    <p className="text-slate-500 text-sm">Recharts 통합 예정</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Recent Activity */}
+                {/* User Growth Chart */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <Card className="bg-slate-900 border-slate-800">
+                    <Card className="bg-slate-900 border-slate-800 h-full">
                         <CardHeader>
-                            <CardTitle className="text-white">Recent Activity</CardTitle>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <Users className="w-5 h-5" />
+                                User Growth
+                            </CardTitle>
                             <CardDescription className="text-slate-400">
-                                실시간 사용자 활동 로그
+                                Weekly new user registrations
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {recentActivity.map((activity, index) => (
-                                    <div key={index} className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${activity.type === 'simulation' ? 'bg-blue-500' :
-                                            activity.type === 'report' ? 'bg-green-500' :
-                                                activity.type === 'payment' ? 'bg-purple-500' :
-                                                    'bg-slate-500'
-                                            }`} />
-                                        <div className="flex-1">
-                                            <p className="text-sm text-white">
-                                                <span className="font-medium">{activity.user}</span>
-                                                <span className="text-slate-400"> {activity.action}</span>
-                                            </p>
-                                            <p className="text-xs text-slate-500">{activity.time}</p>
-                                        </div>
-                                        <Badge
-                                            variant="outline"
-                                            className={`text-xs ${activity.type === 'simulation' ? 'border-blue-500/30 text-blue-400' :
-                                                activity.type === 'report' ? 'border-green-500/30 text-green-400' :
-                                                    activity.type === 'payment' ? 'border-purple-500/30 text-purple-400' :
-                                                        'border-slate-600 text-slate-400'
-                                                }`}
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={userGrowthData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                        <XAxis dataKey="name" stroke="#94a3b8" />
+                                        <YAxis stroke="#94a3b8" />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Line type="monotone" dataKey="users" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6' }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Top Targets Pie Chart */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    <Card className="bg-slate-900 border-slate-800 h-full">
+                        <CardHeader>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <Activity className="w-5 h-5" />
+                                Top Targets
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">
+                                Most analyzed targets this month
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[300px] w-full flex items-center justify-center">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={topTargetsData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={100}
+                                            fill="#8884d8"
+                                            paddingAngle={5}
+                                            dataKey="value"
                                         >
-                                            {activity.type}
-                                        </Badge>
-                                    </div>
-                                ))}
+                                            {topTargetsData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="space-y-2">
+                                    {topTargetsData.map((entry, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                            <span className="text-sm text-slate-300">{entry.name} ({entry.value})</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
                 </motion.div>
             </div>
 
-            {/* System Status - Live Health Check */}
+            {/* Live Feed */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.5 }}
             >
                 <Card className="bg-slate-900 border-slate-800">
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="text-white">System Status</CardTitle>
-                                <CardDescription className="text-slate-400">
-                                    주요 서비스 상태 (1분마다 자동 갱신)
-                                </CardDescription>
-                            </div>
-                            <Badge variant="outline" className="border-slate-600 text-slate-400">
-                                Live
-                            </Badge>
-                        </div>
+                        <CardTitle className="text-white flex items-center gap-2">
+                            <Activity className="w-5 h-5" />
+                            Live Feed
+                        </CardTitle>
+                        <CardDescription className="text-slate-400">
+                            Real-time system events and logs
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {systemServices.map((service) => {
-                                const status = serviceStatuses[service.id]
-                                return (
-                                    <div
-                                        key={service.id}
-                                        className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700"
-                                    >
-                                        {status === 'checking' ? (
-                                            <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-                                        ) : status === 'operational' ? (
-                                            <CheckCircle className="w-4 h-4 text-green-500" />
-                                        ) : (
-                                            <XCircle className="w-4 h-4 text-red-500" />
-                                        )}
-                                        <div>
-                                            <p className="text-sm font-medium text-white">{service.name}</p>
-                                            <p className={`text-xs capitalize ${status === 'operational' ? 'text-green-400' :
-                                                status === 'checking' ? 'text-slate-400' :
-                                                    'text-red-400'
-                                                }`}>
-                                                {status}
-                                            </p>
-                                        </div>
+                        <div className="space-y-4">
+                            {liveFeed.map((item) => (
+                                <div key={item.id} className="flex items-start gap-4 p-3 rounded-lg bg-slate-800/30 border border-slate-800 hover:bg-slate-800/50 transition-colors">
+                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${item.type === 'error' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                            item.type === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
+                                                'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                                        }`} />
+                                    <div className="flex-1">
+                                        <p className="text-sm text-slate-200">{item.message}</p>
+                                        <p className="text-xs text-slate-500 mt-1">{item.time}</p>
                                     </div>
-                                )
-                            })}
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>

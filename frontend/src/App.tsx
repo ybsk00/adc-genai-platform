@@ -34,10 +34,10 @@ function App() {
           {/* Admin Routes (Protected + Role Check) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
-            <Route path="users" element={<UserOperations />} />
-            <Route path="data" element={<DataOperations />} />
+            <Route path="user-operations" element={<UserOperations />} />
+            <Route path="data-operations" element={<DataOperations />} />
             <Route path="upload" element={<UploadPage />} />
-            <Route path="ai" element={<AITuning />} />
+            <Route path="ai-tuning" element={<AITuning />} />
           </Route>
         </Routes>
         <Toaster />
