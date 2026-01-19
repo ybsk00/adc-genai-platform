@@ -29,4 +29,5 @@ def get_gemini_model(
 
 
 # Singleton instance for common use
-gemini_flash = get_gemini_model(temperature=0)
+# gemini_flash = get_gemini_model(temperature=0)  # Removed to prevent startup crash if API key is missing
+
