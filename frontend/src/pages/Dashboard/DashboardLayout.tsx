@@ -27,6 +27,9 @@ export function DashboardLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false)
     const location = useLocation()
 
+    // Debug log to verify dark mode code is running
+    console.log('Rendering DashboardLayout (Dark Mode Version)')
+
     return (
         <div className="min-h-screen bg-slate-950 flex">
             {/* Sidebar */}

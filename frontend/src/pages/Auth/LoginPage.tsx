@@ -29,10 +29,13 @@ export function LoginPage() {
             }
 
             if (data?.user) {
+                console.log('Login successful, user:', data.user.email)
                 toast.success('로그인 성공!')
-                if (data.user.email === 'admin@admin.com') {
+                if (data.user.email?.toLowerCase() === 'admin@admin.com') {
+                    console.log('Redirecting to admin dashboard')
                     navigate('/admin')
                 } else {
+                    console.log('Redirecting to user dashboard')
                     navigate('/dashboard')
                 }
             }
