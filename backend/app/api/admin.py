@@ -164,9 +164,14 @@ async def get_all_users():
     """
     try:
         # profiles 테이블 조회
-        res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
-        return res.data
+        try:
+            res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
+            return res.data
+        except Exception as db_error:
+            print(f"Warning: Failed to fetch profiles. Error: {db_error}")
+            return []
     except Exception as e:
+        print(f"Error in get_all_users: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -405,18 +410,28 @@ async def get_simulation_logs(limit: int = 50):
     전체 시뮬레이션 로그 조회
     """
     try:
-        # projects 테이블 조회 + user info join (Supabase는 join이 까다로우므로 일단 projects만)
-        # TODO: profiles와 join하여 user_email 가져오기
-        res = supabase.table("projects") \
-            .select("*, profiles(email)") \
-            .order("created_at", desc=True) \
-            .limit(limit) \
-            .execute()
-            
-        return res.data
+        # projects 테이블 조회 + user info join
+        # Try joining with profiles first
+        try:
+            res = supabase.table("projects") \
+                .select("*, profiles(email)") \
+                .order("created_at", desc=True) \
+                .limit(limit) \
+                .execute()
+            return res.data
+        except Exception as join_error:
+            print(f"Warning: Failed to join profiles. Fetching projects only. Error: {join_error}")
+            # Fallback: Fetch projects without join
+            res = supabase.table("projects") \
+                .select("*") \
+                .order("created_at", desc=True) \
+                .limit(limit) \
+                .execute()
+            return res.data
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error fetching simulation logs: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {str(e)}")
 
 
 # ============================================================
