@@ -28,22 +28,22 @@ export function DashboardLayout() {
     const location = useLocation()
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-slate-950 flex">
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "bg-white border-r border-gray-200 flex flex-col transition-all duration-300",
+                    "bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300",
                     isCollapsed ? "w-16" : "w-60"
                 )}
             >
                 {/* Logo */}
-                <div className="h-16 flex items-center px-4 border-b border-gray-100">
+                <div className="h-16 flex items-center px-4 border-b border-slate-800">
                     <Link to="/dashboard" className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-[#007AFF] rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
                             <span className="text-white font-bold text-sm">ADC</span>
                         </div>
                         {!isCollapsed && (
-                            <span className="font-semibold text-gray-900">ADC-GenAI</span>
+                            <span className="font-semibold text-white">ADC-GenAI</span>
                         )}
                     </Link>
                 </div>
@@ -60,8 +60,8 @@ export function DashboardLayout() {
                                         className={cn(
                                             "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                                             isActive
-                                                ? "bg-[#007AFF] text-white"
-                                                : "text-gray-600 hover:bg-gray-100"
+                                                ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                                : "text-slate-400 hover:text-white hover:bg-slate-800"
                                         )}
                                     >
                                         <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -74,11 +74,11 @@ export function DashboardLayout() {
                 </nav>
 
                 {/* Collapse Button */}
-                <div className="p-2 border-t border-gray-100">
+                <div className="p-2 border-t border-slate-800">
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-center"
+                        className="w-full justify-center text-slate-400 hover:text-white hover:bg-slate-800"
                         onClick={() => setIsCollapsed(!isCollapsed)}
                     >
                         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -89,34 +89,34 @@ export function DashboardLayout() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col">
                 {/* Top Header */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+                <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6">
                     {/* Breadcrumb */}
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-slate-500">
                         <span>Home</span>
                         <span className="mx-2">/</span>
-                        <span className="text-gray-900 font-medium">Dashboard</span>
+                        <span className="text-white font-medium">Dashboard</span>
                     </div>
 
                     {/* Right Section */}
                     <div className="flex items-center gap-4">
                         {/* Credits */}
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-sm">
                             <CreditCard className="w-4 h-4" />
                             <span className="font-medium">450 Credits</span>
                         </div>
 
                         {/* Status */}
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                             <span>System Operational</span>
                         </div>
 
                         {/* User Menu */}
-                        <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                        <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
                             <Avatar className="w-8 h-8">
-                                <AvatarFallback className="bg-[#007AFF] text-white text-sm">DR</AvatarFallback>
+                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm">DR</AvatarFallback>
                             </Avatar>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                                 <LogOut className="w-4 h-4" />
                             </Button>
                         </div>
@@ -124,7 +124,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-6 overflow-auto">
+                <main className="flex-1 p-6 overflow-auto bg-slate-950 text-slate-200">
                     <Outlet />
                 </main>
             </div>

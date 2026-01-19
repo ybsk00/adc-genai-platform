@@ -184,24 +184,24 @@ export function ResultViewer() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
-                    <Card>
+                    <Card className="bg-slate-900 border-slate-800">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Loader2 className="w-5 h-5 animate-spin text-[#007AFF]" />
+                            <CardTitle className="flex items-center gap-2 text-white">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                                 Simulation in Progress
                             </CardTitle>
-                            <CardDescription>Job ID: {jobId}</CardDescription>
+                            <CardDescription className="text-slate-400">Job ID: {jobId}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {/* Progress Bar */}
                             <div className="mb-8">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-gray-500">Overall Progress</span>
-                                    <span className="text-sm font-medium text-gray-900">{progress}%</span>
+                                    <span className="text-sm text-slate-500">Overall Progress</span>
+                                    <span className="text-sm font-medium text-white">{progress}%</span>
                                 </div>
-                                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
                                     <motion.div
-                                        className="h-full bg-gradient-to-r from-[#007AFF] to-purple-500"
+                                        className="h-full bg-gradient-to-r from-blue-600 to-purple-600"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${progress}%` }}
                                         transition={{ duration: 0.3 }}
@@ -231,12 +231,12 @@ export function ResultViewer() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
-                    <Card className="border-amber-200 bg-amber-50">
+                    <Card className="border-amber-500/30 bg-amber-500/10">
                         <CardContent className="p-4 flex items-center gap-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            <AlertTriangle className="w-5 h-5 text-amber-500" />
                             <div className="flex-1">
-                                <p className="font-medium text-amber-800">Some analyses were not completed</p>
-                                <p className="text-sm text-amber-600">You can retry failed Agents below. Credits will not be deducted.</p>
+                                <p className="font-medium text-amber-400">Some analyses were not completed</p>
+                                <p className="text-sm text-amber-500/80">You can retry failed Agents below. Credits will not be deducted.</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -248,18 +248,18 @@ export function ResultViewer() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-none">
+                <Card className="bg-gradient-to-r from-slate-900 to-slate-800 border-slate-800">
                     <CardContent className="p-8">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500 mb-1">Final Assessment</p>
+                                <p className="text-sm text-slate-400 mb-1">Final Assessment</p>
                                 <div className="flex items-center gap-4">
-                                    <span className="text-6xl font-bold text-[#007AFF]">B+</span>
+                                    <span className="text-6xl font-bold text-blue-400">B+</span>
                                     <div>
-                                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-lg px-3 py-1">
+                                        <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-lg px-3 py-1">
                                             Conditional Go
                                         </Badge>
-                                        <p className="text-gray-600 mt-2 max-w-md">
+                                        <p className="text-slate-400 mt-2 max-w-md">
                                             Excellent efficacy but toxicity risk detected.
                                             Additional in-vitro testing recommended.
                                         </p>
@@ -268,7 +268,7 @@ export function ResultViewer() {
                             </div>
                             <div className="flex flex-col gap-2">
                                 <Button
-                                    className="bg-[#007AFF] hover:bg-[#0056b3]"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                     onClick={handleDownloadPDF}
                                     disabled={isDownloading}
                                 >
@@ -279,7 +279,7 @@ export function ResultViewer() {
                                     )}
                                     Download PDF Report
                                 </Button>
-                                <Button variant="outline">
+                                <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                     <ExternalLink className="w-4 h-4 mr-2" />
                                     View 3D Structure
                                 </Button>
@@ -291,9 +291,9 @@ export function ResultViewer() {
 
             {/* Show Partially Failed Agents */}
             {status === 'partial' && (
-                <Card>
+                <Card className="bg-slate-900 border-slate-800">
                     <CardHeader>
-                        <CardTitle>Agent Status</CardTitle>
+                        <CardTitle className="text-white">Agent Status</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
@@ -311,19 +311,19 @@ export function ResultViewer() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
             >
-                <Card>
+                <Card className="bg-slate-900 border-slate-800">
                     <CardHeader>
-                        <CardTitle>3D Structure View</CardTitle>
-                        <CardDescription>MolStar 3D Viewer - Rotate and zoom with mouse</CardDescription>
+                        <CardTitle className="text-white">3D Structure View</CardTitle>
+                        <CardDescription className="text-slate-400">MolStar 3D Viewer - Rotate and zoom with mouse</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg flex items-center justify-center">
+                        <div className="aspect-video bg-gradient-to-br from-slate-950 to-slate-900 rounded-lg flex items-center justify-center border border-slate-800">
                             <div className="text-center text-white">
-                                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#007AFF] to-purple-500 flex items-center justify-center">
+                                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-900/20">
                                     <span className="text-4xl">🧬</span>
                                 </div>
-                                <p className="text-gray-400">Interactive 3D ADC Model</p>
-                                <p className="text-gray-500 text-sm">(MolStar Integration)</p>
+                                <p className="text-slate-300">Interactive 3D ADC Model</p>
+                                <p className="text-slate-500 text-sm">(MolStar Integration)</p>
                             </div>
                         </div>
                     </CardContent>
@@ -337,9 +337,9 @@ export function ResultViewer() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <Card className="h-full">
+                    <Card className="h-full bg-slate-900 border-slate-800">
                         <CardHeader>
-                            <CardTitle>Analysis Scores</CardTitle>
+                            <CardTitle className="text-white">Analysis Scores</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -352,10 +352,10 @@ export function ResultViewer() {
                                 ].map((item) => (
                                     <div key={item.label}>
                                         <div className="flex justify-between text-sm mb-1">
-                                            <span className="text-gray-600">{item.label}</span>
-                                            <span className="font-medium">{item.score}/100</span>
+                                            <span className="text-slate-400">{item.label}</span>
+                                            <span className="font-medium text-white">{item.score}/100</span>
                                         </div>
-                                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                                             <motion.div
                                                 className={`h-full ${item.color}`}
                                                 initial={{ width: 0 }}
@@ -375,37 +375,37 @@ export function ResultViewer() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <Card className="h-full">
+                    <Card className="h-full bg-slate-900 border-slate-800">
                         <CardHeader>
-                            <CardTitle>Key Findings</CardTitle>
+                            <CardTitle className="text-white">Key Findings</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
-                                    <div className="p-1.5 bg-red-100 rounded-lg">
-                                        <Shield className="w-4 h-4 text-red-600" />
+                                    <div className="p-1.5 bg-red-500/10 rounded-lg">
+                                        <Shield className="w-4 h-4 text-red-400" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">Toxicity Risk Detected</p>
-                                        <p className="text-sm text-gray-500">Neutropenia Risk (LogP: 3.8)</p>
+                                        <p className="font-medium text-white">Toxicity Risk Detected</p>
+                                        <p className="text-sm text-slate-400">Neutropenia Risk (LogP: 3.8)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <div className="p-1.5 bg-green-100 rounded-lg">
-                                        <FileSearch className="w-4 h-4 text-green-600" />
+                                    <div className="p-1.5 bg-green-500/10 rounded-lg">
+                                        <FileSearch className="w-4 h-4 text-green-400" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">Patent Safe</p>
-                                        <p className="text-sm text-gray-500">Major patents expired (2024)</p>
+                                        <p className="font-medium text-white">Patent Safe</p>
+                                        <p className="text-sm text-slate-400">Major patents expired (2024)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                                        <Users className="w-4 h-4 text-blue-600" />
+                                    <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                                        <Users className="w-4 h-4 text-blue-400" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">Competitor Status</p>
-                                        <p className="text-sm text-gray-500">Merck (Phase 2), Seagen (Phase 1)</p>
+                                        <p className="font-medium text-white">Competitor Status</p>
+                                        <p className="text-sm text-slate-400">Merck (Phase 2), Seagen (Phase 1)</p>
                                     </div>
                                 </div>
                             </div>
@@ -416,7 +416,7 @@ export function ResultViewer() {
 
             {/* Back Button */}
             <div className="flex justify-center pt-4">
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                     <Link to="/dashboard">← Back to Dashboard</Link>
                 </Button>
             </div>
@@ -435,66 +435,66 @@ function AgentStatusRow({
     const Icon = agent.icon
 
     const bgColor = {
-        pending: 'bg-gray-50',
-        running: 'bg-blue-50',
-        done: 'bg-green-50',
-        error: 'bg-red-50',
+        pending: 'bg-slate-950',
+        running: 'bg-blue-500/5',
+        done: 'bg-green-500/5',
+        error: 'bg-red-500/5',
     }[agent.status]
 
     const iconBgColor = {
-        pending: 'bg-gray-100',
-        running: 'bg-blue-100',
-        done: 'bg-green-100',
-        error: 'bg-red-100',
+        pending: 'bg-slate-900',
+        running: 'bg-blue-500/10',
+        done: 'bg-green-500/10',
+        error: 'bg-red-500/10',
     }[agent.status]
 
     const iconColor = {
-        pending: 'text-gray-400',
-        running: 'text-blue-600',
-        done: 'text-green-600',
-        error: 'text-red-600',
+        pending: 'text-slate-600',
+        running: 'text-blue-400',
+        done: 'text-green-400',
+        error: 'text-red-400',
     }[agent.status]
 
     return (
-        <div className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${bgColor}`}>
+        <div className={`flex items-center gap-4 p-3 rounded-lg transition-colors border border-slate-800 ${bgColor}`}>
             <div className={`p-2 rounded-lg ${iconBgColor}`}>
                 <Icon className={`w-5 h-5 ${iconColor}`} />
             </div>
             <div className="flex-1">
-                <p className="font-medium text-gray-900">{agent.name}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-white">{agent.name}</p>
+                <p className="text-sm text-slate-500">
                     {agent.errorMessage || agent.description}
                 </p>
             </div>
             <div className="flex items-center gap-2">
                 {agent.status === 'done' && (
-                    <Badge className="bg-green-100 text-green-700 border-green-200">
+                    <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Done
                     </Badge>
                 )}
                 {agent.status === 'running' && (
-                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                    <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                         Running
                     </Badge>
                 )}
                 {agent.status === 'pending' && (
-                    <Badge variant="outline" className="text-gray-400">
+                    <Badge variant="outline" className="text-slate-500 border-slate-700">
                         <Clock className="w-3 h-3 mr-1" />
                         Pending
                     </Badge>
                 )}
                 {agent.status === 'error' && (
                     <>
-                        <Badge className="bg-red-100 text-red-700 border-red-200">
+                        <Badge className="bg-red-500/10 text-red-400 border-red-500/20">
                             <AlertTriangle className="w-3 h-3 mr-1" />
                             Error
                         </Badge>
                         <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-xs"
+                            className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
                             onClick={() => onRetry(agent.id)}
                         >
                             <RefreshCw className="w-3 h-3 mr-1" />

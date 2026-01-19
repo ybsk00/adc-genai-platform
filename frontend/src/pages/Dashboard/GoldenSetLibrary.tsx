@@ -175,8 +175,8 @@ export function GoldenSetLibrary() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <h1 className="text-2xl font-bold text-gray-900">Golden Set Library</h1>
-                <p className="text-gray-500 mt-1">FDA Approved ADC Database - 15 Verified ADC Entries</p>
+                <h1 className="text-2xl font-bold text-white">Golden Set Library</h1>
+                <p className="text-slate-400 mt-1">FDA Approved ADC Database - 15 Verified ADC Entries</p>
             </motion.div>
 
             {/* Search & Filters */}
@@ -185,44 +185,44 @@ export function GoldenSetLibrary() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
             >
-                <Card>
+                <Card className="bg-slate-900 border-slate-800">
                     <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row gap-4">
                             {/* Search */}
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <Input
                                     placeholder="Search by drug name, company..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
+                                    className="pl-10 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
                                 />
                             </div>
 
                             {/* Target Filter */}
                             <Select value={targetFilter} onValueChange={setTargetFilter}>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <Target className="w-4 h-4 mr-2" />
+                                <SelectTrigger className="w-full md:w-[180px] bg-slate-950 border-slate-800 text-white">
+                                    <Target className="w-4 h-4 mr-2 text-slate-400" />
                                     <SelectValue placeholder="Target" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Targets</SelectItem>
+                                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                    <SelectItem value="all" className="focus:bg-slate-800 focus:text-white">All Targets</SelectItem>
                                     {targets.map(t => (
-                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                        <SelectItem key={t} value={t} className="focus:bg-slate-800 focus:text-white">{t}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
 
                             {/* Payload Filter */}
                             <Select value={payloadFilter} onValueChange={setPayloadFilter}>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <Pill className="w-4 h-4 mr-2" />
+                                <SelectTrigger className="w-full md:w-[180px] bg-slate-950 border-slate-800 text-white">
+                                    <Pill className="w-4 h-4 mr-2 text-slate-400" />
                                     <SelectValue placeholder="Payload" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Payloads</SelectItem>
+                                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                    <SelectItem value="all" className="focus:bg-slate-800 focus:text-white">All Payloads</SelectItem>
                                     {payloads.map(p => (
-                                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                                        <SelectItem key={p} value={p} className="focus:bg-slate-800 focus:text-white">{p}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -233,10 +233,10 @@ export function GoldenSetLibrary() {
 
             {/* Results Count */}
             <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                     {filteredData.length} results
                 </p>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                     <Filter className="w-4 h-4 mr-2" />
                     Advanced Filter
                 </Button>
@@ -256,48 +256,48 @@ export function GoldenSetLibrary() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 + index * 0.05 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
+                        <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer group">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div>
-                                        <CardTitle className="text-lg group-hover:text-[#007AFF] transition-colors">
+                                        <CardTitle className="text-lg text-white group-hover:text-blue-400 transition-colors">
                                             {item.drugName}
                                         </CardTitle>
-                                        <CardDescription className="text-xs mt-1">
+                                        <CardDescription className="text-xs mt-1 text-slate-400">
                                             {item.brandName}
                                         </CardDescription>
                                     </div>
-                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                                    <Badge className="bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20">
                                         {item.status}
                                     </Badge>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Target className="w-4 h-4 text-[#007AFF]" />
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <Target className="w-4 h-4 text-blue-400" />
                                         <span>{item.target}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Pill className="w-4 h-4 text-purple-500" />
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <Pill className="w-4 h-4 text-purple-400" />
                                         <span>{item.payload}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Link2 className="w-4 h-4 text-orange-500" />
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <Link2 className="w-4 h-4 text-orange-400" />
                                         <span className="truncate">{item.linker.split(' ')[0]}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <FlaskConical className="w-4 h-4 text-green-500" />
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <FlaskConical className="w-4 h-4 text-green-400" />
                                         <span>DAR {item.dar}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
                                     <Building2 className="w-4 h-4" />
                                     <span className="truncate">{item.company}</span>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
                                     <Calendar className="w-4 h-4" />
                                     <span>Approval Date: {item.approvalDate}</span>
                                 </div>
@@ -306,14 +306,14 @@ export function GoldenSetLibrary() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="flex-1"
+                                        className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
                                         onClick={() => handleViewDetail(item)}
                                     >
                                         View Details
                                     </Button>
                                     <Button
                                         size="sm"
-                                        className="flex-1 bg-[#007AFF] hover:bg-[#0066DD]"
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                                         onClick={() => handleUseAsTemplate(item)}
                                     >
                                         Use Template
@@ -328,64 +328,66 @@ export function GoldenSetLibrary() {
 
             {/* Detail Modal */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl bg-slate-900 border-slate-800 text-white">
                     {selectedItem && (
                         <>
                             <DialogHeader>
-                                <DialogTitle className="text-xl">{selectedItem.drugName}</DialogTitle>
-                                <DialogDescription>{selectedItem.brandName}</DialogDescription>
+                                <DialogTitle className="text-xl text-white">{selectedItem.drugName}</DialogTitle>
+                                <DialogDescription className="text-slate-400">{selectedItem.brandName}</DialogDescription>
                             </DialogHeader>
 
                             <div className="space-y-6 py-4">
                                 {/* Basic Info */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-500">Target</p>
-                                        <p className="font-medium">{selectedItem.target}</p>
+                                        <p className="text-sm text-slate-500">Target</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.target}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">Payload</p>
-                                        <p className="font-medium">{selectedItem.payload}</p>
+                                        <p className="text-sm text-slate-500">Payload</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.payload}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">Antibody</p>
-                                        <p className="font-medium">{selectedItem.antibody}</p>
+                                        <p className="text-sm text-slate-500">Antibody</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.antibody}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">Linker</p>
-                                        <p className="font-medium">{selectedItem.linker}</p>
+                                        <p className="text-sm text-slate-500">Linker</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.linker}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">DAR</p>
-                                        <p className="font-medium">{selectedItem.dar}</p>
+                                        <p className="text-sm text-slate-500">DAR</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.dar}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">Developer</p>
-                                        <p className="font-medium">{selectedItem.company}</p>
+                                        <p className="text-sm text-slate-500">Developer</p>
+                                        <p className="font-medium text-slate-200">{selectedItem.company}</p>
                                     </div>
                                 </div>
 
                                 {/* Indications */}
                                 <div>
-                                    <p className="text-sm text-gray-500 mb-2">Approved Indications</p>
+                                    <p className="text-sm text-slate-500 mb-2">Approved Indications</p>
                                     <div className="flex flex-wrap gap-2">
                                         {selectedItem.indications.map((ind, i) => (
-                                            <Badge key={i} variant="outline">{ind}</Badge>
+                                            <Badge key={i} variant="outline" className="border-slate-700 text-slate-300">
+                                                {ind}
+                                            </Badge>
                                         ))}
                                     </div>
                                 </div>
 
                                 {/* External Links */}
                                 <div className="flex gap-3">
-                                    <Button variant="outline" size="sm">
+                                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         FDA Label
                                     </Button>
-                                    <Button variant="outline" size="sm">
+                                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         ClinicalTrials.gov
                                     </Button>
-                                    <Button variant="outline" size="sm">
+                                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         PubMed
                                     </Button>
@@ -393,11 +395,11 @@ export function GoldenSetLibrary() {
                             </div>
 
                             <div className="flex justify-end gap-3">
-                                <Button variant="outline" onClick={() => setDetailOpen(false)}>
+                                <Button variant="outline" onClick={() => setDetailOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                     Close
                                 </Button>
                                 <Button
-                                    className="bg-[#007AFF] hover:bg-[#0066DD]"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                     onClick={() => handleUseAsTemplate(selectedItem)}
                                 >
                                     Use this ADC as Template

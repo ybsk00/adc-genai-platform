@@ -23,9 +23,9 @@ const recentSimulations = [
 ]
 
 const statusConfig = {
-    completed: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50' },
-    processing: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50' },
-    failed: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+    completed: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10' },
+    processing: { icon: Loader2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
 }
 
 /**
@@ -37,32 +37,32 @@ function DashboardSkeleton() {
         <div className="space-y-6">
             {/* Welcome Skeleton */}
             <div>
-                <Skeleton className="h-8 w-80 mb-2" />
-                <Skeleton className="h-5 w-60" />
+                <Skeleton className="h-8 w-80 mb-2 bg-slate-800" />
+                <Skeleton className="h-5 w-60 bg-slate-800" />
             </div>
 
             {/* Quick Actions Skeleton */}
             <div className="grid md:grid-cols-2 gap-4">
-                <Skeleton className="h-24 rounded-xl" />
-                <Skeleton className="h-24 rounded-xl" />
+                <Skeleton className="h-24 rounded-xl bg-slate-800" />
+                <Skeleton className="h-24 rounded-xl bg-slate-800" />
             </div>
 
             {/* Recent Activity Skeleton */}
-            <Card>
+            <Card className="bg-slate-900 border-slate-800">
                 <CardHeader>
-                    <Skeleton className="h-6 w-40" />
-                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-6 w-40 bg-slate-800" />
+                    <Skeleton className="h-4 w-32 bg-slate-800" />
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
                         {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="flex items-center gap-3 p-3">
-                                <Skeleton className="w-10 h-10 rounded-lg" />
+                                <Skeleton className="w-10 h-10 rounded-lg bg-slate-800" />
                                 <div className="flex-1">
-                                    <Skeleton className="h-5 w-40 mb-1" />
-                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-5 w-40 mb-1 bg-slate-800" />
+                                    <Skeleton className="h-4 w-24 bg-slate-800" />
                                 </div>
-                                <Skeleton className="h-6 w-20 rounded-full" />
+                                <Skeleton className="h-6 w-20 rounded-full bg-slate-800" />
                             </div>
                         ))}
                     </div>
@@ -70,15 +70,15 @@ function DashboardSkeleton() {
             </Card>
 
             {/* Trend Feed Skeleton */}
-            <Card>
+            <Card className="bg-slate-900 border-slate-800">
                 <CardHeader>
-                    <Skeleton className="h-6 w-40" />
-                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-6 w-40 bg-slate-800" />
+                    <Skeleton className="h-4 w-48 bg-slate-800" />
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <Skeleton className="h-20 rounded-lg" />
-                        <Skeleton className="h-20 rounded-lg" />
+                        <Skeleton className="h-20 rounded-lg bg-slate-800" />
+                        <Skeleton className="h-20 rounded-lg bg-slate-800" />
                     </div>
                 </CardContent>
             </Card>
@@ -111,10 +111,10 @@ export function DashboardHome() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-white">
                     Good Morning, {userName}. Ready to discover?
                 </h1>
-                <p className="text-gray-500 mt-1">
+                <p className="text-slate-400 mt-1">
                     Analyze new ADC candidates today.
                 </p>
             </motion.div>
@@ -126,29 +126,29 @@ export function DashboardHome() {
                 transition={{ delay: 0.1 }}
                 className="grid md:grid-cols-2 gap-4"
             >
-                <Card className="border-2 border-dashed border-[#007AFF] bg-blue-50/50 hover:bg-blue-50 transition-colors cursor-pointer">
+                <Card className="border-2 border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors cursor-pointer">
                     <Link to="/dashboard/builder">
                         <CardContent className="flex items-center gap-4 p-6">
-                            <div className="w-14 h-14 rounded-xl bg-[#007AFF] flex items-center justify-center">
-                                <Plus className="w-7 h-7 text-white" />
+                            <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                <Plus className="w-7 h-7 text-blue-400" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-gray-900 text-lg">New Simulation</h3>
-                                <p className="text-gray-500 text-sm">Start AI-based ADC analysis</p>
+                                <h3 className="font-semibold text-white text-lg">New Simulation</h3>
+                                <p className="text-slate-400 text-sm">Start AI-based ADC analysis</p>
                             </div>
                         </CardContent>
                     </Link>
                 </Card>
 
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
                     <Link to="/dashboard/library">
                         <CardContent className="flex items-center gap-4 p-6">
-                            <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center">
-                                <Library className="w-7 h-7 text-gray-600" />
+                            <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center">
+                                <Library className="w-7 h-7 text-slate-400" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-gray-900 text-lg">Browse Golden Set</h3>
-                                <p className="text-gray-500 text-sm">Search FDA-approved ADC database</p>
+                                <h3 className="font-semibold text-white text-lg">Browse Golden Set</h3>
+                                <p className="text-slate-400 text-sm">Search FDA-approved ADC database</p>
                             </div>
                         </CardContent>
                     </Link>
@@ -161,13 +161,13 @@ export function DashboardHome() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
             >
-                <Card>
+                <Card className="bg-slate-900 border-slate-800">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Clock className="w-5 h-5" />
+                        <CardTitle className="flex items-center gap-2 text-white">
+                            <Clock className="w-5 h-5 text-slate-400" />
                             Recent Activity
                         </CardTitle>
-                        <CardDescription>Recent Simulation Status</CardDescription>
+                        <CardDescription className="text-slate-400">Recent Simulation Status</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
@@ -178,30 +178,30 @@ export function DashboardHome() {
                                     <Link
                                         key={sim.id}
                                         to={`/dashboard/result/${sim.id}`}
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-lg ${config.bg}`}>
                                                 <StatusIcon className={`w-4 h-4 ${config.color} ${sim.status === 'processing' ? 'animate-spin' : ''}`} />
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900">{sim.name}</p>
-                                                <p className="text-sm text-gray-500">{sim.date}</p>
+                                                <p className="font-medium text-white">{sim.name}</p>
+                                                <p className="text-sm text-slate-400">{sim.date}</p>
                                             </div>
                                         </div>
                                         <div>
                                             {sim.status === 'completed' && (
-                                                <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">
+                                                <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10">
                                                     Grade: {sim.grade}
                                                 </Badge>
                                             )}
                                             {sim.status === 'processing' && (
-                                                <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                                                <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-500/10">
                                                     {sim.progress}%
                                                 </Badge>
                                             )}
                                             {sim.status === 'failed' && (
-                                                <Badge variant="outline" className="border-red-200 text-red-700 bg-red-50">
+                                                <Badge variant="outline" className="border-red-500/30 text-red-400 bg-red-500/10">
                                                     {sim.error}
                                                 </Badge>
                                             )}
