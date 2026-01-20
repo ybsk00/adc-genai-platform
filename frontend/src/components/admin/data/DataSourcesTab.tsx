@@ -12,6 +12,7 @@ import {
     Settings
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DataSourceSettingsDialog } from './DataSourceSettingsDialog'
 
 interface DataSource {
     id: string
@@ -28,6 +29,8 @@ import { API_BASE_URL } from '@/lib/api'
 
 export function DataSourcesTab() {
     const [syncingIds, setSyncingIds] = useState<string[]>([])
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [selectedSource, setSelectedSource] = useState<{ id: string, name: string } | null>(null)
     const [sources, setSources] = useState<DataSource[]>([
         {
             id: 'clinical',
@@ -71,7 +74,11 @@ export function DataSourcesTab() {
 
     const handleSync = async (sourceId: string, endpoint?: string) => {
         if (!endpoint) {
-            toast.info('This source does not support manual sync yet.')
+            if (sourceId === 'goldenset') {
+                toast.info('Golden Set is auto-generated from other sources.')
+            } else {
+                toast.info('This source is coming soon.')
+            }
             return
         }
 
@@ -93,6 +100,11 @@ export function DataSourcesTab() {
                 setSyncingIds(prev => prev.filter(id => id !== sourceId))
             }, 2000)
         }
+    }
+
+    const openSettings = (source: DataSource) => {
+        setSelectedSource({ id: source.id, name: source.name })
+        setSettingsOpen(true)
     }
 
     return (
@@ -161,6 +173,7 @@ export function DataSourcesTab() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="border-slate-700 text-slate-300 hover:text-white"
+                                                onClick={() => openSettings(source)}
                                             >
                                                 <Settings className="w-4 h-4" />
                                             </Button>
@@ -185,6 +198,15 @@ export function DataSourcesTab() {
                     </motion.div>
                 )
             })}
+
+            {selectedSource && (
+                <DataSourceSettingsDialog
+                    open={settingsOpen}
+                    onOpenChange={setSettingsOpen}
+                    sourceId={selectedSource.id}
+                    sourceName={selectedSource.name}
+                />
+            )}
         </motion.div>
     )
 }
