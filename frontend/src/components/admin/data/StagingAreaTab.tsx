@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CheckCircle, XCircle, FileText, Loader2, ArrowRight } from 'lucide-react'
+import { CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getSession } from '@/lib/supabase'
 
@@ -34,6 +34,8 @@ interface GoldenSetDraft {
     linker?: string
     enrichment_source: string
     created_at: string
+    outcome_type?: string
+    failure_reason?: string
     // Add other fields as needed for comparison
     raw_data?: string // Mock field for now if not in API response
 }
@@ -178,9 +180,16 @@ export function StagingAreaTab() {
                                             </span>
                                         </div>
                                         <p className="text-sm text-slate-400 mb-2">{draft.target}</p>
-                                        <Badge variant="outline" className="text-xs border-slate-700 text-slate-500">
-                                            {draft.enrichment_source}
-                                        </Badge>
+                                        <div className="flex gap-2 mt-2">
+                                            <Badge variant="outline" className="text-xs border-slate-700 text-slate-500">
+                                                {draft.enrichment_source}
+                                            </Badge>
+                                            {draft.enrichment_source === 'clinical_trials_ai_refined' && (
+                                                <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] gap-1">
+                                                    <Sparkles className="w-2.5 h-2.5" /> AI
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -196,12 +205,35 @@ export function StagingAreaTab() {
                         <CardHeader className="border-b border-slate-800 pb-4">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-white">{selectedDraft.drug_name}</CardTitle>
+                                    <CardTitle className="text-white flex items-center gap-2">
+                                        {selectedDraft.drug_name}
+                                        {selectedDraft.outcome_type === 'Success' && (
+                                            <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 text-xs gap-1">
+                                                <CheckCircle2 className="w-3 h-3" /> Success
+                                            </Badge>
+                                        )}
+                                        {selectedDraft.outcome_type === 'Failure' && (
+                                            <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-xs gap-1">
+                                                <AlertCircle className="w-3 h-3" /> Failure
+                                            </Badge>
+                                        )}
+                                        {selectedDraft.outcome_type === 'Ongoing' && (
+                                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs gap-1">
+                                                <Clock className="w-3 h-3" /> Ongoing
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
                                     <CardDescription className="text-slate-400 flex items-center gap-2 mt-1">
                                         Source: {selectedDraft.enrichment_source}
                                         <ArrowRight className="w-3 h-3" />
                                         Target: {selectedDraft.target}
                                     </CardDescription>
+                                    {selectedDraft.failure_reason && (
+                                        <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-300 flex items-start gap-2">
+                                            <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                            <span>Failure Reason: {selectedDraft.failure_reason}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
                                     <Button

@@ -36,7 +36,8 @@ import { Label } from "@/components/ui/label"
 import {
     Loader2,
     Plus,
-    Upload
+    Upload,
+    Sparkles
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -51,7 +52,7 @@ export type GoldenSetItem = {
     linker: string | null
     enrichment_source: string
     status: 'approved' | 'rejected' | 'draft' | 'ongoing'
-    outcome_type?: 'Success' | 'Failure' | 'Terminated'
+    outcome_type?: 'Success' | 'Failure' | 'Terminated' | 'Ongoing'
     failure_reason?: string
     ip_status?: 'Green' | 'Yellow' | 'Red' | 'Unknown'
     smiles_code?: string
@@ -70,8 +71,16 @@ function StructureViewer({ smiles, id }: { smiles: string, id: string }) {
                 height: 100,
                 compactDrawing: false,
             })
+
             SmilesDrawer.parse(smiles, (tree: any) => {
-                drawer.draw(tree, canvas, 'light', false)
+                // Check if component is still mounted and canvas is valid
+                if (canvasRef.current) {
+                    try {
+                        drawer.draw(tree, canvasRef.current, 'light', false)
+                    } catch (e) {
+                        console.error("SmilesDrawer draw error:", e)
+                    }
+                }
             }, (err: any) => {
                 console.error(err)
             })
@@ -184,7 +193,14 @@ export function GoldenSetLibraryTab() {
             header: 'Drug Name',
             cell: ({ row }) => (
                 <div>
-                    <div className="font-medium text-white">{row.getValue('drug_name')}</div>
+                    <div className="font-medium text-white flex items-center gap-2">
+                        {row.getValue('drug_name')}
+                        {row.original.enrichment_source === 'clinical_trials_ai_refined' && (
+                            <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 h-4 px-1 text-[9px] gap-0.5">
+                                <Sparkles className="w-2 h-2" /> AI
+                            </Badge>
+                        )}
+                    </div>
                     <div className="text-xs text-slate-500">{row.original.enrichment_source}</div>
                 </div>
             ),
@@ -216,7 +232,8 @@ export function GoldenSetLibraryTab() {
                     <Badge variant="outline" className={`
                         ${outcome === 'Success' ? 'border-green-500/30 text-green-400' :
                             outcome === 'Failure' ? 'border-red-500/30 text-red-400' :
-                                'border-slate-600 text-slate-400'}
+                                outcome === 'Ongoing' ? 'border-blue-500/30 text-blue-400' :
+                                    'border-slate-600 text-slate-400'}
                     `}>
                         {outcome || 'Unknown'}
                     </Badge>
