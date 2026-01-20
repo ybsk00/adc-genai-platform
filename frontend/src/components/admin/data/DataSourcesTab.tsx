@@ -81,7 +81,7 @@ export function DataSourcesTab() {
             status: 'synced',
             recordCount: 0,
             estimatedTime: '10 min',
-            endpoint: `${API_BASE_URL}/api/admin/crawler/creative/run`
+            endpoint: `${API_BASE_URL}/api/scheduler/crawler/creative/run`
         },
         {
             id: 'goldenset',

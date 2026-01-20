@@ -415,8 +415,21 @@ async def sync_openfda(background_tasks: BackgroundTasks):
         "status": "queued", "source": "openfda", "records_found": 0, "records_drafted": 0,
         "started_at": datetime.utcnow().isoformat(), "completed_at": None, "cancel_requested": False, "errors": []
     }
-    background_tasks.add_task(process_openfda_data, job_id)
-    return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA sync started.")
+    # AstraForge 2.0: Use the new openfda_service for approved drugs
+    background_tasks.add_task(openfda_service.sync_to_db)
+    return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA Approved ADC sync started.")
+
+@router.post("/crawler/creative/run", response_model=SyncJobResponse)
+async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):
+    """Creative Biolabs 크롤러 실행 (AstraForge 2.0)"""
+    from app.services.creative_biolabs_crawler import creative_crawler
+    job_id = f"crawl_creative_{uuid4().hex[:8]}"
+    sync_jobs[job_id] = {
+        "status": "running", "source": "creative_biolabs", "records_found": 0, "records_drafted": 0,
+        "started_at": datetime.utcnow().isoformat(), "completed_at": None, "cancel_requested": False, "errors": []
+    }
+    background_tasks.add_task(creative_crawler.run, search_term)
+    return SyncJobResponse(job_id=job_id, status="running", message="Creative Biolabs crawler started.")
 
 @router.post("/sync/goldenset", response_model=SyncJobResponse)
 async def sync_goldenset(background_tasks: BackgroundTasks):

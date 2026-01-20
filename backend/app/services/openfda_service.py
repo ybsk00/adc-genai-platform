@@ -1,79 +1,83 @@
-"""
-OpenFDA Service - 승인된 ADC 약물 라벨 데이터 수집
-Payload/Linker 키워드로 역추적하여 골든셋의 'Approved' 데이터를 완성함
-"""
 import httpx
 from typing import List, Dict, Any
-import asyncio
-from tenacity import retry, stop_after_attempt, wait_exponential
+from app.core.supabase import supabase
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OpenFDAService:
     BASE_URL = "https://api.fda.gov/drug/label.json"
-    
-    # [핵심] 3대 ADC 및 유명 독립군을 잡기 위한 '그물망' 키워드
+    # AstraForge 2.0 Search Queries
     SEARCH_QUERIES = [
-        # 1. Payload Suffix로 검색 (가장 강력함)
-        'openfda.generic_name:"*vedotin"',      # MMAE/MMAF 계열 (Adcetris, Padcev, Polivy...)
-        'openfda.generic_name:"*deruxtecan"',   # DXd 계열 (Enhertu)
-        'openfda.generic_name:"*govitecan"',    # SN-38 계열 (Trodelvy)
-        'openfda.generic_name:"*tansine"',      # DM1 계열 (Kadcyla)
-        'openfda.generic_name:"*ozogamicin"',   # Calicheamicin 계열 (Mylotarg)
-        'openfda.generic_name:"*soravtansine"', # DM4 계열 (Elahere)
-        
-        # 2. 약효 분류로 검색 (안전망)
-        'openfda.pharm_class_epc:"Antibody-Drug Conjugate"'
+        'openfda.generic_name:"*vedotin"',
+        'openfda.generic_name:"*deruxtecan"',
+        'openfda.generic_name:"*govitecan"',
+        'openfda.brand_name:"*ADC*"'
     ]
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def fetch_labels(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """OpenFDA 라벨 데이터 검색"""
-        params = {
-            "search": query,
-            "limit": limit
-        }
-        async with httpx.AsyncClient() as client:
-            response = await client.get(self.BASE_URL, params=params, timeout=30.0)
-            if response.status_code == 404:
-                return [] # 검색 결과 없음
-            response.raise_for_status()
-            return response.json().get("results", [])
-
-    def extract_golden_info(self, label: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        라벨 데이터에서 '골든셋'에 필요한 핵심 정보만 정제
-        """
-        openfda = label.get("openfda", {})
+    async def fetch_approved_adcs(self, limit: int = 50) -> List[Dict[Any, Any]]:
+        """승인된 ADC 라벨 정보 수집"""
+        all_results = []
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for query in self.SEARCH_QUERIES:
+                try:
+                    params = {
+                        "search": query,
+                        "limit": limit
+                    }
+                    res = await client.get(self.BASE_URL, params=params)
+                    if res.status_code == 200:
+                        data = res.json()
+                        results = data.get("results", [])
+                        all_results.extend(results)
+                        logger.info(f"FDA Query '{query}' found {len(results)} results.")
+                except Exception as e:
+                    logger.error(f"FDA Query Error '{query}': {e}")
         
-        # 1. 기본 정보
+        return all_results
+
+    def extract_golden_info(self, label_data: Dict[Any, Any]) -> Dict[str, Any]:
+        """FDA 라벨에서 golden_set_library 형식으로 정보 추출"""
+        openfda = label_data.get("openfda", {})
         brand_name = openfda.get("brand_name", ["Unknown"])[0]
         generic_name = openfda.get("generic_name", ["Unknown"])[0]
         manufacturer = openfda.get("manufacturer_name", ["Unknown"])[0]
         
-        # 2. 독성 정답지 (Boxed Warning)
-        boxed_warning = label.get("boxed_warning", [])
-        toxicity_summary = " ".join(boxed_warning) if boxed_warning else "No Boxed Warning"
-        
-        # 3. 구조 정보 (Description 섹션에서 링커/페이로드 텍스트 추출 시도)
-        description = label.get("description", [])
-        desc_text = " ".join(description) if description else ""
+        # 독성 정보 (Boxed Warning) 추출
+        boxed_warning = label_data.get("boxed_warning", ["No specific warning"])[0]
         
         return {
-            "name": brand_name,
-            "generic_name": generic_name,
-            "category": "approved_drug",
-            "manufacturer": manufacturer,
-            "description": f"[{manufacturer}] {generic_name}. {toxicity_summary[:200]}...",
+            "name": brand_name if brand_name != "Unknown" else generic_name,
+            "category": "ADC",
+            "description": f"FDA Approved ADC: {generic_name} by {manufacturer}.",
             "properties": {
                 "generic_name": generic_name,
-                "target": "Unknown (Check Description)", # NLP나 LLM으로 추가 추출 필요
-                "payload_type": "Unknown (Check Generic Name)",
-                "toxicity_profile": toxicity_summary, # 이게 진짜 독성 정답지
-                "approval_status": "Approved",
-                "full_description": desc_text
+                "manufacturer": manufacturer,
+                "boxed_warning": boxed_warning,
+                "fda_label_id": label_data.get("id"),
+                "approval_status": "Approved"
             },
-            "status": "approved", # FDA 데이터는 무조건 승인된 것
             "outcome_type": "Success",
+            "status": "approved",
             "enrichment_source": "openfda"
         }
+
+    async def sync_to_db(self):
+        """FDA 데이터를 golden_set_library에 동기화"""
+        labels = await self.fetch_approved_adcs()
+        for label in labels:
+            try:
+                golden_data = self.extract_golden_info(label)
+                # 중복 체크 (generic_name 기준)
+                existing = supabase.table("golden_set_library")\
+                    .select("id")\
+                    .eq("properties->>generic_name", golden_data["properties"]["generic_name"])\
+                    .execute()
+                
+                if not existing.data:
+                    supabase.table("golden_set_library").insert(golden_data).execute()
+                    logger.info(f"✅ Synced Approved ADC: {golden_data['name']}")
+            except Exception as e:
+                logger.error(f"Sync Error for {label.get('id')}: {e}")
 
 openfda_service = OpenFDAService()
