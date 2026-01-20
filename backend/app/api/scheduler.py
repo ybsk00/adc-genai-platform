@@ -296,42 +296,54 @@ async def process_pubmed_data(job_id: str, max_records: int = 500):
         await update_job_status(job_id, status="failed", errors=[str(e)])
 
 async def process_single_article(article: dict, job_id: str) -> bool:
-    """단순화된 논문 저장 (LLM 없이 빠른 수집)"""
+    """PubMed 논문을 golden_set_library에 저장 (통합 저장소)"""
     try:
         medline = article['MedlineCitation']
         article_data = medline['Article']
-        title = article_data.get('ArticleTitle', 'No Title')
-        
-        # 중복 체크
-        existing = supabase.table("knowledge_base").select("id").eq("title", title).execute()
-        if existing.data: return False
-
-        # 초록 추출
-        abstract_texts = article_data.get('Abstract', {}).get('AbstractText', [])
-        abstract = " ".join([str(t) for t in abstract_texts]) if isinstance(abstract_texts, list) else str(abstract_texts)
+        title = str(article_data.get('ArticleTitle', 'No Title'))
         
         # PMID 추출
         pmid = str(medline.get('PMID', ''))
         
+        # 중복 체크 (PMID 기준)
+        if pmid:
+            existing = supabase.table("golden_set_library").select("id").eq("properties->>pmid", pmid).execute()
+            if existing.data: 
+                return False
+        
+        # 초록 추출
+        abstract_texts = article_data.get('Abstract', {}).get('AbstractText', [])
+        if isinstance(abstract_texts, list):
+            abstract = " ".join([str(t) for t in abstract_texts])
+        else:
+            abstract = str(abstract_texts) if abstract_texts else ""
+        
         # 저널 정보
         journal = article_data.get('Journal', {}).get('Title', '')
         
-        # 단순 저장 (LLM 없이)
-        new_kb = {
-            "source_type": "PubMed",
-            "title": title,
-            "content": abstract if abstract and abstract != 'None' else "No abstract available.",
-            "summary": abstract[:500] if abstract else "",
-            "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}" if pmid else None,
-            "rag_status": "pending",
-            "ai_analysis": {"pmid": pmid, "journal": journal}
+        # golden_set_library에 저장
+        new_entry = {
+            "name": title[:200],
+            "category": "literature",
+            "description": abstract[:1000] if abstract else "No abstract available.",
+            "properties": {
+                "pmid": pmid,
+                "journal": journal,
+                "source_url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}" if pmid else None
+            },
+            "status": "draft",
+            "outcome_type": "Unknown",
+            "ai_refined": False,
+            "enrichment_source": "pubmed"
         }
-        supabase.table("knowledge_base").insert(new_kb).execute()
-        logger.info(f"✅ Saved PubMed article: {title[:50]}...")
+        
+        supabase.table("golden_set_library").insert(new_entry).execute()
+        logger.info(f"✅ Saved PubMed: {title[:50]}...")
         return True
     except Exception as e:
-        logger.error(f"PubMed article save error: {e}")
+        logger.error(f"PubMed save error: {e}")
         return False
+
 
 def fetch_pubmed_ids(term: str, max_results: int):
     handle = Entrez.esearch(db="pubmed", term=term, retmax=max_results, sort="pub_date")
