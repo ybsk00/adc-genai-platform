@@ -130,54 +130,99 @@ async def process_clinical_trials_data(job_id: str, max_records: int = 1000):
     total_collected = 0
     drafted = 0
     errors = []
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=headers) as session:
             while total_collected < max_records:
                 if await is_cancelled(job_id):
                     await update_job_status(job_id, status="stopped")
                     return
 
-                params = {"query.term": "ADC OR Antibody-Drug Conjugate", "pageSize": 50, "format": "json"}
+                params = {"query.term": "antibody drug conjugate", "pageSize": 50, "format": "json"}
                 if next_token: params["pageToken"] = next_token
 
-                async with session.get(base_url, params=params) as res:
-                    if res.status != 200: break
-                    data = await res.json()
-                    studies = data.get("studies", [])
-                    if not studies: break
+                try:
+                    async with session.get(base_url, params=params, timeout=aiohttp.ClientTimeout(total=60)) as res:
+                        if res.status == 403:
+                            errors.append("ClinicalTrials API returned 403 Forbidden - API access restricted")
+                            logger.error("ClinicalTrials API 403 Forbidden")
+                            break
+                        if res.status != 200:
+                            errors.append(f"ClinicalTrials API error: {res.status}")
+                            break
+                        
+                        data = await res.json()
+                        studies = data.get("studies", [])
+                        if not studies: break
 
-                    # 발견 즉시 DB 업데이트
-                    current_found = (await get_job_from_db(job_id)).get("records_found", 0)
-                    await update_job_status(job_id, records_found=current_found + len(studies))
-                    
-                    # 병렬 처리
-                    for i in range(0, len(studies), 5):
-                        if await is_cancelled(job_id):
-                            await update_job_status(job_id, status="stopped")
-                            return
+                        # 발견 즉시 DB 업데이트
+                        job = await get_job_from_db(job_id)
+                        current_found = job.get("records_found", 0) if job else 0
+                        await update_job_status(job_id, records_found=current_found + len(studies))
                         
-                        batch = studies[i:i+5]
-                        tasks = [process_single_study(study, job_id) for study in batch]
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        
-                        for r in results:
-                            if isinstance(r, Exception): errors.append(str(r))
-                            elif r: drafted += 1
+                        # 단순 저장 (LLM 없이)
+                        for study in studies:
+                            if await is_cancelled(job_id):
+                                await update_job_status(job_id, status="stopped")
+                                return
+                            try:
+                                result = await process_single_study_simple(study)
+                                if result: drafted += 1
+                            except Exception as e:
+                                errors.append(str(e)[:100])
                         
                         await update_job_status(job_id, records_drafted=drafted, errors=errors[:20])
 
-                    total_collected += len(studies)
-                    next_token = data.get("nextPageToken")
-                    if not next_token: break
-                    await asyncio.sleep(1)
+                        total_collected += len(studies)
+                        next_token = data.get("nextPageToken")
+                        if not next_token: break
+                        await asyncio.sleep(0.5)
+                except Exception as e:
+                    errors.append(f"Request error: {str(e)[:100]}")
+                    logger.error(f"ClinicalTrials request error: {e}")
+                    break
 
-        await update_job_status(job_id, status="completed", completed_at=datetime.utcnow().isoformat())
+        await update_job_status(job_id, status="completed", completed_at=datetime.utcnow().isoformat(), errors=errors[:20])
     except Exception as e:
         logger.error(f"ClinicalTrials Global Error: {e}")
         await update_job_status(job_id, status="failed", errors=[str(e)])
 
+async def process_single_study_simple(study: dict) -> bool:
+    """단순화된 스터디 저장 (LLM 없이)"""
+    try:
+        protocol = study.get("protocolSection", {})
+        id_module = protocol.get("identificationModule", {})
+        nct_id = id_module.get("nctId")
+        if not nct_id: return False
+        
+        existing = supabase.table("golden_set_library").select("id").eq("properties->>nct_id", nct_id).execute()
+        if existing.data: return False
+
+        title = id_module.get("officialTitle") or id_module.get("briefTitle", "No Title")
+        status_module = protocol.get("statusModule", {})
+        
+        new_entry = {
+            "name": title[:100],
+            "category": "clinical_trial",
+            "description": title,
+            "properties": {"nct_id": nct_id, "phase": status_module.get("phase"), "status": status_module.get("overallStatus")},
+            "status": "draft",
+            "outcome_type": "Unknown",
+            "enrichment_source": "clinical_trials_simple"
+        }
+        supabase.table("golden_set_library").insert(new_entry).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Study save error {study.get('protocolSection', {}).get('identificationModule', {}).get('nctId')}: {e}")
+        return False
+
 async def process_single_study(study: dict, job_id: str) -> bool:
+    """LLM 포함 스터디 처리 (기존 로직 유지)"""
     try:
         protocol = study.get("protocolSection", {})
         id_module = protocol.get("identificationModule", {})
@@ -251,28 +296,41 @@ async def process_pubmed_data(job_id: str, max_records: int = 500):
         await update_job_status(job_id, status="failed", errors=[str(e)])
 
 async def process_single_article(article: dict, job_id: str) -> bool:
+    """단순화된 논문 저장 (LLM 없이 빠른 수집)"""
     try:
         medline = article['MedlineCitation']
         article_data = medline['Article']
         title = article_data.get('ArticleTitle', 'No Title')
         
+        # 중복 체크
         existing = supabase.table("knowledge_base").select("id").eq("title", title).execute()
         if existing.data: return False
 
+        # 초록 추출
         abstract_texts = article_data.get('Abstract', {}).get('AbstractText', [])
         abstract = " ".join([str(t) for t in abstract_texts]) if isinstance(abstract_texts, list) else str(abstract_texts)
         
-        refined = await refine_drug_data_with_llm(title=title, text_content=abstract)
+        # PMID 추출
+        pmid = str(medline.get('PMID', ''))
+        
+        # 저널 정보
+        journal = article_data.get('Journal', {}).get('Title', '')
+        
+        # 단순 저장 (LLM 없이)
         new_kb = {
             "source_type": "PubMed",
             "title": title,
-            "content": abstract,
-            "ai_analysis": refined,
-            "rag_status": "pending"
+            "content": abstract if abstract and abstract != 'None' else "No abstract available.",
+            "summary": abstract[:500] if abstract else "",
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}" if pmid else None,
+            "rag_status": "pending",
+            "ai_analysis": {"pmid": pmid, "journal": journal}
         }
         supabase.table("knowledge_base").insert(new_kb).execute()
+        logger.info(f"✅ Saved PubMed article: {title[:50]}...")
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"PubMed article save error: {e}")
         return False
 
 def fetch_pubmed_ids(term: str, max_results: int):
