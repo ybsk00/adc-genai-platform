@@ -35,19 +35,19 @@ export function DataSourcesTab() {
     const [selectedSource, setSelectedSource] = useState<{ id: string, name: string } | null>(null)
     const [sources, setSources] = useState<DataSource[]>([
         {
-            id: 'clinical',
-            name: 'ClinicalTrials.gov',
-            description: 'Clinical trial data',
+            id: 'bulk_import',
+            name: 'ClinicalTrials.gov (Bulk Import)',
+            description: 'Download full ADC trials dump (bypasses API limits)',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
-            estimatedTime: '5 min',
-            endpoint: `${API_BASE_URL}/api/scheduler/sync/clinical`
+            estimatedTime: '10-30 min',
+            endpoint: `${API_BASE_URL}/api/scheduler/bulk/import`
         },
         {
             id: 'pubmed',
             name: 'PubMed/BioRxiv',
-            description: 'Scientific literature',
+            description: 'Scientific literature → knowledge_base',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
@@ -55,18 +55,9 @@ export function DataSourcesTab() {
             endpoint: `${API_BASE_URL}/api/scheduler/sync/pubmed`
         },
         {
-            id: 'news',
-            name: 'Perplexity News',
-            description: 'ADC related news',
-            lastSync: 'Not synced',
-            status: 'synced',
-            recordCount: 0,
-            estimatedTime: '3 min'
-        },
-        {
             id: 'openfda',
             name: 'OpenFDA Approved Labels',
-            description: 'Official FDA labels for ADCs (Enhertu, Trodelvy, etc.)',
+            description: 'FDA-approved ADCs → golden_set_library',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
@@ -76,7 +67,7 @@ export function DataSourcesTab() {
         {
             id: 'creative',
             name: 'Creative Biolabs',
-            description: 'Antibody data & UniProt ID extraction',
+            description: 'Commercial reagents → commercial_reagents',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
@@ -84,16 +75,17 @@ export function DataSourcesTab() {
             endpoint: `${API_BASE_URL}/api/scheduler/crawler/creative/run`
         },
         {
-            id: 'goldenset',
-            name: 'Golden Set Library',
-            description: 'FDA approved ADC data',
+            id: 'ai_refiner',
+            name: 'AI Refiner',
+            description: 'Process pending records with LLM analysis',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
-            estimatedTime: '1 min',
-            endpoint: `${API_BASE_URL}/api/scheduler/sync/goldenset`
+            estimatedTime: '5 min',
+            endpoint: `${API_BASE_URL}/api/scheduler/refiner/run`
         },
     ])
+
 
     const pollJobStatus = async (jobId: string, sourceId: string) => {
         const interval = setInterval(async () => {
