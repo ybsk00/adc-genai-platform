@@ -1,0 +1,20 @@
+=== START DIAGNOSTICS ===
+API Key Role: service_role
+Supabase client initialized.
+
+[Test 1] Checking 'golden_set_library' existence (SELECT)...
+SUCCESS: Table exists. Count: 1
+
+[Test 2] Checking Simple INSERT...
+SUCCESS: Simple insert worked. ID: be9f4141-023e-4215-917c-31a9c9c33efd
+
+[Test 3] Checking Complex JSONB INSERT...
+FAILURE: Complex insert failed. Error: {'message': "Could not find the 'raw_data' column of 'golden_set_library' in the schema cache", 'code': 'PGRST204', 'hint': None, 'details': None}
+
+[Test 4] Checking JSON Filter (Duplicate Check)...
+SUCCESS: .contains() query worked. Found: 0
+
+[Cleanup] Deleting test records...
+Cleanup successful.
+
+=== END DIAGNOSTICS ===
