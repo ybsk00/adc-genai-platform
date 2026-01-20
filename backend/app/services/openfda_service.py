@@ -8,17 +8,21 @@ logger = logging.getLogger(__name__)
 
 class OpenFDAService:
     BASE_URL = "https://api.fda.gov/drug/label.json"
-    # AstraForge 2.0 Search Queries
+    # AstraForge 2.0 Search Queries (와일드카드 제거 - API 호환성)
     SEARCH_QUERIES = [
-        'openfda.generic_name:"*vedotin"',
-        'openfda.generic_name:"*deruxtecan"',
-        'openfda.generic_name:"*govitecan"',
-        'openfda.brand_name:"*ADC*"'
+        'openfda.generic_name:vedotin',
+        'openfda.generic_name:deruxtecan',
+        'openfda.generic_name:govitecan',
+        'openfda.generic_name:trastuzumab',
+        'openfda.generic_name:sacituzumab',
+        'openfda.generic_name:enfortumab'
     ]
 
     async def fetch_approved_adcs(self, limit: int = 50) -> List[Dict[Any, Any]]:
         """승인된 ADC 라벨 정보 수집"""
         all_results = []
+        seen_ids = set()  # 중복 제거용
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
             for query in self.SEARCH_QUERIES:
                 try:
@@ -27,14 +31,25 @@ class OpenFDAService:
                         "limit": limit
                     }
                     res = await client.get(self.BASE_URL, params=params)
+                    logger.info(f"FDA Query '{query}' -> Status: {res.status_code}")
+                    
                     if res.status_code == 200:
                         data = res.json()
                         results = data.get("results", [])
-                        all_results.extend(results)
-                        logger.info(f"FDA Query '{query}' found {len(results)} results.")
+                        for r in results:
+                            label_id = r.get("id")
+                            if label_id and label_id not in seen_ids:
+                                seen_ids.add(label_id)
+                                all_results.append(r)
+                        logger.info(f"FDA Query '{query}' found {len(results)} results (unique: {len(seen_ids)}).")
+                    elif res.status_code == 404:
+                        logger.info(f"FDA Query '{query}' returned 0 results.")
+                    else:
+                        logger.error(f"FDA Query '{query}' error: {res.status_code} - {res.text[:200]}")
                 except Exception as e:
-                    logger.error(f"FDA Query Error '{query}': {e}")
+                    logger.error(f"FDA Query Exception '{query}': {e}")
         
+        logger.info(f"Total unique FDA labels found: {len(all_results)}")
         return all_results
 
     def extract_golden_info(self, label_data: Dict[Any, Any]) -> Dict[str, Any]:
