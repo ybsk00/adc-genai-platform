@@ -24,6 +24,8 @@ interface DataSource {
     endpoint?: string
 }
 
+import { API_BASE_URL } from '@/lib/api'
+
 export function DataSourcesTab() {
     const [syncingIds, setSyncingIds] = useState<string[]>([])
     const [sources, setSources] = useState<DataSource[]>([
@@ -35,7 +37,7 @@ export function DataSourcesTab() {
             status: 'synced',
             recordCount: 0,
             estimatedTime: '5 min',
-            endpoint: '/api/scheduler/sync/clinical'
+            endpoint: `${API_BASE_URL}/api/scheduler/sync/clinical`
         },
         {
             id: 'pubmed',
@@ -45,7 +47,7 @@ export function DataSourcesTab() {
             status: 'synced',
             recordCount: 0,
             estimatedTime: '15 min',
-            endpoint: '/api/scheduler/sync/pubmed'
+            endpoint: `${API_BASE_URL}/api/scheduler/sync/pubmed`
         },
         {
             id: 'news',

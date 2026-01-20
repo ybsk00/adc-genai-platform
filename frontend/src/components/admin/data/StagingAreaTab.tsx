@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getSession } from '@/lib/supabase'
+import { API_BASE_URL } from '@/lib/api'
 
 interface GoldenSetDraft {
     id: string
@@ -62,7 +63,7 @@ export function StagingAreaTab() {
             const { session } = await getSession()
             if (!session) throw new Error('No session')
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/drafts`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts`, {
                 headers: {
                     Authorization: `Bearer ${session.access_token}`
                 }
@@ -78,7 +79,7 @@ export function StagingAreaTab() {
             const { session } = await getSession()
             if (!session) throw new Error('No session')
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/${id}/approve`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/approve`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ export function StagingAreaTab() {
             const { session } = await getSession()
             if (!session) throw new Error('No session')
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/${id}/reject`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/reject`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
