@@ -143,9 +143,12 @@ async def process_clinical_trials_data(job_id: str):
                 id_module = protocol.get("identificationModule", {})
                 nct_id = id_module.get("nctId")
                 
-                # 중복 체크
-                existing = supabase.table("golden_set_library").select("id").eq("raw_data->>nct_id", nct_id).execute()
+                # 중복 체크 (JSONB contains 사용)
+                # existing = supabase.table("golden_set_library").select("id").eq("raw_data->>nct_id", nct_id).execute()
+                existing = supabase.table("golden_set_library").select("id").contains("properties", {"nct_id": nct_id}).execute()
+                
                 if existing.data:
+                    print(f"Skipping duplicate: {nct_id}")
                     continue
 
                 # 기본 정보 추출
@@ -299,9 +302,12 @@ async def process_pubmed_data(job_id: str):
                     abstract_list = article_data.get('Abstract', {}).get('AbstractText', [])
                     abstract = " ".join(abstract_list) if abstract_list else "No Abstract"
                     
-                    # 중복 체크
+                    # 중복 체크 (Title은 text 컬럼이 없으므로 properties나 raw_data 확인 필요하지만, 
+                    # knowledge_base는 title 컬럼이 있음! -> eq 사용 가능)
+                    # 단, source_type과 title 모두 일치해야 함
                     existing = supabase.table("knowledge_base").select("id").eq("source_type", "PubMed").eq("title", title).execute()
                     if existing.data:
+                        print(f"Skipping duplicate PubMed: {pmid}")
                         continue
                         
                     # Knowledge Base에 저장
