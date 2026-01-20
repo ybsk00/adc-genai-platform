@@ -24,50 +24,50 @@ router = APIRouter()
 # Entrez 설정
 Entrez.email = settings.ENTREZ_EMAIL
 
-# [Cost Strategy] 데이터 처리용 가성비 모델
-llm_refiner = ChatOpenAI(
-    model=settings.FAST_LLM, # gpt-4o-mini
-    temperature=0,
-    api_key=settings.OPENAI_API_KEY
-)
-
 async def refine_drug_data_with_llm(title: str, description: str, raw_status: str, why_stopped: str) -> dict:
     """
     LLM을 사용하여 약물 이름 추출 및 임상 결과 분석 수행
     """
-    system_prompt = """You are an expert Clinical Data Analyst. 
-    Your task is to extract structured information from unstructured clinical trial text.
-    
-    1. **Drug Name Extraction:** 
-       - Find the specific ADC code name (e.g., 'DS-8201', 'IMGN-632') or generic name.
-       - If only 'Anti-HER2 ADC' is found, output 'Unknown'.
-       - Do NOT invent names.
-       
-    2. **Outcome Analysis:**
-       - Determine if the trial was a 'Success', 'Failure', or 'Ongoing'.
-       - If 'Failure' (Terminated/Withdrawn), summarize the *scientific reason* (Toxicity, Lack of Efficacy) in 1 short sentence.
-       
-    Output JSON format:
-    {
-        "extracted_name": "DS-8201a",
-        "outcome_type": "Failure", 
-        "failure_reason": "Terminated due to Grade 3 interstitial lung disease."
-    }
-    """
-    
-    user_prompt = f"""
-    Title: {title}
-    Description: {description}
-    Status: {raw_status}
-    Why Stopped: {why_stopped}
-    """
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("user", user_prompt)
-    ])
-    
     try:
+        # Lazy Load to prevent startup crash if API Key is missing
+        llm_refiner = ChatOpenAI(
+            model=settings.FAST_LLM, # gpt-4o-mini
+            temperature=0,
+            api_key=settings.OPENAI_API_KEY
+        )
+        
+        system_prompt = """You are an expert Clinical Data Analyst. 
+        Your task is to extract structured information from unstructured clinical trial text.
+        
+        1. **Drug Name Extraction:** 
+           - Find the specific ADC code name (e.g., 'DS-8201', 'IMGN-632') or generic name.
+           - If only 'Anti-HER2 ADC' is found, output 'Unknown'.
+           - Do NOT invent names.
+           
+        2. **Outcome Analysis:**
+           - Determine if the trial was a 'Success', 'Failure', or 'Ongoing'.
+           - If 'Failure' (Terminated/Withdrawn), summarize the *scientific reason* (Toxicity, Lack of Efficacy) in 1 short sentence.
+           
+        Output JSON format:
+        {
+            "extracted_name": "DS-8201a",
+            "outcome_type": "Failure", 
+            "failure_reason": "Terminated due to Grade 3 interstitial lung disease."
+        }
+        """
+        
+        user_prompt = f"""
+        Title: {title}
+        Description: {description}
+        Status: {raw_status}
+        Why Stopped: {why_stopped}
+        """
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", user_prompt)
+        ])
+    
         chain = prompt | llm_refiner
         # JSON 모드 강제 (Structured Output)
         response = await chain.ainvoke({})
