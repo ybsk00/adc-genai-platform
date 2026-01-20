@@ -46,12 +46,13 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
         For each field, provide the 'value' and the 'evidence' (the exact sentence or phrase from the text).
         
         Fields to extract:
-        1. **drug_name**: Specific ADC code name or generic name.
+        1. **drug_name**: Specific ADC code name (e.g., DS-8201, IMGN-632) or generic name.
         2. **target**: The biological target (e.g., HER2, TROP2, CD33).
         3. **payload**: The cytotoxic drug (e.g., MMAE, DXd, SN-38).
         4. **linker**: The linker type (e.g., Val-Cit, tetrapeptide-based).
         5. **outcome_type**: 'Success', 'Failure', or 'Ongoing'.
-        6. **toxicity_profile**: Key safety issues or boxed warnings.
+        6. **failure_reason**: If 'Failure', summarize the scientific reason (e.g., "Due to Grade 3 ILD").
+        7. **toxicity_profile**: Key safety issues or boxed warnings.
         
         Output JSON format:
         {
@@ -60,6 +61,7 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
             "payload": {"value": "DXd", "evidence": "...deruxtecan, a derivative of exatecan..."},
             "linker": {"value": "Tetrapeptide-based", "evidence": "...cleavable tetrapeptide-based linker..."},
             "outcome_type": {"value": "Success", "evidence": "...demonstrated significant improvement in PFS..."},
+            "failure_reason": {"value": null, "evidence": null},
             "toxicity_profile": {"value": "ILD/Pneumonitis", "evidence": "...Boxed Warning for interstitial lung disease..."}
         }
         """
@@ -94,6 +96,7 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
             "payload": {"value": "Unknown", "evidence": None},
             "linker": {"value": "Unknown", "evidence": None},
             "outcome_type": {"value": "Unknown", "evidence": None},
+            "failure_reason": {"value": None, "evidence": None},
             "toxicity_profile": {"value": "Unknown", "evidence": None}
         }
 
@@ -196,14 +199,24 @@ async def process_clinical_trials_data(job_id: str):
                 # [Merge] LLM 결과 적용
                 final_name = refined_data.get("drug_name", {}).get("value", drug_name)
                 if final_name == "Unknown": final_name = drug_name
-                if final_name == "Unknown": final_name = f"Unnamed ADC ({nct_id})"
-
+                
+                # [V2.0] Status Mapping
+                # COMPLETED/APPROVED -> "Success"
+                # TERMINATED/WITHDRAWN -> "Failure"
+                # RECRUITING -> "Ongoing"
                 outcome_type = refined_data.get("outcome_type", {}).get("value", "Unknown")
+                overall_status = protocol.get("statusModule", {}).get("overallStatus", "Unknown")
+                
                 if outcome_type == "Unknown":
-                    overall_status = protocol.get("statusModule", {}).get("overallStatus", "Unknown")
                     if overall_status in ["COMPLETED", "APPROVED"]: outcome_type = "Success"
                     elif overall_status in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]: outcome_type = "Failure"
-                    elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING"]: outcome_type = "Ongoing"
+                    elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]: outcome_type = "Ongoing"
+
+                # [V2.0] Fallback Naming
+                # If LLM fails, use: f"Unnamed {Target} ADC ({NCT_ID})"
+                if final_name == "Unknown":
+                    target_val = refined_data.get("target", {}).get("value", "Unknown")
+                    final_name = f"Unnamed {target_val} ADC ({nct_id})"
 
                 new_entry = {
                     "name": final_name,
@@ -223,7 +236,8 @@ async def process_clinical_trials_data(job_id: str):
                     "enrichment_source": "clinical_trials_ai_refined",
                     "raw_data": study,
                     "outcome_type": outcome_type,
-                    "failure_reason": refined_data.get("toxicity_profile", {}).get("value") if outcome_type == "Failure" else None
+                    "failure_reason": refined_data.get("failure_reason", {}).get("value") or refined_data.get("toxicity_profile", {}).get("value") if outcome_type == "Failure" else None,
+                    "is_ai_extracted": refined_data.get("drug_name", {}).get("value") != "Unknown"
                 }
 
                 supabase.table("golden_set_library").insert(new_entry).execute()

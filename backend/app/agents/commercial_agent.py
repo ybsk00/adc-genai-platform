@@ -81,12 +81,27 @@ async def run_commercial_agent(state: ADCState) -> CommercialInfo:
                 "supplier": "Ambeed"
             }
         )
+    # [V2.0] Total Cost Estimation Logic (Commented out as requested)
+    """
+    payload_cost = float(payload_info.get("price", "0").replace("$", "").split("/")[0]) if payload_info else 0
+    antibody_cost = 0
+    target = state.input.target.lower()
+    
+    if "her2" in target:
+        antibody_cost = 450  # Est. $450/mg (Trastuzumab Biosimilar)
+    elif "trop" in target:
+        antibody_cost = 500  # Est. $500/mg
     else:
-        # 기본값 (검색 실패 시)
-        return CommercialInfo(
-            feasibility_score=40.0,
-            total_estimated_cost="Unknown (Quote Required)",
-            availability="Custom Synthesis Required",
-            payload_info={"name": payload_id, "status": "Not Found"},
-            linker_info={"name": linker_id, "status": "Not Found"}
-        )
+        antibody_cost = 600  # Custom
+        
+    total_estimate = payload_cost + antibody_cost
+    # total_estimated_cost = f"${total_estimate:.2/mg}"
+    """
+
+    return CommercialInfo(
+        feasibility_score=40.0,
+        total_estimated_cost="Unknown (Quote Required)",
+        availability="Custom Synthesis Required",
+        payload_info={"name": payload_id, "status": "Not Found"},
+        linker_info={"name": linker_id, "status": "Not Found"}
+    )

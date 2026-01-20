@@ -74,6 +74,16 @@ export function DataSourcesTab() {
             endpoint: `${API_BASE_URL}/api/scheduler/sync/openfda`
         },
         {
+            id: 'creative',
+            name: 'Creative Biolabs',
+            description: 'Antibody data & UniProt ID extraction',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '10 min',
+            endpoint: `${API_BASE_URL}/api/admin/crawler/creative/run`
+        },
+        {
             id: 'goldenset',
             name: 'Golden Set Library',
             description: 'FDA approved ADC data',

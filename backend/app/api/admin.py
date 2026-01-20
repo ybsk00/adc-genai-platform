@@ -53,6 +53,7 @@ class GoldenSetDraft(BaseModel):
     created_at: str
     outcome_type: Optional[str] = None # Success, Failure, Ongoing
     failure_reason: Optional[str] = None
+    is_ai_extracted: bool = False
 
 
 class ApproveRequest(BaseModel):
@@ -205,7 +206,8 @@ async def get_golden_set_drafts():
                 enrichment_source=item.get("enrichment_source") or "unknown",
                 created_at=item.get("created_at"),
                 outcome_type=item.get("outcome_type"),
-                failure_reason=item.get("failure_reason")
+                failure_reason=item.get("failure_reason"),
+                is_ai_extracted=item.get("is_ai_extracted") or False
             ))
             
         return drafts
@@ -470,6 +472,22 @@ async def run_ambeed_crawler(req: CrawlerRunRequest, background_tasks: Backgroun
             "status": "started",
             "message": f"Ambeed crawler started for category: {req.category}",
             "mode": "stealth"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/crawler/creative/run")
+async def run_creative_crawler(background_tasks: BackgroundTasks, target: str = "HER2"):
+    """
+    Creative Biolabs Crawler 실행 (Background)
+    """
+    try:
+        from app.services.creative_biolabs_crawler import creative_crawler
+        background_tasks.add_task(creative_crawler.run, target)
+        
+        return {
+            "status": "started",
+            "message": f"Creative Biolabs crawler started for target: {target}"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

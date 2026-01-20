@@ -37,8 +37,8 @@ interface GoldenSetDraft {
     created_at: string
     outcome_type?: string
     failure_reason?: string
-    // Add other fields as needed for comparison
-    raw_data?: string // Mock field for now if not in API response
+    is_ai_extracted?: boolean
+    raw_data?: string
 }
 
 export function StagingAreaTab() {
@@ -185,9 +185,9 @@ export function StagingAreaTab() {
                                             <Badge variant="outline" className="text-xs border-slate-700 text-slate-500">
                                                 {draft.enrichment_source}
                                             </Badge>
-                                            {draft.enrichment_source === 'clinical_trials_ai_refined' && (
+                                            {draft.is_ai_extracted && (
                                                 <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] gap-1">
-                                                    <Sparkles className="w-2.5 h-2.5" /> AI
+                                                    <Sparkles className="w-2.5 h-2.5" /> ✨ AI Extracted
                                                 </Badge>
                                             )}
                                         </div>
