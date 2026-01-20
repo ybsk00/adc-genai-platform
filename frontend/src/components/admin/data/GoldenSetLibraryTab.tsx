@@ -23,12 +23,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -39,22 +33,13 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from "@/components/ui/label"
-import { Textarea } from '@/components/ui/textarea'
 import {
-    ChevronDown,
-    Check,
-    X,
     Loader2,
-    RefreshCw,
     Plus,
-    Upload,
-    FileText,
-    AlertCircle,
-    Search
+    Upload
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
 import SmilesDrawer from 'smiles-drawer'
 
 // API Response Type
@@ -78,14 +63,15 @@ function StructureViewer({ smiles, id }: { smiles: string, id: string }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
-        if (canvasRef.current && smiles) {
+        const canvas = canvasRef.current
+        if (canvas && smiles) {
             const drawer = new SmilesDrawer.Drawer({
                 width: 200,
                 height: 100,
                 compactDrawing: false,
             })
             SmilesDrawer.parse(smiles, (tree: any) => {
-                drawer.draw(tree, canvasRef.current, 'light', false)
+                drawer.draw(tree, canvas, 'light', false)
             }, (err: any) => {
                 console.error(err)
             })
@@ -245,9 +231,9 @@ export function GoldenSetLibraryTab() {
                 return (
                     <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${status === 'Green' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
-                                status === 'Yellow' ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]' :
-                                    status === 'Red' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                        'bg-slate-500'
+                            status === 'Yellow' ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]' :
+                                status === 'Red' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                    'bg-slate-500'
                             }`} />
                         <span className="text-sm text-slate-300">{status}</span>
                     </div>

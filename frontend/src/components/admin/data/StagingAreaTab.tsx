@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CheckCircle, XCircle, FileText, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSession } from '@/lib/supabase'
 
 interface GoldenSetDraft {
     id: string
@@ -57,7 +57,7 @@ export function StagingAreaTab() {
             // Let's use supabase-js to call the edge function or just standard fetch if we have a token.
             // Given the setup, I'll use the supabase client to get the session and then fetch.
 
-            const { data: { session } } = await supabase.auth.getSession()
+            const { session } = await getSession()
             if (!session) throw new Error('No session')
 
             const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/drafts`, {
@@ -73,7 +73,7 @@ export function StagingAreaTab() {
     // Approve Mutation
     const approveMutation = useMutation({
         mutationFn: async (id: string) => {
-            const { data: { session } } = await supabase.auth.getSession()
+            const { session } = await getSession()
             if (!session) throw new Error('No session')
 
             const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/${id}/approve`, {
@@ -100,7 +100,7 @@ export function StagingAreaTab() {
     // Reject Mutation
     const rejectMutation = useMutation({
         mutationFn: async ({ id, reason }: { id: string, reason: string }) => {
-            const { data: { session } } = await supabase.auth.getSession()
+            const { session } = await getSession()
             if (!session) throw new Error('No session')
 
             const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/goldenset/${id}/reject`, {

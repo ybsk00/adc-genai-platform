@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { API_BASE_URL } from '@/lib/api'
+
 export function CommercialCrawlerTab() {
     const [category, setCategory] = useState<string>('Payload')
     const [isRunning, setIsRunning] = useState(false)
@@ -23,7 +25,7 @@ export function CommercialCrawlerTab() {
         setLogs(prev => [`[${new Date().toLocaleTimeString()}] Starting crawler for ${category}...`, ...prev])
 
         try {
-            const response = await fetch('/api/admin/crawler/ambeed/run', {
+            const response = await fetch(`${API_BASE_URL}/api/admin/crawler/ambeed/run`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category, max_pages: 1 })

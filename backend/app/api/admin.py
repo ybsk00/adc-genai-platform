@@ -49,7 +49,10 @@ class GoldenSetDraft(BaseModel):
     payload: Optional[str]
     linker: Optional[str]
     enrichment_source: str
+    enrichment_source: str
     created_at: str
+    outcome_type: Optional[str] = None # Success, Failure, Ongoing
+    failure_reason: Optional[str] = None
 
 
 class ApproveRequest(BaseModel):
@@ -200,7 +203,9 @@ async def get_golden_set_drafts():
                 payload=item.get("properties", {}).get("payload"),
                 linker=item.get("properties", {}).get("linker"),
                 enrichment_source=item.get("enrichment_source") or "unknown",
-                created_at=item.get("created_at")
+                created_at=item.get("created_at"),
+                outcome_type=item.get("outcome_type"),
+                failure_reason=item.get("failure_reason")
             ))
             
         return drafts

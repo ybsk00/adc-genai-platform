@@ -1,97 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-    FileText,
-    Users,
-    Zap,
-    AlertTriangle,
-    TrendingUp,
-    TrendingDown,
     Activity,
-    CheckCircle,
-    XCircle,
     Loader2
 } from 'lucide-react'
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell
-} from 'recharts'
 import { API_BASE_URL } from '@/lib/api'
-
-// Mock KPI Data (To be replaced with API data)
-const kpiData = [
-    {
-        label: 'Docs Crawled Today',
-        value: '1,240',
-        change: '+150',
-        trend: 'up',
-        icon: FileText,
-        color: 'from-blue-500 to-cyan-500'
-    },
-    {
-        label: 'Simulations Ran Today',
-        value: '45',
-        change: '+12',
-        trend: 'up',
-        icon: Zap,
-        color: 'from-purple-500 to-pink-500'
-    },
-    {
-        label: 'Error Rate',
-        value: '0.5%',
-        change: '-0.2%',
-        trend: 'down',
-        icon: AlertTriangle,
-        color: 'from-amber-500 to-orange-500'
-    },
-    {
-        label: 'Total Users',
-        value: '1,204',
-        change: '+15',
-        trend: 'up',
-        icon: Users,
-        color: 'from-green-500 to-emerald-500'
-    },
-]
-
-// Mock Chart Data
-const userGrowthData = [
-    { name: 'Mon', users: 10 },
-    { name: 'Tue', users: 15 },
-    { name: 'Wed', users: 12 },
-    { name: 'Thu', users: 20 },
-    { name: 'Fri', users: 25 },
-    { name: 'Sat', users: 30 },
-    { name: 'Sun', users: 35 },
-]
-
-const topTargetsData = [
-    { name: 'HER2', value: 400 },
-    { name: 'LIV-1', value: 300 },
-    { name: 'TROP2', value: 200 },
-    { name: 'CD30', value: 100 },
-]
-
-const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981']
-
-// Mock Live Feed
-const liveFeed = [
-    { id: 1, message: 'Simulation #Job-992 failed (Timeout)', time: '2 mins ago', type: 'error' },
-    { id: 2, message: 'User kim@bionet.com purchased Pro Plan', time: '15 mins ago', type: 'success' },
-    { id: 3, message: 'Crawler: 150 new PubMed articles indexed', time: '1 hour ago', type: 'info' },
-    { id: 4, message: 'System Backup completed successfully', time: '3 hours ago', type: 'info' },
-    { id: 5, message: 'New user registered: lee@syngene.com', time: '5 hours ago', type: 'success' },
-]
 
 // System services to monitor
 const systemServices = [

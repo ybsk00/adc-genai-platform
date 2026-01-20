@@ -15,11 +15,75 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from app.services.perplexity_service import enrich_drug_data
 from app.core.config import settings
 from app.core.supabase import supabase
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+import json
 
 router = APIRouter()
 
 # Entrez 설정
 Entrez.email = settings.ENTREZ_EMAIL
+
+# [Cost Strategy] 데이터 처리용 가성비 모델
+llm_refiner = ChatOpenAI(
+    model=settings.FAST_LLM, # gpt-4o-mini
+    temperature=0,
+    api_key=settings.OPENAI_API_KEY
+)
+
+async def refine_drug_data_with_llm(title: str, description: str, raw_status: str, why_stopped: str) -> dict:
+    """
+    LLM을 사용하여 약물 이름 추출 및 임상 결과 분석 수행
+    """
+    system_prompt = """You are an expert Clinical Data Analyst. 
+    Your task is to extract structured information from unstructured clinical trial text.
+    
+    1. **Drug Name Extraction:** 
+       - Find the specific ADC code name (e.g., 'DS-8201', 'IMGN-632') or generic name.
+       - If only 'Anti-HER2 ADC' is found, output 'Unknown'.
+       - Do NOT invent names.
+       
+    2. **Outcome Analysis:**
+       - Determine if the trial was a 'Success', 'Failure', or 'Ongoing'.
+       - If 'Failure' (Terminated/Withdrawn), summarize the *scientific reason* (Toxicity, Lack of Efficacy) in 1 short sentence.
+       
+    Output JSON format:
+    {
+        "extracted_name": "DS-8201a",
+        "outcome_type": "Failure", 
+        "failure_reason": "Terminated due to Grade 3 interstitial lung disease."
+    }
+    """
+    
+    user_prompt = f"""
+    Title: {title}
+    Description: {description}
+    Status: {raw_status}
+    Why Stopped: {why_stopped}
+    """
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("user", user_prompt)
+    ])
+    
+    try:
+        chain = prompt | llm_refiner
+        # JSON 모드 강제 (Structured Output)
+        response = await chain.ainvoke({})
+        
+        content = response.content.strip()
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+            
+        return json.loads(content)
+        
+    except Exception as e:
+        print(f"LLM Refine Error: {e}")
+        return {"extracted_name": "Unknown", "outcome_type": "Unknown", "failure_reason": None}
+
 
 # In-memory 동기화 상태 추적 (TODO: Redis로 대체)
 sync_jobs: Dict[str, Dict[str, Any]] = {}
@@ -106,14 +170,62 @@ async def process_clinical_trials_data(job_id: str):
                 # enriched = await enrich_drug_data(record) 
                 # 일단 Raw Data 위주로 저장
                 
+                # [LLM Injection] 데이터 정제 요청
+                # 이름이 없거나, 상태가 'Terminated'인 경우 LLM에게 분석 요청
+                should_refine = (
+                    drug_name in ["Unknown", "Drug:"] or 
+                    protocol.get("statusModule", {}).get("overallStatus") in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]
+                )
+                
+                refined_data = {}
+                if should_refine:
+                    refined_data = await refine_drug_data_with_llm(
+                        title=id_module.get("officialTitle"),
+                        description=str(protocol.get("descriptionModule", {})),
+                        raw_status=protocol.get("statusModule", {}).get("overallStatus"),
+                        why_stopped=protocol.get("statusModule", {}).get("whyStopped", "")
+                    )
+                
+                # [Merge] LLM이 찾은 이름 적용
+                final_name = drug_name
+                if refined_data.get("extracted_name") and refined_data["extracted_name"] != "Unknown":
+                    final_name = refined_data["extracted_name"]
+                
+                # 이름이 여전히 없으면 Fallback 규칙 적용
+                if final_name == "Unknown":
+                     final_name = f"Unnamed ADC ({nct_id})"
+
+                # [Merge] LLM이 분석한 결과 적용
+                outcome_type = refined_data.get("outcome_type", "Unknown")
+                # LLM이 분석 안했으면 기본 매핑
+                if outcome_type == "Unknown":
+                    overall_status = protocol.get("statusModule", {}).get("overallStatus", "Unknown")
+                    if overall_status in ["COMPLETED", "APPROVED"]:
+                        outcome_type = "Success"
+                    elif overall_status in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]:
+                        outcome_type = "Failure"
+                    elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]:
+                        outcome_type = "Ongoing"
+
+                failure_reason = refined_data.get("failure_reason")
+                if not failure_reason and outcome_type == "Failure":
+                    failure_reason = protocol.get("statusModule", {}).get("whyStopped", "")
+
                 new_entry = {
-                    "name": drug_name,
+                    "name": final_name,
                     "category": "clinical_trial",
-                    "description": f"Clinical Trial {nct_id}: {record['title']}",
-                    "properties": record,
+                    "description": f"[{outcome_type}] {record['title']}",
+                    "properties": {
+                        **record,
+                        "ai_analysis": refined_data, # AI 분석 원본 보관
+                        "overall_status": protocol.get("statusModule", {}).get("overallStatus"),
+                        "why_stopped": protocol.get("statusModule", {}).get("whyStopped")
+                    },
                     "status": "draft",
-                    "enrichment_source": "clinical_trials",
-                    "raw_data": study # 전체 데이터 저장
+                    "enrichment_source": "clinical_trials_ai_refined" if should_refine else "clinical_trials",
+                    "raw_data": study, # 전체 데이터 저장
+                    "outcome_type": outcome_type,
+                    "failure_reason": failure_reason
                 }
 
                 supabase.table("golden_set_library").insert(new_entry).execute()
