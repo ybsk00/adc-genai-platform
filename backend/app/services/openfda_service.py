@@ -1,5 +1,5 @@
 import httpx
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.core.supabase import supabase
 import logging
 
