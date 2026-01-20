@@ -7,20 +7,24 @@ from app.core.supabase import supabase
 class RAGService:
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            print("Warning: OPENAI_API_KEY is missing. RAG Service will not function.")
-            self.client = None
-        else:
-            self.client = AsyncOpenAI(api_key=self.api_key)
+        self.client = None
 
+    def _get_client(self):
+        if not self.client:
+            if not self.api_key:
+                print("Warning: OPENAI_API_KEY is missing. RAG Service will not function.")
+                return None
+            self.client = AsyncOpenAI(api_key=self.api_key)
+        return self.client
 
     async def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI"""
-        if not self.client:
-            print("Error: OpenAI client not initialized")
+        client = self._get_client()
+        if not client:
+            print("Error: OpenAI client not available")
             return []
             
-        response = await self.client.embeddings.create(
+        response = await client.embeddings.create(
             input=text,
             model="text-embedding-3-small"
         )

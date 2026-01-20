@@ -30,4 +30,9 @@ ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 
 # 실행
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# 시작 스크립트 복사 및 실행 권한 부여
+COPY start.sh .
+RUN chmod +x start.sh
+
+# 실행
+CMD ["./start.sh"]
