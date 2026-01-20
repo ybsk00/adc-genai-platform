@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+from datetime import datetime
 from bs4 import BeautifulSoup
 from typing import List, Dict, Any, Optional
 from app.core.supabase import supabase

@@ -305,6 +305,23 @@ async def sync_pubmed(background_tasks: BackgroundTasks):
     background_tasks.add_task(process_pubmed_data, job_id)
     return SyncJobResponse(job_id=job_id, status="queued", message="PubMed sync started.")
 
+@router.post("/sync/openfda", response_model=SyncJobResponse)
+async def sync_openfda(background_tasks: BackgroundTasks):
+    job_id = f"sync_openfda_{uuid4().hex[:8]}"
+    data = {"id": job_id, "status": "queued", "source": "openfda", "started_at": datetime.utcnow().isoformat()}
+    supabase.table("sync_jobs").insert(data).execute()
+    background_tasks.add_task(openfda_service.sync_to_db, job_id)
+    return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA sync started.")
+
+@router.post("/crawler/creative/run", response_model=SyncJobResponse)
+async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):
+    from app.services.creative_biolabs_crawler import creative_crawler
+    job_id = f"crawl_creative_{uuid4().hex[:8]}"
+    data = {"id": job_id, "status": "queued", "source": "creative_biolabs", "started_at": datetime.utcnow().isoformat()}
+    supabase.table("sync_jobs").insert(data).execute()
+    background_tasks.add_task(creative_crawler.run, search_term, 3, job_id)
+    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started.")
+
 @router.get("/sync/{job_id}")
 async def get_sync_status(job_id: str):
     job = await get_job_from_db(job_id)
