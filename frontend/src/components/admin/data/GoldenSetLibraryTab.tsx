@@ -66,24 +66,31 @@ function StructureViewer({ smiles, id }: { smiles: string, id: string }) {
     useEffect(() => {
         const canvas = canvasRef.current
         if (canvas && smiles) {
+            // Prevent drawing if canvas is hidden (e.g. inactive tab)
+            if (canvas.offsetParent === null) return
+
             const drawer = new SmilesDrawer.Drawer({
                 width: 200,
                 height: 100,
                 compactDrawing: false,
             })
 
-            SmilesDrawer.parse(smiles, (tree: any) => {
-                // Check if component is still mounted and canvas is valid
-                if (canvasRef.current) {
-                    try {
-                        drawer.draw(tree, canvasRef.current, 'light', false)
-                    } catch (e) {
-                        console.error("SmilesDrawer draw error:", e)
+            try {
+                SmilesDrawer.parse(smiles, (tree: any) => {
+                    // Double check if component is still mounted and visible
+                    if (canvasRef.current && canvasRef.current.offsetParent !== null) {
+                        try {
+                            drawer.draw(tree, canvasRef.current, 'light', false)
+                        } catch (e) {
+                            console.warn("SmilesDrawer draw error (likely hidden canvas):", e)
+                        }
                     }
-                }
-            }, (err: any) => {
-                console.error(err)
-            })
+                }, (err: any) => {
+                    console.warn("SmilesDrawer parse error:", err)
+                })
+            } catch (e) {
+                console.warn("SmilesDrawer init error:", e)
+            }
         }
     }, [smiles, id])
 
