@@ -1,177 +1,114 @@
-import httpx
-from bs4 import BeautifulSoup
+import aiohttp
 import asyncio
-import random
-import re
-from typing import Optional, List, Dict, Any
-from fake_useragent import UserAgent
+from bs4 import BeautifulSoup
+from typing import List, Dict, Any, Optional
 from app.core.supabase import supabase
 import logging
+import re
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class CreativeBiolabsCrawler:
+class CreativeBiolabsScraper:
     BASE_URL = "https://www.creative-biolabs.com"
-    # ADC Primary Antibody 카테고리 URL
-    CATEGORY_URL = "https://www.creative-biolabs.com/adc/products/primary-antibodies-for-adc-27.htm"
-    SEARCH_URL = "https://www.creative-biolabs.com/search"
     
-    def __init__(self):
-        self.ua = UserAgent()
-
-    def get_headers(self):
-        return {
-            'User-Agent': self.ua.random,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Referer': self.BASE_URL,
-        }
-
-    async def safe_request(self, client: httpx.AsyncClient, url: str, params: Optional[Dict] = None):
-        for i in range(3):
-            try:
-                await asyncio.sleep(random.uniform(2, 5)) # 매너 딜레이
-                headers = self.get_headers()
-                res = await client.get(url, headers=headers, params=params)
-                if res.status_code == 200:
-                    return res
-                elif res.status_code in [403, 429]:
-                    logger.warning(f"⚠️ Blocked. Cooling down...")
-                    await asyncio.sleep(30)
-            except Exception as e:
-                logger.error(f"Req Error: {e}")
-                await asyncio.sleep(5)
-        return None
-
-    async def parse_product_page(self, client: httpx.AsyncClient, url: str, job_id: Optional[str] = None):
-        """상세 페이지 파싱 및 commercial_reagents 저장"""
-        from app.api.scheduler import sync_jobs
-        
-        res = await self.safe_request(client, url)
-        if not res: return
-
-        soup = BeautifulSoup(res.text, 'html.parser')
-        
-        try:
-            # 중단 요청 체크
-            if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"):
-                return
-
-            h1 = soup.select_one('h1')
-            product_name = h1.get_text(strip=True) if h1 else "Unknown Antibody"
-            
-            properties = {"target": "Unknown"}
-            cat_no = None
-            supplier = "Creative Biolabs"
-
-            # 상세 스펙 테이블 파싱
-            for row in soup.select('table tr'):
-                text = row.get_text(" ", strip=True)
-                
-                if "Catalog No" in text or "Cat No" in text:
-                    cat_no = text.split(":")[-1].strip()
-                
-                if "UniProt" in text:
-                    raw_id = text.split("ID")[-1].strip()
-                    uniprot_id = re.sub(r'[^A-Z0-9]', '', raw_id) 
-                    properties['uniprot_id'] = uniprot_id
-                    logger.info(f"🧬 Found UniProt: {uniprot_id}")
-                
-                if "Target" in text:
-                    target = text.split(":")[-1].strip()
-                    properties['target'] = target
-
-            if not cat_no:
-                cat_no = url.split("/")[-1].replace(".htm", "")
-
-            # 중복 체크 (commercial_reagents 테이블)
-            existing = supabase.table("commercial_reagents").select("id").eq("catalog_no", cat_no).execute()
-            if existing.data:
-                logger.info(f"Skipping duplicate reagent: {cat_no}")
-                return
-
-            # commercial_reagents 형식으로 저장
-            new_reagent = {
-                "name": product_name,
-                "category": "antibody",
-                "description": f"High affinity antibody targeting {properties['target']} from Creative Biolabs.",
-                "supplier": supplier,
-                "product_url": url,
-                "catalog_no": cat_no,
-                "properties": properties
-            }
-            
-            supabase.table("commercial_reagents").insert(new_reagent).execute()
-            if job_id and job_id in sync_jobs:
-                sync_jobs[job_id]["records_drafted"] += 1
-            logger.info(f"✅ Saved to Commercial Reagents: {product_name}")
-
-        except Exception as e:
-            logger.error(f"Parse Error {url}: {e}")
-            if job_id and job_id in sync_jobs:
-                sync_jobs[job_id]["errors"].append(str(e))
-
     async def run(self, search_term: Optional[str] = None, max_pages: int = 3, job_id: Optional[str] = None):
         """
-        크롤링 실행
+        크롤링 실행 (aiohttp)
         """
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            if search_term:
-                await self.run_search_mode(client, search_term, job_id)
-            else:
-                await self.run_category_mode(client, max_pages, job_id)
-
-    async def run_search_mode(self, client: httpx.AsyncClient, target: str, job_id: Optional[str] = None):
-        """특정 타겟 검색 모드"""
-        logger.info(f"🔎 Search Mode: {target}")
-        res = await self.safe_request(client, self.SEARCH_URL, params={'k': f"{target} antibody", 'type': 'product'})
-        if res:
-            await self.process_list_page(client, res.text, job_id)
-
-    async def run_category_mode(self, client: httpx.AsyncClient, max_pages: int, job_id: Optional[str] = None):
-        """전체 카테고리 순회 모드"""
         from app.api.scheduler import sync_jobs
-        logger.info(f"🕸️ Trawl Mode: Scanning ADC antibodies (Max {max_pages} pages)")
-        
-        for page in range(1, max_pages + 1):
-            # 중단 요청 체크
-            if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"):
-                if job_id in sync_jobs:
-                    sync_jobs[job_id]["status"] = "stopped"
-                return
-
-            page_url = f"{self.CATEGORY_URL}?page={page}" if page > 1 else self.CATEGORY_URL
-            logger.info(f"📄 Processing Page {page}...")
-            
-            res = await self.safe_request(client, page_url)
-            if not res: break
-            
-            found_count = await self.process_list_page(client, res.text, job_id)
-            if found_count == 0:
-                logger.info("No more products found. Stopping.")
-                break
-
-    async def process_list_page(self, client: httpx.AsyncClient, html_content: str, job_id: Optional[str] = None):
-        """리스트 페이지에서 제품 링크 추출 후 방문"""
-        from app.api.scheduler import sync_jobs
-        soup = BeautifulSoup(html_content, 'html.parser')
-        links = []
-        for a in soup.select('.pro_list_title a'):
-            href = a.get('href')
-            if href:
-                full_url = self.BASE_URL + href if href.startswith('/') else href
-                links.append(full_url)
         
         if job_id and job_id in sync_jobs:
-            sync_jobs[job_id]["records_found"] += len(links)
+            sync_jobs[job_id]["status"] = "running"
 
-        logger.info(f"Found {len(links)} products on this page.")
-        for link in links:
-            # 중단 요청 체크
-            if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"):
-                return
-            await self.parse_product_page(client, link, job_id)
-            
-        return len(links)
+        async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
+            try:
+                if search_term:
+                    await self.run_search_mode(session, search_term, max_pages, job_id)
+                else:
+                    await self.run_category_mode(session, max_pages, job_id)
+                
+                if job_id and job_id in sync_jobs and sync_jobs[job_id]["status"] != "stopped":
+                    sync_jobs[job_id]["status"] = "completed"
+            except Exception as e:
+                logger.error(f"Crawler Global Error: {e}")
+                if job_id and job_id in sync_jobs:
+                    sync_jobs[job_id]["errors"].append(str(e))
+                    sync_jobs[job_id]["status"] = "failed"
 
-creative_crawler = CreativeBiolabsCrawler()
+    async def run_search_mode(self, session: aiohttp.ClientSession, term: str, max_pages: int, job_id: Optional[str] = None):
+        search_url = f"{self.BASE_URL}/adc/search.aspx?q={term}"
+        await self.process_list_page(session, search_url, job_id)
+
+    async def run_category_mode(self, session: aiohttp.ClientSession, max_pages: int, job_id: Optional[str] = None):
+        categories = [
+            "https://www.creative-biolabs.com/adc/products.html",
+            "https://www.creative-biolabs.com/adc/adc-cytotoxin.html",
+            "https://www.creative-biolabs.com/adc/adc-linkers.html"
+        ]
+        for cat_url in categories:
+            from app.api.scheduler import sync_jobs
+            if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"): break
+            await self.process_list_page(session, cat_url, job_id)
+
+    async def process_list_page(self, session: aiohttp.ClientSession, url: str, job_id: Optional[str] = None):
+        from app.api.scheduler import sync_jobs
+        try:
+            async with session.get(url) as res:
+                if res.status != 200: return
+                html = await res.text()
+                soup = BeautifulSoup(html, "html.parser")
+                
+                # 제품 링크 추출 (사이트 구조에 따라 조정 필요)
+                product_links = []
+                for a in soup.select("a[href*='/adc/p/'], a[href*='/adc/product/']"):
+                    link = a["href"]
+                    if not link.startswith("http"):
+                        link = self.BASE_URL + link
+                    if link not in product_links:
+                        product_links.append(link)
+
+                if job_id and job_id in sync_jobs:
+                    sync_jobs[job_id]["records_found"] += len(product_links)
+
+                # 병렬 처리: 5개씩
+                for i in range(0, len(product_links), 5):
+                    if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"): break
+                    batch = product_links[i:i+5]
+                    tasks = [self.parse_product_page(session, link, job_id) for link in batch]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    
+        except Exception as e:
+            logger.error(f"List Page Error {url}: {e}")
+
+    async def parse_product_page(self, session: aiohttp.ClientSession, url: str, job_id: Optional[str] = None):
+        from app.api.scheduler import sync_jobs
+        try:
+            async with session.get(url) as res:
+                if res.status != 200: return
+                html = await res.text()
+                soup = BeautifulSoup(html, "html.parser")
+                
+                name = soup.select_one("h1").text.strip() if soup.select_one("h1") else "Unknown Product"
+                
+                # UniProt ID 추출 (정규식)
+                uniprot_match = re.search(r"[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}", html)
+                uniprot_id = uniprot_match.group(0) if uniprot_match else None
+                
+                product_data = {
+                    "name": name,
+                    "source_url": url,
+                    "uniprot_id": uniprot_id,
+                    "raw_data": {"html_title": soup.title.string if soup.title else None},
+                    "status": "available"
+                }
+                
+                # commercial_reagents 테이블에 저장
+                supabase.table("commercial_reagents").upsert(product_data, on_conflict="name").execute()
+                
+                if job_id and job_id in sync_jobs:
+                    sync_jobs[job_id]["records_drafted"] += 1
+                    
+        except Exception as e:
+            logger.error(f"Product Page Error {url}: {e}")
+
+creative_crawler = CreativeBiolabsScraper()
