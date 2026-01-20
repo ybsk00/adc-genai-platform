@@ -29,9 +29,5 @@ COPY app/ ./app/
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 
-# 헬스체크
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
 # 실행
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
