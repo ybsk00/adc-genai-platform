@@ -29,43 +29,45 @@ if settings.NCBI_API_KEY:
 if settings.NCBI_TOOL:
     Entrez.tool = settings.NCBI_TOOL
 
-async def refine_drug_data_with_llm(title: str, description: str, raw_status: str, why_stopped: str) -> dict:
+async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: Optional[str] = None) -> dict:
     """
-    LLM을 사용하여 약물 이름 추출 및 임상 결과 분석 수행
+    LLM을 사용하여 약물 이름, 타겟, 페이로드, 링커, 독성 정보 및 근거 추출
     """
     try:
-        # Lazy Load to prevent startup crash if API Key is missing
         llm_refiner = ChatOpenAI(
             model=settings.FAST_LLM, # gpt-4o-mini
             temperature=0,
             api_key=settings.OPENAI_API_KEY
         )
         
-        system_prompt = """You are an expert Clinical Data Analyst. 
-        Your task is to extract structured information from unstructured clinical trial text.
+        system_prompt = """You are an expert Clinical & Pharmaceutical Data Analyst. 
+        Extract structured ADC (Antibody-Drug Conjugate) information from the provided text.
         
-        1. **Drug Name Extraction:** 
-           - Find the specific ADC code name (e.g., 'DS-8201', 'IMGN-632') or generic name.
-           - If only 'Anti-HER2 ADC' is found, output 'Unknown'.
-           - Do NOT invent names.
-           
-        2. **Outcome Analysis:**
-           - Determine if the trial was a 'Success', 'Failure', or 'Ongoing'.
-           - If 'Failure' (Terminated/Withdrawn), summarize the *scientific reason* (Toxicity, Lack of Efficacy) in 1 short sentence.
-           
+        For each field, provide the 'value' and the 'evidence' (the exact sentence or phrase from the text).
+        
+        Fields to extract:
+        1. **drug_name**: Specific ADC code name or generic name.
+        2. **target**: The biological target (e.g., HER2, TROP2, CD33).
+        3. **payload**: The cytotoxic drug (e.g., MMAE, DXd, SN-38).
+        4. **linker**: The linker type (e.g., Val-Cit, tetrapeptide-based).
+        5. **outcome_type**: 'Success', 'Failure', or 'Ongoing'.
+        6. **toxicity_profile**: Key safety issues or boxed warnings.
+        
         Output JSON format:
         {
-            "extracted_name": "DS-8201a",
-            "outcome_type": "Failure", 
-            "failure_reason": "Terminated due to Grade 3 interstitial lung disease."
+            "drug_name": {"value": "DS-8201a", "evidence": "...fam-trastuzumab deruxtecan-nxki..."},
+            "target": {"value": "HER2", "evidence": "...targeting human epidermal growth factor receptor 2..."},
+            "payload": {"value": "DXd", "evidence": "...deruxtecan, a derivative of exatecan..."},
+            "linker": {"value": "Tetrapeptide-based", "evidence": "...cleavable tetrapeptide-based linker..."},
+            "outcome_type": {"value": "Success", "evidence": "...demonstrated significant improvement in PFS..."},
+            "toxicity_profile": {"value": "ILD/Pneumonitis", "evidence": "...Boxed Warning for interstitial lung disease..."}
         }
         """
         
         user_prompt = f"""
         Title: {title}
-        Description: {description}
-        Status: {raw_status}
-        Why Stopped: {why_stopped}
+        Content: {text_content}
+        Status Context: {raw_status if raw_status else 'N/A'}
         """
         
         prompt = ChatPromptTemplate.from_messages([
@@ -74,7 +76,6 @@ async def refine_drug_data_with_llm(title: str, description: str, raw_status: st
         ])
     
         chain = prompt | llm_refiner
-        # JSON 모드 강제 (Structured Output)
         response = await chain.ainvoke({})
         
         content = response.content.strip()
@@ -87,7 +88,14 @@ async def refine_drug_data_with_llm(title: str, description: str, raw_status: st
         
     except Exception as e:
         print(f"LLM Refine Error: {e}")
-        return {"extracted_name": "Unknown", "outcome_type": "Unknown", "failure_reason": None}
+        return {
+            "drug_name": {"value": "Unknown", "evidence": None},
+            "target": {"value": "Unknown", "evidence": None},
+            "payload": {"value": "Unknown", "evidence": None},
+            "linker": {"value": "Unknown", "evidence": None},
+            "outcome_type": {"value": "Unknown", "evidence": None},
+            "toxicity_profile": {"value": "Unknown", "evidence": None}
+        }
 
 
 # In-memory 동기화 상태 추적 (TODO: Redis로 대체)
@@ -178,45 +186,24 @@ async def process_clinical_trials_data(job_id: str):
                     "phase": protocol.get("designModule", {}).get("phases", ["Unknown"])[0]
                 }
                 
-                # [LLM Injection] 데이터 정제 요청
-                should_refine = (
-                    drug_name in ["Unknown", "Drug:"] or 
-                    protocol.get("statusModule", {}).get("overallStatus") in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]
+                # [LLM Injection] 전방위 데이터 분석 (항상 수행)
+                refined_data = await refine_drug_data_with_llm(
+                    title=id_module.get("officialTitle"),
+                    text_content=str(protocol.get("descriptionModule", {})),
+                    raw_status=protocol.get("statusModule", {}).get("overallStatus")
                 )
                 
-                refined_data = {}
-                if should_refine:
-                    refined_data = await refine_drug_data_with_llm(
-                        title=id_module.get("officialTitle"),
-                        description=str(protocol.get("descriptionModule", {})),
-                        raw_status=protocol.get("statusModule", {}).get("overallStatus"),
-                        why_stopped=protocol.get("statusModule", {}).get("whyStopped", "")
-                    )
-                
-                # [Merge] LLM이 찾은 이름 적용
-                final_name = drug_name
-                if refined_data.get("extracted_name") and refined_data["extracted_name"] != "Unknown":
-                    final_name = refined_data["extracted_name"]
-                
-                # 이름이 여전히 없으면 Fallback 규칙 적용
-                if final_name == "Unknown":
-                     final_name = f"Unnamed ADC ({nct_id})"
+                # [Merge] LLM 결과 적용
+                final_name = refined_data.get("drug_name", {}).get("value", drug_name)
+                if final_name == "Unknown": final_name = drug_name
+                if final_name == "Unknown": final_name = f"Unnamed ADC ({nct_id})"
 
-                # [Merge] LLM이 분석한 결과 적용
-                outcome_type = refined_data.get("outcome_type", "Unknown")
-                # LLM이 분석 안했으면 기본 매핑
+                outcome_type = refined_data.get("outcome_type", {}).get("value", "Unknown")
                 if outcome_type == "Unknown":
                     overall_status = protocol.get("statusModule", {}).get("overallStatus", "Unknown")
-                    if overall_status in ["COMPLETED", "APPROVED"]:
-                        outcome_type = "Success"
-                    elif overall_status in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]:
-                        outcome_type = "Failure"
-                    elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]:
-                        outcome_type = "Ongoing"
-
-                failure_reason = refined_data.get("failure_reason")
-                if not failure_reason and outcome_type == "Failure":
-                    failure_reason = protocol.get("statusModule", {}).get("whyStopped", "")
+                    if overall_status in ["COMPLETED", "APPROVED"]: outcome_type = "Success"
+                    elif overall_status in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]: outcome_type = "Failure"
+                    elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING"]: outcome_type = "Ongoing"
 
                 new_entry = {
                     "name": final_name,
@@ -224,15 +211,19 @@ async def process_clinical_trials_data(job_id: str):
                     "description": f"[{outcome_type}] {record['title']}",
                     "properties": {
                         **record,
-                        "ai_analysis": refined_data, # AI 분석 원본 보관
+                        "ai_analysis": refined_data, 
+                        "target": refined_data.get("target", {}).get("value"),
+                        "payload": refined_data.get("payload", {}).get("value"),
+                        "linker": refined_data.get("linker", {}).get("value"),
+                        "toxicity_profile": refined_data.get("toxicity_profile", {}).get("value"),
                         "overall_status": protocol.get("statusModule", {}).get("overallStatus"),
                         "why_stopped": protocol.get("statusModule", {}).get("whyStopped")
                     },
                     "status": "draft",
-                    "enrichment_source": "clinical_trials_ai_refined" if should_refine else "clinical_trials",
-                    "raw_data": study, # 전체 데이터 저장
+                    "enrichment_source": "clinical_trials_ai_refined",
+                    "raw_data": study,
                     "outcome_type": outcome_type,
-                    "failure_reason": failure_reason
+                    "failure_reason": refined_data.get("toxicity_profile", {}).get("value") if outcome_type == "Failure" else None
                 }
 
                 supabase.table("golden_set_library").insert(new_entry).execute()
@@ -330,6 +321,12 @@ async def process_pubmed_data(job_id: str):
                         sync_jobs[job_id]["status"] = "stopped"
                         return
                         
+                    # [LLM Injection] PubMed 데이터 분석
+                    refined_data = await refine_drug_data_with_llm(
+                        title=title,
+                        text_content=abstract
+                    )
+
                     new_kb = {
                         "source_type": "PubMed",
                         "title": title,
@@ -337,7 +334,8 @@ async def process_pubmed_data(job_id: str):
                         "content": abstract,
                         "relevance_score": 0.0,
                         "source_tier": 1,
-                        "rag_status": "pending"
+                        "rag_status": "pending",
+                        "ai_analysis": refined_data # AI 분석 결과 추가
                     }
                     
                     supabase.table("knowledge_base").insert(new_kb).execute()
@@ -390,6 +388,19 @@ async def process_openfda_data(job_id: str):
                         
                     if existing.data:
                         continue # 이미 있으면 패스
+                    
+                    # [LLM Injection] OpenFDA 데이터 분석
+                    refined_data = await refine_drug_data_with_llm(
+                        title=golden_data["name"],
+                        text_content=golden_data["properties"].get("full_description", "")
+                    )
+                    
+                    # AI 분석 결과 병합
+                    golden_data["properties"]["ai_analysis"] = refined_data
+                    if refined_data.get("target", {}).get("value") != "Unknown":
+                        golden_data["properties"]["target"] = refined_data["target"]["value"]
+                    if refined_data.get("payload", {}).get("value") != "Unknown":
+                        golden_data["properties"]["payload_type"] = refined_data["payload"]["value"]
                     
                     # 저장
                     supabase.table("golden_set_library").insert(golden_data).execute()
