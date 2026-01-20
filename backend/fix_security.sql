@@ -1,4 +1,4 @@
--- [Security Fix] 1. Enable RLS and add policies
+-- [Security Fix] 1. Enable RLS and add policies (Idempotent)
 -- data_sync_logs
 ALTER TABLE public.data_sync_logs ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
@@ -38,27 +38,43 @@ DO $$ BEGIN
 END $$;
 
 
--- [Security Fix] 2. Set Search Path for Functions (Robust Check)
+-- [Security Fix] 2. Set Search Path for Functions (Correct Signatures)
 DO $$
 BEGIN
-    -- approve_golden_set
+    -- approve_golden_set(uuid, uuid, text)
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'approve_golden_set') THEN
-        EXECUTE 'ALTER FUNCTION public.approve_golden_set(uuid) SET search_path = public';
+        BEGIN
+            EXECUTE 'ALTER FUNCTION public.approve_golden_set(uuid, uuid, text) SET search_path = public';
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Could not alter approve_golden_set: %', SQLERRM;
+        END;
     END IF;
 
-    -- handle_new_user
+    -- handle_new_user()
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'handle_new_user') THEN
-        EXECUTE 'ALTER FUNCTION public.handle_new_user() SET search_path = public';
+        BEGIN
+            EXECUTE 'ALTER FUNCTION public.handle_new_user() SET search_path = public';
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Could not alter handle_new_user: %', SQLERRM;
+        END;
     END IF;
 
-    -- update_updated_at
+    -- update_updated_at()
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_updated_at') THEN
-        EXECUTE 'ALTER FUNCTION public.update_updated_at() SET search_path = public';
+        BEGIN
+            EXECUTE 'ALTER FUNCTION public.update_updated_at() SET search_path = public';
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Could not alter update_updated_at: %', SQLERRM;
+        END;
     END IF;
 
-    -- match_golden_set
+    -- match_golden_set(vector, float, int)
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'match_golden_set') THEN
-        EXECUTE 'ALTER FUNCTION public.match_golden_set SET search_path = public';
+        BEGIN
+            EXECUTE 'ALTER FUNCTION public.match_golden_set(vector, float, int) SET search_path = public';
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Could not alter match_golden_set: %', SQLERRM;
+        END;
     END IF;
 END
 $$;
