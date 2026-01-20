@@ -291,17 +291,22 @@ async def process_pubmed_data(job_id: str):
     sync_jobs[job_id]["status"] = "running"
     
     try:
-        id_list = fetch_pubmed_ids()
+        # 동기 함수를 별도 스레드에서 실행하여 이벤트 루프 차단 방지
+        loop = asyncio.get_event_loop()
+        id_list = await loop.run_in_executor(None, fetch_pubmed_ids)
+        
         sync_jobs[job_id]["records_found"] = len(id_list)
         if not id_list:
             sync_jobs[job_id]["status"] = "completed"
+            sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
             return
 
-        papers = fetch_pubmed_details(id_list)
+        papers = await loop.run_in_executor(None, fetch_pubmed_details, id_list)
         drafted = 0
         if 'PubmedArticle' in papers:
             for article in papers['PubmedArticle']:
                 try:
+                    # ... (기존 파싱 로직)
                     medline = article['MedlineCitation']
                     article_data = medline['Article']
                     pmid = str(medline['PMID'])
@@ -341,6 +346,31 @@ async def process_pubmed_data(job_id: str):
                 except Exception as e:
                     sync_jobs[job_id]["errors"].append(f"PMID {pmid}: {str(e)}")
 
+        sync_jobs[job_id]["status"] = "completed"
+        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+    except Exception as e:
+        sync_jobs[job_id]["status"] = "failed"
+        sync_jobs[job_id]["errors"].append(str(e))
+
+async def wrapper_openfda_sync(job_id: str):
+    """OpenFDA 서비스 실행 및 상태 업데이트 래퍼"""
+    sync_jobs[job_id]["status"] = "running"
+    try:
+        # 서비스 내부에서 sync_jobs에 접근할 수 없으므로 여기서 관리하거나 
+        # 서비스가 콜백을 받도록 수정해야 함. 우선은 간단하게 래핑.
+        await openfda_service.sync_to_db()
+        sync_jobs[job_id]["status"] = "completed"
+        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+    except Exception as e:
+        sync_jobs[job_id]["status"] = "failed"
+        sync_jobs[job_id]["errors"].append(str(e))
+
+async def wrapper_creative_crawl(job_id: str, search_term: Optional[str] = None):
+    """Creative Biolabs 크롤러 실행 및 상태 업데이트 래퍼"""
+    from app.services.creative_biolabs_crawler import creative_crawler
+    sync_jobs[job_id]["status"] = "running"
+    try:
+        await creative_crawler.run(search_term)
         sync_jobs[job_id]["status"] = "completed"
         sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
     except Exception as e:
@@ -416,20 +446,19 @@ async def sync_openfda(background_tasks: BackgroundTasks):
         "started_at": datetime.utcnow().isoformat(), "completed_at": None, "cancel_requested": False, "errors": []
     }
     # AstraForge 2.0: Use the new openfda_service for approved drugs
-    background_tasks.add_task(openfda_service.sync_to_db)
+    background_tasks.add_task(wrapper_openfda_sync, job_id)
     return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA Approved ADC sync started.")
 
 @router.post("/crawler/creative/run", response_model=SyncJobResponse)
 async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):
     """Creative Biolabs 크롤러 실행 (AstraForge 2.0)"""
-    from app.services.creative_biolabs_crawler import creative_crawler
     job_id = f"crawl_creative_{uuid4().hex[:8]}"
     sync_jobs[job_id] = {
-        "status": "running", "source": "creative_biolabs", "records_found": 0, "records_drafted": 0,
+        "status": "queued", "source": "creative_biolabs", "records_found": 0, "records_drafted": 0,
         "started_at": datetime.utcnow().isoformat(), "completed_at": None, "cancel_requested": False, "errors": []
     }
-    background_tasks.add_task(creative_crawler.run, search_term)
-    return SyncJobResponse(job_id=job_id, status="running", message="Creative Biolabs crawler started.")
+    background_tasks.add_task(wrapper_creative_crawl, job_id, search_term)
+    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started.")
 
 @router.post("/sync/goldenset", response_model=SyncJobResponse)
 async def sync_goldenset(background_tasks: BackgroundTasks):
