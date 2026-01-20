@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     shared-mime-info \
     fonts-noto-cjk \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 작업 디렉토리
