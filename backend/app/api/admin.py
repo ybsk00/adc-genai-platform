@@ -49,7 +49,6 @@ class GoldenSetDraft(BaseModel):
     payload: Optional[str]
     linker: Optional[str]
     enrichment_source: str
-    enrichment_source: str
     created_at: str
     outcome_type: Optional[str] = None # Success, Failure, Ongoing
     failure_reason: Optional[str] = None
