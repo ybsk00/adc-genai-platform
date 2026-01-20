@@ -1,13 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base
 from app.core.config import settings
+from app.services.scheduler_engine import scheduler_engine
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 앱 시작 시 스케줄러 가동
+    scheduler_engine.start()
+    yield
+    # 앱 종료 시 스케줄러 중지
+    scheduler_engine.shutdown()
 
 app = FastAPI(
     title="ADC-GenAI Platform API",
     description="AI-driven ADC analysis platform for bio-researchers",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS 설정
