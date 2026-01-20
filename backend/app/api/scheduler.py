@@ -272,9 +272,9 @@ async def process_clinical_trials_data(job_id: str):
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def fetch_pubmed_ids(term: str = "Antibody-Drug Conjugate", max_results: int = 20):
-    """PubMed ID 검색"""
-    handle = Entrez.esearch(db="pubmed", term=term, retmax=max_results)
+def fetch_pubmed_ids(term: str = "Antibody-Drug Conjugate", max_results: int = 50):
+    """PubMed ID 검색 (최신순 정렬)"""
+    handle = Entrez.esearch(db="pubmed", term=term, retmax=max_results, sort="pub_date")
     record = Entrez.read(handle)
     handle.close()
     return record["IdList"]
