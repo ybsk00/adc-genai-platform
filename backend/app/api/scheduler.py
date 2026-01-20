@@ -18,6 +18,7 @@ from app.core.supabase import supabase
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 import json
+from app.services.openfda_service import openfda_service
 
 router = APIRouter()
 
@@ -355,6 +356,60 @@ async def process_pubmed_data(job_id: str):
         sync_jobs[job_id]["errors"].append(str(e))
 
 
+async def process_openfda_data(job_id: str):
+    """
+    OpenFDA 데이터 수집 워커
+    3대 ADC 및 주요 링커/페이로드 기반 약물 수집
+    """
+    sync_jobs[job_id]["status"] = "running"
+    
+    try:
+        total_found = 0
+        drafted = 0
+        
+        # 정의된 모든 쿼리에 대해 순차 검색
+        for query in openfda_service.SEARCH_QUERIES:
+            try:
+                # 중지 요청 확인
+                if sync_jobs.get(job_id, {}).get("cancel_requested"):
+                    sync_jobs[job_id]["status"] = "stopped"
+                    return
+
+                labels = await openfda_service.fetch_labels(query, limit=20)
+                total_found += len(labels)
+                
+                for label in labels:
+                    # 데이터 정제
+                    golden_data = openfda_service.extract_golden_info(label)
+                    
+                    # 중복 체크 (Generic Name 기준)
+                    existing = supabase.table("golden_set_library")\
+                        .select("id")\
+                        .eq("properties->>generic_name", golden_data["generic_name"])\
+                        .execute()
+                        
+                    if existing.data:
+                        continue # 이미 있으면 패스
+                    
+                    # 저장
+                    supabase.table("golden_set_library").insert(golden_data).execute()
+                    drafted += 1
+                    sync_jobs[job_id]["records_drafted"] = drafted
+                    
+            except Exception as e:
+                print(f"Query failed: {query} - {e}")
+                sync_jobs[job_id]["errors"].append(f"Query {query}: {str(e)}")
+                continue # 쿼리 하나 실패해도 계속 진행
+                
+        sync_jobs[job_id]["records_found"] = total_found
+        sync_jobs[job_id]["status"] = "completed"
+        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        
+    except Exception as e:
+        sync_jobs[job_id]["status"] = "failed"
+        sync_jobs[job_id]["errors"].append(str(e))
+
+
 @router.post("/sync/clinical", response_model=SyncJobResponse)
 async def sync_clinical_trials(background_tasks: BackgroundTasks):
     """ClinicalTrials.gov 데이터 동기화"""
@@ -402,6 +457,31 @@ async def sync_pubmed(background_tasks: BackgroundTasks):
         job_id=job_id,
         status="queued",
         message="PubMed sync started."
+    )
+
+
+@router.post("/sync/openfda", response_model=SyncJobResponse)
+async def sync_openfda(background_tasks: BackgroundTasks):
+    """OpenFDA 동기화 트리거"""
+    job_id = f"sync_openfda_{uuid4().hex[:8]}"
+    
+    sync_jobs[job_id] = {
+        "status": "queued",
+        "source": "openfda",
+        "records_found": 0,
+        "records_drafted": 0,
+        "started_at": datetime.utcnow().isoformat(),
+        "completed_at": None,
+        "cancel_requested": False,
+        "errors": []
+    }
+    
+    background_tasks.add_task(process_openfda_data, job_id)
+    
+    return SyncJobResponse(
+        job_id=job_id,
+        status="queued",
+        message="OpenFDA sync started. Searching for Big 3 ADCs & Linker payloads."
     )
 
 

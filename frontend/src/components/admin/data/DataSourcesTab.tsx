@@ -64,6 +64,16 @@ export function DataSourcesTab() {
             estimatedTime: '3 min'
         },
         {
+            id: 'openfda',
+            name: 'OpenFDA Approved Labels',
+            description: 'Official FDA labels for ADCs (Enhertu, Trodelvy, etc.)',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '3 min',
+            endpoint: `${API_BASE_URL}/api/scheduler/sync/openfda`
+        },
+        {
             id: 'goldenset',
             name: 'Golden Set Library',
             description: 'FDA approved ADC data',
