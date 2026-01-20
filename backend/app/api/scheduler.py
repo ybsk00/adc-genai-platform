@@ -11,16 +11,19 @@ import httpx
 import asyncio
 from Bio import Entrez
 from tenacity import retry, stop_after_attempt, wait_exponential
+import logging
+import json
+import re
 
 from app.services.perplexity_service import enrich_drug_data
 from app.core.config import settings
 from app.core.supabase import supabase
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-import json
 from app.services.openfda_service import openfda_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Entrez 설정
 Entrez.email = settings.NCBI_EMAIL
@@ -28,6 +31,29 @@ if settings.NCBI_API_KEY:
     Entrez.api_key = settings.NCBI_API_KEY
 if settings.NCBI_TOOL:
     Entrez.tool = settings.NCBI_TOOL
+
+# In-memory 동기화 상태 추적 (TODO: Redis로 대체)
+sync_jobs: Dict[str, Dict[str, Any]] = {}
+
+class DataSourceSetting(BaseModel):
+    source_id: str
+    auto_sync: bool
+    sync_interval_hours: int
+
+class SyncJobResponse(BaseModel):
+    job_id: str
+    status: str
+    message: str
+
+class SyncJobStatus(BaseModel):
+    job_id: str
+    status: str
+    source: str
+    records_found: int
+    records_drafted: int
+    started_at: str
+    completed_at: Optional[str] = None
+    errors: List[str] = []
 
 async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: Optional[str] = None) -> dict:
     """
@@ -89,7 +115,7 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
         return json.loads(content)
         
     except Exception as e:
-        print(f"LLM Refine Error: {e}")
+        logger.error(f"LLM Refine Error: {e}")
         return {
             "drug_name": {"value": "Unknown", "evidence": None},
             "target": {"value": "Unknown", "evidence": None},
@@ -99,58 +125,6 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
             "failure_reason": {"value": None, "evidence": None},
             "toxicity_profile": {"value": "Unknown", "evidence": None}
         }
-
-
-# In-memory 동기화 상태 추적 (TODO: Redis로 대체)
-sync_jobs: Dict[str, Dict[str, Any]] = {}
-
-class DataSourceSetting(BaseModel):
-    source_id: str
-    auto_sync: bool
-    sync_interval_hours: int
-
-@router.get("/settings/{source_id}")
-async def get_source_settings(source_id: str):
-    """특정 데이터 소스의 설정 조회"""
-    try:
-        res = supabase.table("data_source_settings").select("*").eq("source_id", source_id).execute()
-        if res.data:
-            return res.data[0]
-        return {"source_id": source_id, "auto_sync": False, "sync_interval_hours": 24}
-    except Exception:
-        return {"source_id": source_id, "auto_sync": False, "sync_interval_hours": 24}
-
-@router.post("/settings")
-async def save_source_settings(setting: DataSourceSetting):
-    """특정 데이터 소스의 설정 저장"""
-    try:
-        data = {
-            "source_id": setting.source_id,
-            "auto_sync": setting.auto_sync,
-            "sync_interval_hours": setting.sync_interval_hours,
-            "updated_at": datetime.utcnow().isoformat()
-        }
-        supabase.table("data_source_settings").upsert(data).execute()
-        return {"status": "success", "message": f"Settings for {setting.source_id} saved."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class SyncJobResponse(BaseModel):
-    """동기화 작업 응답"""
-    job_id: str
-    status: str
-    message: str
-
-class SyncJobStatus(BaseModel):
-    """동기화 작업 상태"""
-    job_id: str
-    status: str
-    source: str
-    records_found: int
-    records_drafted: int
-    started_at: str
-    completed_at: Optional[str] = None
-    errors: List[str] = []
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def fetch_clinical_trials(query: str = "ADC OR Antibody-Drug Conjugate"):
@@ -167,9 +141,7 @@ async def fetch_clinical_trials(query: str = "ADC OR Antibody-Drug Conjugate"):
         return response.json()
 
 async def process_clinical_trials_data(job_id: str):
-    """
-    ClinicalTrials.gov 데이터 수집 및 처리
-    """
+    """ClinicalTrials.gov 데이터 수집 및 처리"""
     if job_id not in sync_jobs:
         sync_jobs[job_id] = {"status": "queued", "records_found": 0, "records_drafted": 0, "errors": []}
     
@@ -183,6 +155,11 @@ async def process_clinical_trials_data(job_id: str):
         
         for study in studies:
             try:
+                # 중단 요청 체크
+                if sync_jobs.get(job_id, {}).get("cancel_requested"):
+                    sync_jobs[job_id]["status"] = "stopped"
+                    return
+
                 protocol = study.get("protocolSection", {})
                 id_module = protocol.get("identificationModule", {})
                 nct_id = id_module.get("nctId")
@@ -190,10 +167,6 @@ async def process_clinical_trials_data(job_id: str):
                 existing = supabase.table("golden_set_library").select("id").eq("properties->>nct_id", nct_id).execute()
                 if existing.data:
                     continue
-
-                if sync_jobs.get(job_id, {}).get("cancel_requested"):
-                    sync_jobs[job_id]["status"] = "stopped"
-                    return
 
                 conditions = protocol.get("conditionsModule", {}).get("conditions", [])
                 interventions = protocol.get("armsInterventionsModule", {}).get("interventions", [])
@@ -221,10 +194,6 @@ async def process_clinical_trials_data(job_id: str):
                     elif overall_status in ["TERMINATED", "WITHDRAWN", "SUSPENDED"]: outcome_type = "Failure"
                     elif overall_status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]: outcome_type = "Ongoing"
 
-                if final_name == "Unknown":
-                    target_val = refined_data.get("target", {}).get("value", "Unknown")
-                    final_name = f"Unnamed {target_val} ADC ({nct_id})"
-
                 new_entry = {
                     "name": final_name,
                     "category": "clinical_trial",
@@ -247,7 +216,7 @@ async def process_clinical_trials_data(job_id: str):
                     "enrichment_source": "clinical_trials_ai_refined",
                     "raw_data": study,
                     "outcome_type": outcome_type,
-                    "failure_reason": refined_data.get("failure_reason", {}).get("value") or refined_data.get("toxicity_profile", {}).get("value") if outcome_type == "Failure" else None,
+                    "failure_reason": refined_data.get("failure_reason", {}).get("value") if outcome_type == "Failure" else None,
                     "is_ai_extracted": refined_data.get("drug_name", {}).get("value") != "Unknown"
                 }
 
@@ -256,12 +225,14 @@ async def process_clinical_trials_data(job_id: str):
                 sync_jobs[job_id]["records_drafted"] = drafted
                 
             except Exception as e:
+                logger.error(f"Clinical Trial Error ({nct_id}): {e}")
                 sync_jobs[job_id]["errors"].append(str(e))
         
         sync_jobs[job_id]["status"] = "completed"
         sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
                     
     except Exception as e:
+        logger.error(f"Clinical Trial Worker Error: {e}")
         sync_jobs[job_id]["status"] = "failed"
         sync_jobs[job_id]["errors"].append(str(e))
 
@@ -283,17 +254,15 @@ def fetch_pubmed_details(id_list: List[str]):
     return records
 
 async def process_pubmed_data(job_id: str):
-    """
-    PubMed 데이터 수집
-    """
+    """PubMed 데이터 수집"""
     if job_id not in sync_jobs:
         sync_jobs[job_id] = {"status": "queued", "records_found": 0, "records_drafted": 0, "errors": []}
     sync_jobs[job_id]["status"] = "running"
     
     try:
-        # 동기 함수를 별도 스레드에서 실행하여 이벤트 루프 차단 방지
         loop = asyncio.get_event_loop()
-        id_list = await loop.run_in_executor(None, fetch_pubmed_ids)
+        search_term = "Antibody-Drug Conjugate OR ADC"
+        id_list = await loop.run_in_executor(None, fetch_pubmed_ids, search_term)
         
         sync_jobs[job_id]["records_found"] = len(id_list)
         if not id_list:
@@ -303,10 +272,15 @@ async def process_pubmed_data(job_id: str):
 
         papers = await loop.run_in_executor(None, fetch_pubmed_details, id_list)
         drafted = 0
+        
         if 'PubmedArticle' in papers:
             for article in papers['PubmedArticle']:
                 try:
-                    # ... (기존 파싱 로직)
+                    # 중단 요청 체크
+                    if sync_jobs.get(job_id, {}).get("cancel_requested"):
+                        sync_jobs[job_id]["status"] = "stopped"
+                        return
+
                     medline = article['MedlineCitation']
                     article_data = medline['Article']
                     pmid = str(medline['PMID'])
@@ -324,10 +298,6 @@ async def process_pubmed_data(job_id: str):
                     existing = supabase.table("knowledge_base").select("id").eq("title", title).execute()
                     if existing.data:
                         continue
-                    
-                    if sync_jobs.get(job_id, {}).get("cancel_requested"):
-                        sync_jobs[job_id]["status"] = "stopped"
-                        return
                         
                     refined_data = await refine_drug_data_with_llm(title=title, text_content=abstract)
                     new_kb = {
@@ -344,11 +314,13 @@ async def process_pubmed_data(job_id: str):
                     drafted += 1
                     sync_jobs[job_id]["records_drafted"] = drafted
                 except Exception as e:
+                    logger.error(f"PubMed Article Error (PMID {pmid}): {e}")
                     sync_jobs[job_id]["errors"].append(f"PMID {pmid}: {str(e)}")
 
         sync_jobs[job_id]["status"] = "completed"
         sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
     except Exception as e:
+        logger.error(f"PubMed Worker Error: {e}")
         sync_jobs[job_id]["status"] = "failed"
         sync_jobs[job_id]["errors"].append(str(e))
 
@@ -356,12 +328,12 @@ async def wrapper_openfda_sync(job_id: str):
     """OpenFDA 서비스 실행 및 상태 업데이트 래퍼"""
     sync_jobs[job_id]["status"] = "running"
     try:
-        # 서비스 내부에서 sync_jobs에 접근할 수 없으므로 여기서 관리하거나 
-        # 서비스가 콜백을 받도록 수정해야 함. 우선은 간단하게 래핑.
-        await openfda_service.sync_to_db()
-        sync_jobs[job_id]["status"] = "completed"
-        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        await openfda_service.sync_to_db(job_id=job_id)
+        if sync_jobs[job_id]["status"] != "stopped":
+            sync_jobs[job_id]["status"] = "completed"
+            sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
     except Exception as e:
+        logger.error(f"OpenFDA Wrapper Error: {e}")
         sync_jobs[job_id]["status"] = "failed"
         sync_jobs[job_id]["errors"].append(str(e))
 
@@ -370,53 +342,38 @@ async def wrapper_creative_crawl(job_id: str, search_term: Optional[str] = None)
     from app.services.creative_biolabs_crawler import creative_crawler
     sync_jobs[job_id]["status"] = "running"
     try:
-        await creative_crawler.run(search_term)
-        sync_jobs[job_id]["status"] = "completed"
-        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        await creative_crawler.run(search_term=search_term, job_id=job_id)
+        if sync_jobs[job_id]["status"] != "stopped":
+            sync_jobs[job_id]["status"] = "completed"
+            sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
     except Exception as e:
+        logger.error(f"Creative Crawler Wrapper Error: {e}")
         sync_jobs[job_id]["status"] = "failed"
         sync_jobs[job_id]["errors"].append(str(e))
 
-async def process_openfda_data(job_id: str):
-    """
-    OpenFDA 데이터 수집 워커
-    """
-    if job_id not in sync_jobs:
-        sync_jobs[job_id] = {"status": "queued", "records_found": 0, "records_drafted": 0, "errors": []}
-    sync_jobs[job_id]["status"] = "running"
-    
+@router.get("/settings/{source_id}")
+async def get_source_settings(source_id: str):
     try:
-        total_found = 0
-        drafted = 0
-        queries = openfda_service.SEARCH_QUERIES + ['openfda.brand_name:"*ADC*"', 'openfda.generic_name:"*conjugate*"']
-        
-        for query in queries:
-            try:
-                if sync_jobs.get(job_id, {}).get("cancel_requested"):
-                    sync_jobs[job_id]["status"] = "stopped"
-                    return
-                labels = await openfda_service.fetch_labels(query, limit=50)
-                total_found += len(labels)
-                for label in labels:
-                    golden_data = openfda_service.extract_golden_info(label)
-                    existing = supabase.table("golden_set_library").select("id").eq("properties->>generic_name", golden_data["generic_name"]).execute()
-                    if existing.data:
-                        continue
-                    refined_data = await refine_drug_data_with_llm(title=golden_data["name"], text_content=golden_data["properties"].get("full_description", ""))
-                    golden_data["properties"]["ai_analysis"] = refined_data
-                    if refined_data.get("target", {}).get("value") != "Unknown":
-                        golden_data["properties"]["target"] = refined_data["target"]["value"]
-                    supabase.table("golden_set_library").insert(golden_data).execute()
-                    drafted += 1
-                    sync_jobs[job_id]["records_drafted"] = drafted
-            except Exception as e:
-                sync_jobs[job_id]["errors"].append(f"Query {query}: {str(e)}")
-        sync_jobs[job_id]["records_found"] = total_found
-        sync_jobs[job_id]["status"] = "completed"
-        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        res = supabase.table("data_source_settings").select("*").eq("source_id", source_id).execute()
+        if res.data:
+            return res.data[0]
+        return {"source_id": source_id, "auto_sync": False, "sync_interval_hours": 24}
+    except Exception:
+        return {"source_id": source_id, "auto_sync": False, "sync_interval_hours": 24}
+
+@router.post("/settings")
+async def save_source_settings(setting: DataSourceSetting):
+    try:
+        data = {
+            "source_id": setting.source_id,
+            "auto_sync": setting.auto_sync,
+            "sync_interval_hours": setting.sync_interval_hours,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        supabase.table("data_source_settings").upsert(data).execute()
+        return {"status": "success", "message": f"Settings for {setting.source_id} saved."}
     except Exception as e:
-        sync_jobs[job_id]["status"] = "failed"
-        sync_jobs[job_id]["errors"].append(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/sync/clinical", response_model=SyncJobResponse)
 async def sync_clinical_trials(background_tasks: BackgroundTasks):
@@ -445,13 +402,11 @@ async def sync_openfda(background_tasks: BackgroundTasks):
         "status": "queued", "source": "openfda", "records_found": 0, "records_drafted": 0,
         "started_at": datetime.utcnow().isoformat(), "completed_at": None, "cancel_requested": False, "errors": []
     }
-    # AstraForge 2.0: Use the new openfda_service for approved drugs
     background_tasks.add_task(wrapper_openfda_sync, job_id)
     return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA Approved ADC sync started.")
 
 @router.post("/crawler/creative/run", response_model=SyncJobResponse)
 async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):
-    """Creative Biolabs 크롤러 실행 (AstraForge 2.0)"""
     job_id = f"crawl_creative_{uuid4().hex[:8]}"
     sync_jobs[job_id] = {
         "status": "queued", "source": "creative_biolabs", "records_found": 0, "records_drafted": 0,
@@ -485,7 +440,6 @@ async def stop_sync_job(job_id: str):
 
 @router.get("/health")
 async def scheduler_health():
-    """스케줄러 API 헬스 체크"""
     return {
         "status": "healthy",
         "active_jobs": len([j for j in sync_jobs.values() if j.get("status") == "running"])
