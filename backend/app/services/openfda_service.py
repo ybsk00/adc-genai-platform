@@ -63,24 +63,35 @@ class OpenFDAService:
         }
 
     async def sync_to_db(self, job_id: Optional[str] = None):
-        """FDA 데이터를 golden_set_library에 동기화"""
-        from app.api.scheduler import sync_jobs
+        """FDA 데이터를 golden_set_library에 동기화 (DB 기반)"""
+        from app.api.scheduler import update_job_status, is_cancelled
         
+        if job_id:
+            await update_job_status(job_id, status="running")
+            
         labels = await self.fetch_approved_adcs()
-        if job_id and job_id in sync_jobs:
-            sync_jobs[job_id]["records_found"] = len(labels)
+        if job_id:
+            await update_job_status(job_id, records_found=len(labels))
             
         drafted = 0
         for label in labels:
             try:
                 # 중단 요청 체크
-                if job_id and sync_jobs.get(job_id, {}).get("cancel_requested"):
-                    if job_id in sync_jobs:
-                        sync_jobs[job_id]["status"] = "stopped"
+                if job_id and await is_cancelled(job_id):
+                    await update_job_status(job_id, status="stopped")
                     logger.info(f"Sync job {job_id} stopped by user.")
                     return
 
                 golden_data = self.extract_golden_info(label)
+                
+                # SMILES 보강
+                drug_name = golden_data.get("name")
+                if drug_name:
+                    from app.services.chemical_resolver import chemical_resolver
+                    smiles = chemical_resolver.fetch_verified_smiles(drug_name)
+                    if smiles:
+                        golden_data["smiles_code"] = smiles
+
                 # 중복 체크 (generic_name 기준)
                 existing = supabase.table("golden_set_library")\
                     .select("id")\
@@ -90,12 +101,16 @@ class OpenFDAService:
                 if not existing.data:
                     supabase.table("golden_set_library").insert(golden_data).execute()
                     drafted += 1
-                    if job_id and job_id in sync_jobs:
-                        sync_jobs[job_id]["records_drafted"] = drafted
+                    if job_id:
+                        await update_job_status(job_id, records_drafted=drafted)
                     logger.info(f"✅ Synced Approved ADC: {golden_data['name']}")
             except Exception as e:
                 logger.error(f"Sync Error for {label.get('id')}: {e}")
-                if job_id and job_id in sync_jobs:
-                    sync_jobs[job_id]["errors"].append(str(e))
+                if job_id:
+                    # 에러 로그는 리스트로 관리 (실제 구현 시 DB 구조에 맞춰 조정)
+                    pass
+
+        if job_id:
+            await update_job_status(job_id, status="completed", completed_at=datetime.utcnow().isoformat())
 
 openfda_service = OpenFDAService()
