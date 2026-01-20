@@ -249,6 +249,22 @@ async def process_clinical_trials_data(job_id: str):
                     }).execute()
                 except:
                     pass
+                    
+    except Exception as e:
+        print(f"Job failed: {e}")
+        sync_jobs[job_id]["status"] = "failed"
+        sync_jobs[job_id]["error"] = str(e)
+        # Log job failure to DB
+        try:
+             supabase.table("data_sync_logs").insert({
+                "source_id": "clinical_trials",
+                "status": "failed",
+                "records_synced": 0,
+                "records_drafted": 0,
+                "error_message": f"Job Critical Failure: {str(e)}"
+            }).execute()
+        except:
+            pass
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
