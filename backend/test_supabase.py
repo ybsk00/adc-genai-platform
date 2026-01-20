@@ -35,6 +35,14 @@ def test_supabase_connection():
         
     except Exception as e:
         print(f"Insert Failed: {e}")
+        if hasattr(e, 'code'):
+            print(f"Error Code: {e.code}")
+        if hasattr(e, 'details'):
+            print(f"Error Details: {e.details}")
+        if hasattr(e, 'message'):
+            print(f"Error Message: {e.message}")
 
 if __name__ == "__main__":
+    from app.core.config import settings
+    print(f"Target URL: {settings.SUPABASE_URL}")
     test_supabase_connection()
