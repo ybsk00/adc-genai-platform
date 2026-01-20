@@ -48,6 +48,7 @@ class Settings(BaseSettings):
 
     # PubMed
     ENTREZ_EMAIL: str = "your-email@example.com"
+    ENTREZ_API_KEY: str = ""
     
     # JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
