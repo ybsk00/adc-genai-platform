@@ -121,6 +121,27 @@ async def fetch_clinical_trials(query: str = "ADC OR Antibody-Drug Conjugate"):
         "pageSize": 20,
         "format": "json"
     }
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params, timeout=30.0)
+        response.raise_for_status()
+        return response.json()
+
+
+async def process_clinical_trials_data(job_id: str):
+    """
+    ClinicalTrials.gov 데이터 수집 및 처리
+    """
+    sync_jobs[job_id]["status"] = "running"
+    
+    try:
+        # 1. Fetch Data
+        data = await fetch_clinical_trials()
+        studies = data.get("studies", [])
+        
+        sync_jobs[job_id]["records_found"] = len(studies)
+        drafted = 0
+        
+        for study in studies:
             try:
                 protocol = study.get("protocolSection", {})
                 id_module = protocol.get("identificationModule", {})
