@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y \
     shared-mime-info \
     fonts-noto-cjk \
     curl \
+    libxrender1 \
+    libxext6 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # 작업 디렉토리
