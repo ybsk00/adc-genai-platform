@@ -391,6 +391,65 @@ async def stop_sync_job(job_id: str):
     await update_job_status(job_id, cancel_requested=True)
     return {"message": "Stop request sent to DB."}
 
+# --- Bulk Import & AI Refiner Endpoints ---
+
+@router.post("/bulk/import", response_model=SyncJobResponse)
+async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 5000):
+    """ClinicalTrials.gov 전체 덤프에서 ADC 데이터 일괄 임포트"""
+    from app.services.bulk_importer import BulkImporter
+    
+    job_id = f"bulk_import_{uuid4().hex[:8]}"
+    data = {
+        "id": job_id, 
+        "status": "queued", 
+        "source": "clinical_trials_bulk", 
+        "started_at": datetime.utcnow().isoformat()
+    }
+    supabase.table("sync_jobs").insert(data).execute()
+    
+    importer = BulkImporter()
+    background_tasks.add_task(importer.run_import, job_id, max_studies)
+    
+    return SyncJobResponse(
+        job_id=job_id, 
+        status="queued", 
+        message=f"Bulk import started (max {max_studies} studies)."
+    )
+
+@router.post("/refiner/run", response_model=SyncJobResponse)
+async def run_ai_refiner(background_tasks: BackgroundTasks, max_records: int = 50):
+    """미정제 레코드 LLM 분석 및 SMILES 보강"""
+    from app.services.ai_refiner import ai_refiner
+    
+    job_id = f"ai_refiner_{uuid4().hex[:8]}"
+    data = {
+        "id": job_id, 
+        "status": "queued", 
+        "source": "ai_refiner", 
+        "started_at": datetime.utcnow().isoformat()
+    }
+    supabase.table("sync_jobs").insert(data).execute()
+    
+    background_tasks.add_task(ai_refiner.process_pending_records, job_id, max_records)
+    
+    return SyncJobResponse(
+        job_id=job_id, 
+        status="queued", 
+        message=f"AI Refiner started (max {max_records} records)."
+    )
+
+@router.get("/refiner/pending")
+async def get_pending_count():
+    """미정제 레코드 수 조회"""
+    try:
+        res = supabase.table("golden_set_library")\
+            .select("count", count="exact")\
+            .eq("ai_refined", False)\
+            .execute()
+        return {"pending_count": res.count}
+    except Exception as e:
+        return {"pending_count": 0, "error": str(e)}
+
 @router.get("/health")
 async def health():
     res = supabase.table("sync_jobs").select("count", count="exact").eq("status", "running").execute()
