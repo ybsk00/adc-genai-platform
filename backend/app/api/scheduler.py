@@ -237,6 +237,7 @@ async def process_clinical_trials_data(job_id: str):
                 await asyncio.sleep(0.5)
                 
             except Exception as e:
+                print(f"Error processing {nct_id}: {e}")
                 sync_jobs[job_id]["errors"].append(f"{nct_id}: {str(e)}")
         
         sync_jobs[job_id]["status"] = "completed"

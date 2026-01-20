@@ -72,13 +72,65 @@ export function DataSourcesTab() {
         },
     ])
 
-    const handleSync = async (sourceId: string, endpoint?: string) => {
-        if (!endpoint) {
-            if (sourceId === 'goldenset') {
-                toast.info('Golden Set is auto-generated from other sources.')
-            } else {
-                toast.info('This source is coming soon.')
+    const pollJobStatus = async (jobId: string, sourceId: string) => {
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/scheduler/sync/${jobId}`)
+                if (!res.ok) return
+
+                const status = await res.json()
+
+                if (status.status === 'completed' || status.status === 'failed') {
+                    clearInterval(interval)
+                    setSyncingIds(prev => prev.filter(id => id !== sourceId))
+
+                    if (status.status === 'completed') {
+                        toast.success(`Sync completed! Found: ${status.records_found}, Drafted: ${status.records_drafted}`)
+                        // Update the local source count if possible (would need a refetch of sources)
+                    } else {
+                        toast.error(`Sync failed: ${status.errors.join(', ')}`)
+                    }
+                }
+            } catch (e) {
+                console.error("Polling error", e)
             }
+        }, 2000) // Poll every 2 seconds
+    }
+
+    const fetchRecordCounts = async () => {
+        try {
+            // Fetch counts for each source
+            // This is a placeholder. In a real app, you'd have an endpoint for this.
+            // For now, we'll just simulate it or fetch from the library API if available.
+            const res = await fetch(`${API_BASE_URL}/api/library/stats`) // Assuming this endpoint exists or we create it
+            if (res.ok) {
+                const stats = await res.json()
+                setSources(prev => prev.map(s => ({
+                    ...s,
+                    recordCount: stats[s.id] || s.recordCount,
+                    lastSync: stats[`${s.id}_last_sync`] || 'Just now'
+                })))
+            }
+        } catch (e) {
+            console.error("Failed to fetch stats", e)
+        }
+    }
+
+    const handleSync = async (sourceId: string, endpoint?: string) => {
+        // Special handling for Golden Set (Refresh View)
+        if (sourceId === 'goldenset') {
+            setSyncingIds(prev => [...prev, sourceId])
+            // Simulate refresh
+            setTimeout(async () => {
+                await fetchRecordCounts()
+                setSyncingIds(prev => prev.filter(id => id !== sourceId))
+                toast.success('Golden Set data refreshed')
+            }, 1000)
+            return
+        }
+
+        if (!endpoint) {
+            toast.info('This source is coming soon.')
             return
         }
 
@@ -91,14 +143,19 @@ export function DataSourcesTab() {
             const result = await response.json()
             toast.success(`${result.message}`)
 
-            // In a real app, we would poll for status here using result.job_id
+            // Start polling
+            if (result.job_id) {
+                pollJobStatus(result.job_id, sourceId)
+            } else {
+                setTimeout(() => {
+                    setSyncingIds(prev => prev.filter(id => id !== sourceId))
+                }, 2000)
+            }
+
         } catch (error) {
             console.error(error)
             toast.error('Failed to start sync')
-        } finally {
-            setTimeout(() => {
-                setSyncingIds(prev => prev.filter(id => id !== sourceId))
-            }, 2000)
+            setSyncingIds(prev => prev.filter(id => id !== sourceId))
         }
     }
 
