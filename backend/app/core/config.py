@@ -46,9 +46,10 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     GEMINI_MODEL_ID: str = "gemini-2.0-flash-exp"
 
-    # PubMed
-    ENTREZ_EMAIL: str = "your-email@example.com"
-    ENTREZ_API_KEY: str = ""
+    # NCBI (PubMed)
+    NCBI_EMAIL: str = "your-email@example.com"
+    NCBI_API_KEY: str = ""
+    NCBI_TOOL: str = "adc-platform"
     
     # JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
