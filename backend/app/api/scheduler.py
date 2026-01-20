@@ -236,12 +236,19 @@ async def process_clinical_trials_data(job_id: str):
                 drafted += 1
                 sync_jobs[job_id]["records_drafted"] = drafted
                 
-                "records_synced": 0,
-                "records_drafted": 0,
-                "error_message": str(e)[:1000]
-            }).execute()
-        except:
-            pass
+            except Exception as e:
+                print(f"Error processing study: {e}")
+                # Log error to DB
+                try:
+                    supabase.table("data_sync_logs").insert({
+                        "source_id": "clinical_trials",
+                        "status": "failed",
+                        "records_synced": 0,
+                        "records_drafted": 0,
+                        "error_message": str(e)[:1000]
+                    }).execute()
+                except:
+                    pass
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
