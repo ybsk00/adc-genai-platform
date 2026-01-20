@@ -236,25 +236,6 @@ async def process_clinical_trials_data(job_id: str):
                 drafted += 1
                 sync_jobs[job_id]["records_drafted"] = drafted
                 
-                # Rate Limiting
-                await asyncio.sleep(0.5)
-                
-            except Exception as e:
-                print(f"Error processing {nct_id}: {e}")
-                sync_jobs[job_id]["errors"].append(f"{nct_id}: {str(e)}")
-        
-        sync_jobs[job_id]["status"] = "completed"
-        sync_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
-        
-    except Exception as e:
-        sync_jobs[job_id]["status"] = "failed"
-        sync_jobs[job_id]["errors"].append(str(e))
-        
-        # Log to DB
-        try:
-            supabase.table("data_sync_logs").insert({
-                "source_id": "clinical_trials",
-                "status": "failed",
                 "records_synced": 0,
                 "records_drafted": 0,
                 "error_message": str(e)[:1000]
