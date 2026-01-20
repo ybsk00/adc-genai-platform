@@ -7,8 +7,8 @@ def test_supabase_connection():
     # 1. Test Select
     try:
         print("Attempting to select from golden_set_library...")
-        response = supabase.table("golden_set_library").select("count", count="exact").limit(1).execute()
-        print(f"Select successful. Total count: {response.count}")
+        response = supabase.table("golden_set_library").select("*").limit(1).execute()
+        print(f"Select successful. Data: {response.data}")
     except Exception as e:
         print(f"Select Failed: {e}")
         return

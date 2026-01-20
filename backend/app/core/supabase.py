@@ -28,6 +28,8 @@ class MockSupabaseClient:
 def get_supabase_client() -> Client:
     """Supabase 클라이언트 반환"""
     url = settings.SUPABASE_URL
+    if url and url.endswith("/"):
+        url = url[:-1]
     key = settings.SUPABASE_SERVICE_KEY
     
     if not url or not key:
