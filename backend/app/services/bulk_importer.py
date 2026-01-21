@@ -115,8 +115,14 @@ class BulkImporter:
         batch_size = 100
         
         try:
+            # ClinicalTrials.gov 403 방지를 위한 완전한 브라우저 헤더
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/zip,application/octet-stream,*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': 'https://clinicaltrials.gov/',
             }
             
             async with aiohttp.ClientSession(headers=headers) as session:
