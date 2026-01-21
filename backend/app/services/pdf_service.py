@@ -57,7 +57,7 @@ async def generate_pdf_report(
     """
     # Jinja2 환경 설정
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
-    template = env.get_template("report_template.html")
+    template = env.get_template("report_template.jinja2")
     
     # 템플릿 데이터 준비
     grade = result_data.get("final_grade", "B")

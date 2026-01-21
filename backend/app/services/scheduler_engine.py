@@ -58,7 +58,7 @@ class SchedulerEngine:
             
             try:
                 importer = BulkImporter()
-                await importer.run_import(max_studies=5000)
+                await importer.run_import(max_studies=5000, mode="daily")
             finally:
                 await job_lock.release("bulk_import")
                 

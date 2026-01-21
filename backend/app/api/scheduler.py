@@ -401,8 +401,11 @@ async def stop_sync_job(job_id: str):
 # --- Bulk Import & AI Refiner Endpoints ---
 
 @router.post("/bulk/import", response_model=SyncJobResponse)
-async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 5000):
-    """ClinicalTrials.gov 전체 덤프에서 ADC 데이터 일괄 임포트"""
+async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 5000, mode: str = "daily"):
+    """
+    ClinicalTrials.gov 전체 덤프에서 ADC 데이터 일괄 임포트
+    mode: 'daily' (기본값) 또는 'full' (전체 적재)
+    """
     from app.services.bulk_importer import BulkImporter
     
     # 중복 실행 방지
@@ -421,19 +424,19 @@ async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 
     }
     supabase.table("sync_jobs").insert(data).execute()
     
-    async def run_with_lock_release(importer, job_id, max_studies):
+    async def run_with_lock_release(importer, job_id, max_studies, mode):
         try:
-            await importer.run_import(job_id, max_studies)
+            await importer.run_import(job_id, max_studies, mode=mode)
         finally:
             await job_lock.release("bulk_import")
     
     importer = BulkImporter()
-    background_tasks.add_task(run_with_lock_release, importer, job_id, max_studies)
+    background_tasks.add_task(run_with_lock_release, importer, job_id, max_studies, mode)
     
     return SyncJobResponse(
         job_id=job_id, 
         status="queued", 
-        message=f"Bulk import started (max {max_studies} studies)."
+        message=f"Bulk import started (mode: {mode}, max {max_studies} studies)."
     )
 
 @router.post("/refiner/run", response_model=SyncJobResponse)

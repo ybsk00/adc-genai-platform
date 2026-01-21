@@ -85,17 +85,11 @@ class BulkImporter:
         elif status in ["WITHDRAWN", "SUSPENDED"]:
             return "Terminated"
         elif status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]:
-            # DB Constraint: outcome_type in ('Success', 'Failure', 'Terminated')
-            # 'Ongoing' is not yet supported in DB constraint, so mapping to 'Unknown' (or null)
-            # But 'Unknown' is not in the check list either?
-            # Let's check the init.sql again: check (outcome_type in ('Success', 'Failure', 'Terminated'))
-            # So 'Unknown' is ALSO not allowed if it's not null.
-            # However, the column is nullable. So we should return None.
             return None 
         return None
 
     async def save_batch(self, batch: List[Dict[str, Any]], job_id: Optional[str] = None):
-        """배치 단위로 DB에 저장 (upsert)"""
+        """배치 단위로 DB에 저장 (Upsert 전략: Select -> Insert or Update)"""
         if not batch:
             return 0
         
@@ -106,32 +100,51 @@ class BulkImporter:
                 if not nct_id:
                     continue
                 
-                # 중복 체크 (nct_id 기준)
+                # 1. 중복 체크 (nct_id 기준)
                 existing = supabase.table("golden_set_library")\
                     .select("id")\
                     .eq("properties->>nct_id", nct_id)\
                     .execute()
                 
                 if existing.data:
-                    self.duplicates_skipped += 1
-                    continue
-                
-                # 새 레코드 저장
-                supabase.table("golden_set_library").insert(entry).execute()
-                saved_count += 1
-                self.total_imported += 1
+                    # 2. 존재하면 업데이트 (Upsert 효과)
+                    record_id = existing.data[0]['id']
+                    # 업데이트할 필드만 선택 (기존 AI 분석 결과 등은 보존하고 싶을 수 있음)
+                    # 여기서는 최신 데이터로 덮어쓰기 (properties 등)
+                    update_data = {
+                        "name": entry["name"],
+                        "description": entry["description"],
+                        "properties": entry["properties"],
+                        "outcome_type": entry["outcome_type"],
+                        # status나 ai_refined는 건드리지 않음 (이미 작업 중일 수 있으므로)
+                    }
+                    supabase.table("golden_set_library").update(update_data).eq("id", record_id).execute()
+                    # logger.info(f"Updated existing record: {nct_id}")
+                else:
+                    # 3. 없으면 삽입
+                    supabase.table("golden_set_library").insert(entry).execute()
+                    saved_count += 1
+                    self.total_imported += 1
                 
             except Exception as e:
-                logger.error(f"Save error for {nct_id}: {e}")
+                logger.error(f"Save/Update error for {nct_id}: {e}")
                 self.errors.append(str(e))
         
         return saved_count
 
-    async def fetch_studies(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 100) -> List[dict]:
-        """API v2로 임상시험 데이터 조회"""
+    async def fetch_studies(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 100, mode: str = "daily") -> List[dict]:
+        """API v2로 임상시험 데이터 조회 (페이지네이션 & 모드 지원)"""
         all_studies = []
         next_page_token = None
         page = 0
+        
+        # 날짜 필터 설정 (Daily Sync용)
+        last_update_date = None
+        if mode == "daily":
+            from datetime import timedelta
+            yesterday = datetime.utcnow() - timedelta(days=1)
+            last_update_date = yesterday.strftime("%Y-%m-%d")
+            logger.info(f"📅 Daily Sync Mode: Fetching updates since {last_update_date}")
         
         async with aiohttp.ClientSession() as session:
             while page < max_pages:
@@ -144,6 +157,9 @@ class BulkImporter:
                 
                 if next_page_token:
                     params["pageToken"] = next_page_token
+                
+                if last_update_date:
+                    params["filter.lastUpdatePostDate"] = last_update_date
                 
                 try:
                     async with session.get(API_BASE_URL, params=params, timeout=aiohttp.ClientTimeout(total=60)) as response:
@@ -165,7 +181,7 @@ class BulkImporter:
                             break
                         
                         page += 1
-                        await asyncio.sleep(0.5)  # Rate limiting
+                        await asyncio.sleep(0.5)  # Rate limiting (0.5초 휴식)
                         
                 except Exception as e:
                     logger.error(f"Fetch error: {e}")
@@ -173,16 +189,17 @@ class BulkImporter:
         
         return all_studies
 
-    async def run_import(self, job_id: Optional[str] = None, max_studies: int = 500):
+    async def run_import(self, job_id: Optional[str] = None, max_studies: int = 5000, mode: str = "daily"):
         """
         ClinicalTrials.gov API v2를 사용하여 ADC 임상시험 데이터 수집
+        mode: 'daily' (기본값, 어제 이후 변경분) 또는 'full' (전체 덤프)
         """
         from app.api.scheduler import update_job_status, is_cancelled
         
         if job_id:
             await update_job_status(job_id, status="running")
         
-        logger.info("🚀 [API v2 Importer] Starting ClinicalTrials.gov data collection...")
+        logger.info(f"🚀 [API v2 Importer] Starting ClinicalTrials.gov data collection (Mode: {mode})...")
         
         batch = []
         batch_size = 50
@@ -195,6 +212,10 @@ class BulkImporter:
             ]
             
             total_fetched = 0
+            
+            # Full 모드일 때는 페이지 제한을 넉넉하게 (5000건 / 100 = 50페이지 이상)
+            # Daily 모드일 때는 적게
+            max_pages_per_term = 100 if mode == "full" else 5
             
             for search_term in ADC_SEARCH_TERMS:
                 if self.total_imported >= max_studies:
@@ -212,7 +233,8 @@ class BulkImporter:
                         search_term=search_term,
                         status_filter=status_filter,
                         page_size=100,
-                        max_pages=100 # Deep Scraping: 최대 100페이지(10,000건)까지 조회
+                        max_pages=max_pages_per_term,
+                        mode=mode
                     )
                     
                     for study in studies:
@@ -242,6 +264,7 @@ class BulkImporter:
             
             logger.info(f"""
             ✅ [API v2 Import Complete]
+            - Mode: {mode}
             - Total Fetched: {total_fetched}
             - New Records: {self.total_imported}
             - Duplicates Skipped: {self.duplicates_skipped}

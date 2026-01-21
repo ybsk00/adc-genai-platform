@@ -260,7 +260,21 @@ Description: {description[:1000] if description else 'N/A'}"""
                     await asyncio.sleep(0.5)
                 
                 except Exception as e:
-                    logger.error(f"Record processing error: {e}")
+                    logger.error(f"Record processing error for {item.get('id')}: {e}")
+                    # 에러 발생 시에도 처리된 것으로 표시하여 무한 루프 방지
+                    try:
+                        supabase.table("golden_set_library")\
+                            .update({
+                                "processing_error": f"Processing failed: {str(e)}",
+                                "ai_refined": True, # 재시도 방지
+                                "outcome_type": "Failure",
+                                "failure_reason": "System Error"
+                            })\
+                            .eq("id", item["id"])\
+                            .execute()
+                    except Exception as db_e:
+                        logger.error(f"Failed to update error status: {db_e}")
+                    
                     error_count += 1
             
             logger.info(f"🎉 Refiner Complete! Refined: {refined_count}, Errors: {error_count}")
