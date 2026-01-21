@@ -12,6 +12,7 @@ from app.core.supabase import supabase
 from app.core.config import settings
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from app.services.cost_tracker import cost_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,11 @@ class AIRefiner:
     async def refine_single_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """단일 레코드 LLM 분석"""
         try:
+            # 비용 한도 체크
+            if await cost_tracker.is_over_limit():
+                logger.warning("⚠️ Daily LLM cost limit reached. Skipping analysis.")
+                return None
+            
             llm = ChatOpenAI(
                 model=settings.FAST_LLM,
                 temperature=0,
@@ -74,6 +80,14 @@ Description: {description[:1000] if description else 'N/A'}"""
             chain = prompt | llm
             response = await chain.ainvoke({})
             content = response.content.strip()
+            
+            # 비용 추적
+            usage = response.response_metadata.get('token_usage', {})
+            await cost_tracker.track_usage(
+                settings.FAST_LLM,
+                usage.get('prompt_tokens', 0),
+                usage.get('completion_tokens', 0)
+            )
             
             # JSON 파싱
             if "```json" in content:

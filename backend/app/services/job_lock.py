@@ -1,0 +1,77 @@
+"""
+Job Lock Service
+중복 작업 실행 방지를 위한 DB 기반 잠금 메커니즘
+"""
+import logging
+from datetime import datetime, timedelta
+from typing import Optional
+
+from app.core.supabase import supabase
+
+logger = logging.getLogger(__name__)
+
+
+class JobLock:
+    """DB 기반 작업 잠금 메커니즘"""
+    
+    # 잠금 만료 시간 (시간 단위) - 비정상 종료 시 자동 해제
+    LOCK_EXPIRY_HOURS = 6
+    
+    async def acquire(self, job_type: str) -> bool:
+        """
+        작업 잠금 획득 시도
+        - 실행 중인 같은 타입의 작업이 없으면 True 반환
+        - 이미 실행 중이면 False 반환
+        """
+        try:
+            # 1. 오래된 잠금 정리 (비정상 종료 대비)
+            expiry_time = datetime.utcnow() - timedelta(hours=self.LOCK_EXPIRY_HOURS)
+            supabase.table("job_locks").delete().lt("acquired_at", expiry_time.isoformat()).execute()
+            
+            # 2. 현재 잠금 확인
+            existing = supabase.table("job_locks")\
+                .select("id, acquired_at")\
+                .eq("job_type", job_type)\
+                .execute()
+            
+            if existing.data:
+                lock = existing.data[0]
+                logger.warning(f"⚠️ Job '{job_type}' is already running since {lock['acquired_at']}")
+                return False
+            
+            # 3. 새 잠금 생성
+            supabase.table("job_locks").insert({
+                "job_type": job_type,
+                "acquired_at": datetime.utcnow().isoformat()
+            }).execute()
+            
+            logger.info(f"🔒 Lock acquired for job: {job_type}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Lock acquire error: {e}")
+            # 잠금 실패 시에도 작업 실행 허용 (fail-open)
+            return True
+    
+    async def release(self, job_type: str):
+        """작업 잠금 해제"""
+        try:
+            supabase.table("job_locks").delete().eq("job_type", job_type).execute()
+            logger.info(f"🔓 Lock released for job: {job_type}")
+        except Exception as e:
+            logger.error(f"Lock release error: {e}")
+    
+    async def is_locked(self, job_type: str) -> bool:
+        """잠금 상태 확인"""
+        try:
+            existing = supabase.table("job_locks")\
+                .select("id")\
+                .eq("job_type", job_type)\
+                .execute()
+            return bool(existing.data)
+        except Exception:
+            return False
+
+
+# 싱글톤 인스턴스
+job_lock = JobLock()

@@ -130,66 +130,88 @@ class BulkImporter:
                             await update_job_status(job_id, status="failed", errors=[error_msg])
                         return
                     
-                    # 전체 콘텐츠 다운로드 (대용량이므로 시간 소요)
-                    logger.info("📦 Downloading ZIP file... (this may take several minutes)")
-                    content = await response.read()
+                    # 스트리밍 다운로드 (메모리 효율적: 2GB → ~10MB)
+                    import tempfile
+                    import os
+                    temp_path = None
                     
-                    if job_id:
-                        await update_job_status(job_id, records_found=0)
-                    
-                    logger.info("📂 Extracting and parsing JSON files...")
-                    
-                    with zipfile.ZipFile(io.BytesIO(content)) as z:
-                        json_files = [f for f in z.namelist() if f.endswith('.json')]
-                        total_files = len(json_files)
-                        logger.info(f"Found {total_files} JSON files in archive")
+                    try:
+                        logger.info("📦 Streaming ZIP file to temp... (this may take several minutes)")
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+                        temp_path = temp_file.name
+                        downloaded_size = 0
                         
-                        for idx, filename in enumerate(json_files):
-                            # 중단 요청 체크
-                            if job_id and await is_cancelled(job_id):
-                                logger.info("Import cancelled by user")
-                                await update_job_status(job_id, status="stopped")
-                                return
-                            
-                            # 최대 수집 개수 체크
-                            if self.total_imported >= max_studies:
-                                logger.info(f"Reached max studies limit: {max_studies}")
-                                break
-                            
-                            try:
-                                with z.open(filename) as f:
-                                    study_data = json.load(f)
-                                    self.total_processed += 1
-                                    
-                                    # ADC 관련 데이터만 필터링
-                                    if self.is_adc_related(study_data):
-                                        entry = self.extract_study_info(study_data)
-                                        batch.append(entry)
+                        async for chunk in response.content.iter_chunked(1024 * 1024):  # 1MB chunks
+                            temp_file.write(chunk)
+                            downloaded_size += len(chunk)
+                            if downloaded_size % (100 * 1024 * 1024) == 0:  # Log every 100MB
+                                logger.info(f"📥 Downloaded {downloaded_size // (1024*1024)} MB...")
+                        
+                        temp_file.close()
+                        logger.info(f"✅ Download complete: {downloaded_size // (1024*1024)} MB")
+                        
+                        if job_id:
+                            await update_job_status(job_id, records_found=0)
+                        
+                        logger.info("📂 Extracting and parsing JSON files...")
+                        
+                        with zipfile.ZipFile(temp_path) as z:
+                            json_files = [f for f in z.namelist() if f.endswith('.json')]
+                            total_files = len(json_files)
+                            logger.info(f"Found {total_files} JSON files in archive")
+                        
+                            for idx, filename in enumerate(json_files):
+                                # 중단 요청 체크
+                                if job_id and await is_cancelled(job_id):
+                                    logger.info("Import cancelled by user")
+                                    await update_job_status(job_id, status="stopped")
+                                    return
+                                
+                                # 최대 수집 개수 체크
+                                if self.total_imported >= max_studies:
+                                    logger.info(f"Reached max studies limit: {max_studies}")
+                                    break
+                                
+                                try:
+                                    with z.open(filename) as f:
+                                        study_data = json.load(f)
+                                        self.total_processed += 1
                                         
-                                        # 배치가 차면 저장
-                                        if len(batch) >= batch_size:
-                                            saved = await self.save_batch(batch, job_id)
-                                            self.total_imported += saved
-                                            batch = []
+                                        # ADC 관련 데이터만 필터링
+                                        if self.is_adc_related(study_data):
+                                            entry = self.extract_study_info(study_data)
+                                            batch.append(entry)
                                             
-                                            if job_id:
-                                                await update_job_status(
-                                                    job_id, 
-                                                    records_found=self.total_processed,
-                                                    records_drafted=self.total_imported
-                                                )
-                                            
-                                            logger.info(f"Progress: {self.total_processed}/{total_files} files, {self.total_imported} ADC studies imported")
-                            
-                            except json.JSONDecodeError:
-                                continue
-                            except Exception as e:
-                                self.errors.append(str(e)[:100])
+                                            # 배치가 차면 저장
+                                            if len(batch) >= batch_size:
+                                                saved = await self.save_batch(batch, job_id)
+                                                self.total_imported += saved
+                                                batch = []
+                                                
+                                                if job_id:
+                                                    await update_job_status(
+                                                        job_id, 
+                                                        records_found=self.total_processed,
+                                                        records_drafted=self.total_imported
+                                                    )
+                                                
+                                                logger.info(f"Progress: {self.total_processed}/{total_files} files, {self.total_imported} ADC studies imported")
+                                
+                                except json.JSONDecodeError:
+                                    continue
+                                except Exception as e:
+                                    self.errors.append(str(e)[:100])
+                        
+                            # 남은 배치 저장
+                            if batch:
+                                saved = await self.save_batch(batch, job_id)
+                                self.total_imported += saved
                     
-                    # 남은 배치 저장
-                    if batch:
-                        saved = await self.save_batch(batch, job_id)
-                        self.total_imported += saved
+                    finally:
+                        # 임시 파일 반드시 삭제 (디스크 공간 확보)
+                        if temp_path and os.path.exists(temp_path):
+                            os.unlink(temp_path)
+                            logger.info(f"🗑️ Temp file deleted: {temp_path}")
             
             # 완료
             logger.info(f"🎉 Import Complete! Total: {self.total_imported} ADC studies from {self.total_processed} files")

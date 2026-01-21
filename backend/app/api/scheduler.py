@@ -20,6 +20,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.services.openfda_service import openfda_service
 from app.services.scheduler_engine import scheduler_engine
 from app.services.chemical_resolver import chemical_resolver
+from app.services.job_lock import job_lock
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -404,6 +405,13 @@ async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 
     """ClinicalTrials.gov 전체 덤프에서 ADC 데이터 일괄 임포트"""
     from app.services.bulk_importer import BulkImporter
     
+    # 중복 실행 방지
+    if not await job_lock.acquire("bulk_import"):
+        raise HTTPException(
+            status_code=409, 
+            detail="이미 실행 중인 Bulk Import 작업이 있습니다. 나중에 다시 시도하세요."
+        )
+    
     job_id = f"bulk_import_{uuid4().hex[:8]}"
     data = {
         "id": job_id, 
@@ -413,8 +421,14 @@ async def run_bulk_import(background_tasks: BackgroundTasks, max_studies: int = 
     }
     supabase.table("sync_jobs").insert(data).execute()
     
+    async def run_with_lock_release(importer, job_id, max_studies):
+        try:
+            await importer.run_import(job_id, max_studies)
+        finally:
+            await job_lock.release("bulk_import")
+    
     importer = BulkImporter()
-    background_tasks.add_task(importer.run_import, job_id, max_studies)
+    background_tasks.add_task(run_with_lock_release, importer, job_id, max_studies)
     
     return SyncJobResponse(
         job_id=job_id, 
@@ -427,6 +441,13 @@ async def run_ai_refiner(background_tasks: BackgroundTasks, max_records: int = 5
     """미정제 레코드 LLM 분석 및 SMILES 보강"""
     from app.services.ai_refiner import ai_refiner
     
+    # 중복 실행 방지
+    if not await job_lock.acquire("ai_refiner"):
+        raise HTTPException(
+            status_code=409, 
+            detail="이미 실행 중인 AI Refiner 작업이 있습니다. 나중에 다시 시도하세요."
+        )
+    
     job_id = f"ai_refiner_{uuid4().hex[:8]}"
     data = {
         "id": job_id, 
@@ -436,7 +457,13 @@ async def run_ai_refiner(background_tasks: BackgroundTasks, max_records: int = 5
     }
     supabase.table("sync_jobs").insert(data).execute()
     
-    background_tasks.add_task(ai_refiner.process_pending_records, job_id, max_records)
+    async def run_with_lock_release(job_id, max_records):
+        try:
+            await ai_refiner.process_pending_records(job_id, max_records)
+        finally:
+            await job_lock.release("ai_refiner")
+    
+    background_tasks.add_task(run_with_lock_release, job_id, max_records)
     
     return SyncJobResponse(
         job_id=job_id, 

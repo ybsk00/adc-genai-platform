@@ -1,5 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 import logging
 from typing import Optional, Callable
 
@@ -15,7 +16,73 @@ class SchedulerEngine:
         if not self.scheduler.running:
             self.scheduler.start()
             self.is_started = True
+            
+            # 자동 스케줄 등록
+            self._register_default_jobs()
+            
             logger.info("🚀 Global AsyncIO Scheduler Started!")
+
+    def _register_default_jobs(self):
+        """기본 예약 작업 등록"""
+        
+        # 1. 매일 새벽 4시 Bulk Import (ClinicalTrials.gov 덤프 갱신 반영)
+        self.scheduler.add_job(
+            self._daily_bulk_import,
+            CronTrigger(hour=4, minute=0),
+            id="daily_bulk_import",
+            replace_existing=True,
+            misfire_grace_time=3600
+        )
+        logger.info("⏰ Registered: Daily Bulk Import at 04:00 AM")
+        
+        # 2. 매 30분마다 AI Refiner 실행 (소량 배치)
+        self.scheduler.add_job(
+            self._periodic_refiner,
+            IntervalTrigger(minutes=30),
+            id="periodic_refiner",
+            replace_existing=True,
+            misfire_grace_time=1800
+        )
+        logger.info("⏰ Registered: Periodic AI Refiner every 30 minutes")
+
+    async def _daily_bulk_import(self):
+        """새벽 4시 자동 Bulk Import"""
+        logger.info("🌅 [Cron] Starting daily bulk import...")
+        try:
+            from app.services.bulk_importer import BulkImporter
+            from app.services.job_lock import job_lock
+            
+            if not await job_lock.acquire("bulk_import"):
+                logger.info("⏭️ [Cron] Bulk import skipped - already running")
+                return
+            
+            try:
+                importer = BulkImporter()
+                await importer.run_import(max_studies=5000)
+            finally:
+                await job_lock.release("bulk_import")
+                
+        except Exception as e:
+            logger.error(f"[Cron] Bulk import error: {e}")
+
+    async def _periodic_refiner(self):
+        """주기적 AI Refiner (소량 배치)"""
+        logger.info("🔄 [Cron] Starting periodic AI refiner...")
+        try:
+            from app.services.ai_refiner import ai_refiner
+            from app.services.job_lock import job_lock
+            
+            if not await job_lock.acquire("ai_refiner"):
+                logger.info("⏭️ [Cron] AI Refiner skipped - already running")
+                return
+            
+            try:
+                await ai_refiner.process_pending_records(max_records=20)
+            finally:
+                await job_lock.release("ai_refiner")
+                
+        except Exception as e:
+            logger.error(f"[Cron] AI Refiner error: {e}")
 
     def shutdown(self):
         """앱 종료 시 스케줄러 중지"""
@@ -46,6 +113,14 @@ class SchedulerEngine:
         if self.scheduler.get_job(job_id):
             self.scheduler.remove_job(job_id)
             logger.info(f"🗑️ Job {job_id} removed.")
+    
+    def get_scheduled_jobs(self) -> list:
+        """등록된 작업 목록"""
+        return [
+            {"id": job.id, "next_run": str(job.next_run_time)}
+            for job in self.scheduler.get_jobs()
+        ]
 
 # 전역 인스턴스
 scheduler_engine = SchedulerEngine()
+
