@@ -188,12 +188,34 @@ Description: {description[:1000] if description else 'N/A'}"""
                     return
                 
                 try:
-                    # LLM 분석
-                    analysis = await self.refine_single_record(item)
+                    # ============ Smart Skip Logic ============
+                    existing_drug_name = item.get("name")
+                    existing_outcome = item.get("outcome_type")
+                    existing_smiles = item.get("smiles_code")
+                    
+                    # 1️⃣ LLM 분석 (drug_name 또는 outcome_type이 없을 때만)
+                    if not existing_drug_name or existing_drug_name == "Unknown" or not existing_outcome:
+                        logger.info(f"🤖 LLM analyzing: {item.get('id', 'unknown')[:20]}...")
+                        analysis = await self.refine_single_record(item)
+                    else:
+                        logger.info(f"⏩ LLM Skip: {existing_drug_name[:30]} (already extracted)")
+                        analysis = {
+                            "drug_name": existing_drug_name,
+                            "outcome_type": existing_outcome,
+                            "failure_reason": item.get("failure_reason"),
+                            "target": item.get("properties", {}).get("target")
+                        }
                     
                     if analysis:
-                        # SMILES 보강
-                        smiles = await self.enrich_with_smiles(analysis.get("drug_name"))
+                        drug_name = analysis.get("drug_name") or existing_drug_name
+                        
+                        # 2️⃣ SMILES 조회 (없을 때만 PubChem 호출)
+                        if existing_smiles:
+                            logger.info(f"⏩ PubChem Skip: {drug_name[:30]} (SMILES exists)")
+                            smiles = existing_smiles
+                        else:
+                            logger.info(f"🔬 PubChem lookup: {drug_name}")
+                            smiles = await self.enrich_with_smiles(drug_name)
                         
                         # 기존 properties에 AI 분석 결과 추가
                         updated_properties = item.get("properties", {})
@@ -204,7 +226,7 @@ Description: {description[:1000] if description else 'N/A'}"""
                         
                         # DB 업데이트
                         update_payload = {
-                            "name": analysis.get("drug_name") or item.get("name"),
+                            "name": drug_name or item.get("name"),
                             "outcome_type": analysis.get("outcome_type", "Unknown"),
                             "failure_reason": analysis.get("failure_reason"),
                             "smiles_code": smiles,
@@ -218,7 +240,7 @@ Description: {description[:1000] if description else 'N/A'}"""
                             .execute()
                         
                         refined_count += 1
-                        logger.info(f"✅ Refined: {item.get('name', 'Unknown')[:50]}...")
+                        logger.info(f"✅ Refined: {drug_name[:50] if drug_name else 'Unknown'}...")
                     else:
                         # 분석 실패 시 에러 기록
                         supabase.table("golden_set_library")\

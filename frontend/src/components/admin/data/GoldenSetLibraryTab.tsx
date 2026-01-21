@@ -56,6 +56,7 @@ export type GoldenSetItem = {
     failure_reason?: string
     ip_status?: 'Green' | 'Yellow' | 'Red' | 'Unknown'
     smiles_code?: string
+    ai_refined?: boolean  // AI 처리 완료 여부
     created_at: string
 }
 
@@ -224,8 +225,15 @@ export function GoldenSetLibraryTab() {
                 <div className="w-[100px] h-[50px] bg-white rounded overflow-hidden flex items-center justify-center">
                     {row.original.smiles_code ? (
                         <StructureViewer smiles={row.original.smiles_code} id={row.original.id} />
+                    ) : row.original.ai_refined === false ? (
+                        // AI가 아직 처리하지 않은 경우
+                        <div className="flex flex-col items-center gap-0.5">
+                            <Sparkles className="w-3 h-3 text-purple-500 animate-pulse" />
+                            <span className="text-[9px] text-purple-500 font-medium">AI 분석 중</span>
+                        </div>
                     ) : (
-                        <span className="text-xs text-slate-400">No Structure</span>
+                        // AI 처리 완료됐지만 SMILES를 못 찾은 경우
+                        <span className="text-xs text-slate-400">Not Found</span>
                     )}
                 </div>
             ),
