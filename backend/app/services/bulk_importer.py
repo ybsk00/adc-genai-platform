@@ -251,12 +251,18 @@ class BulkImporter:
             """)
             
             if job_id:
+                # 중복 스킵 정보를 errors 필드에 정보성으로 추가 (UI 표시용)
+                completion_info = []
+                if self.duplicates_skipped > 0:
+                    completion_info.append(f"Info: {self.duplicates_skipped} records skipped (duplicate).")
+                
                 await update_job_status(
                     job_id,
                     status="completed",
                     records_found=total_fetched,
                     records_drafted=self.total_imported,
-                    completed_at=datetime.utcnow().isoformat()
+                    completed_at=datetime.utcnow().isoformat(),
+                    errors=completion_info + self.errors # 기존 에러에 정보 추가
                 )
                 
         except Exception as e:
