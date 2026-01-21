@@ -156,7 +156,7 @@ class BulkImporter:
             while page < max_pages:
                 params = {
                     "query.term": search_term,
-                    "filter.overallStatus": status_filter,
+                    "filter.overallStatus": ",".join(status_filter) if isinstance(status_filter, list) else status_filter,
                     "pageSize": page_size,
                     "format": "json"
                 }
