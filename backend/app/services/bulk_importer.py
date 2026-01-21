@@ -18,9 +18,7 @@ API_BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
 # ADC 관련 검색어
 ADC_SEARCH_TERMS = [
-    "Antibody Drug Conjugate",
-    "Antibody-drug conjugate", 
-    "ADC therapy",
+    "Antibody Drug Conjugate OR ADC OR Immunoconjugate", # 통합 쿼리 (Deep Scraping)
     "trastuzumab deruxtecan",
     "sacituzumab govitecan",
     "enfortumab vedotin",
@@ -129,7 +127,7 @@ class BulkImporter:
         
         return saved_count
 
-    async def fetch_studies(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 10) -> List[dict]:
+    async def fetch_studies(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 100) -> List[dict]:
         """API v2로 임상시험 데이터 조회"""
         all_studies = []
         next_page_token = None
@@ -214,7 +212,7 @@ class BulkImporter:
                         search_term=search_term,
                         status_filter=status_filter,
                         page_size=100,
-                        max_pages=5
+                        max_pages=100 # Deep Scraping: 최대 100페이지(10,000건)까지 조회
                     )
                     
                     for study in studies:
