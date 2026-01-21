@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCw, Eye, FlaskConical, CheckCircle2, XCircle, Clock, FileJson } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -48,7 +48,6 @@ export function DesignRunsTab() {
     const [assayResults, setAssayResults] = useState<AssayResult[]>([]);
     const [assaySummary, setAssaySummary] = useState<AssaySummary | null>(null);
     const [loading, setLoading] = useState(false);
-    const { toast } = useToast();
 
     const fetchRuns = async () => {
         setLoading(true);
@@ -58,7 +57,7 @@ export function DesignRunsTab() {
             setRuns(data);
         } catch (error) {
             console.error('Failed to fetch design runs:', error);
-            toast({ title: "Error", description: "Failed to fetch design runs", variant: "destructive" });
+            toast.error("Failed to fetch design runs");
         } finally {
             setLoading(false);
         }
