@@ -22,6 +22,14 @@ class AIRefiner:
         self.processed_count = 0
         self.error_count = 0
 
+    async def _is_system_paused(self) -> bool:
+        """시스템 일시정지 상태 확인"""
+        try:
+            res = supabase.table("system_config").select("value").eq("key", "AI_REFINER_STATUS").execute()
+            return res.data[0]["value"] == "PAUSED" if res.data else False
+        except:
+            return False
+
     async def refine_single_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """단일 레코드 LLM 분석"""
         try:
@@ -130,6 +138,13 @@ Description: {description[:1000] if description else 'N/A'}"""
         - DB 업데이트 (ai_refined = true)
         """
         from app.api.scheduler import update_job_status, is_cancelled
+        
+        # 시스템 일시정지 체크
+        if await self._is_system_paused():
+            logger.info("⏸️ System is PAUSED. Skipping AI Refiner.")
+            if job_id:
+                await update_job_status(job_id, status="skipped", errors=["System is paused"])
+            return
         
         if job_id:
             await update_job_status(job_id, status="running")

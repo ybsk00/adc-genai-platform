@@ -23,3 +23,15 @@ CREATE TABLE IF NOT EXISTS llm_usage_logs (
 
 -- 일별 비용 조회를 위한 인덱스
 CREATE INDEX IF NOT EXISTS idx_llm_usage_created ON llm_usage_logs(created_at);
+
+-- System Config 테이블 (AI Refiner 시스템 상태 관리)
+CREATE TABLE IF NOT EXISTS system_config (
+    key text PRIMARY KEY,
+    value text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 기본 상태 삽입
+INSERT INTO system_config (key, value) VALUES ('AI_REFINER_STATUS', 'ACTIVE')
+ON CONFLICT (key) DO NOTHING;
+

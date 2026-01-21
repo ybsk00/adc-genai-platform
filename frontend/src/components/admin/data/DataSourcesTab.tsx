@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DataSourceSettingsDialog } from './DataSourceSettingsDialog'
+import { AIRefinerStatusCard } from './AIRefinerStatusCard'
 
 interface DataSource {
     id: string
@@ -189,6 +190,9 @@ export function DataSourcesTab() {
             transition={{ delay: 0.1 }}
             className="grid gap-4"
         >
+            {/* AI Refiner Status Card */}
+            <AIRefinerStatusCard />
+
             {sources.map((source, index) => {
                 const isSyncing = syncingIds.includes(source.id) || source.status === 'syncing'
 

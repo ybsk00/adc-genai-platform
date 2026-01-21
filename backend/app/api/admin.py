@@ -491,3 +491,95 @@ async def run_creative_crawler(background_tasks: BackgroundTasks, target: str = 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================================
+# AI Control Dashboard (System Monitoring & Control)
+# ============================================================
+
+class SystemStatusRequest(BaseModel):
+    """시스템 상태 변경 요청"""
+    status: str = Field(..., pattern="^(ACTIVE|PAUSED)$", description="ACTIVE or PAUSED")
+
+
+@router.get("/system/status")
+async def get_system_status():
+    """AI Refiner 시스템 상태 조회"""
+    try:
+        res = supabase.table("system_config").select("value").eq("key", "AI_REFINER_STATUS").execute()
+        return {"status": res.data[0]["value"] if res.data else "ACTIVE"}
+    except Exception as e:
+        # 테이블이 없으면 기본값 반환
+        return {"status": "ACTIVE"}
+
+
+@router.post("/system/status")
+async def set_system_status(req: SystemStatusRequest):
+    """AI Refiner 시스템 상태 변경 (ACTIVE/PAUSED)"""
+    try:
+        supabase.table("system_config").upsert({
+            "key": "AI_REFINER_STATUS",
+            "value": req.status,
+            "updated_at": datetime.utcnow().isoformat()
+        }).execute()
+        return {"status": req.status, "message": f"System status changed to {req.status}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/refiner/dashboard")
+async def get_refiner_dashboard():
+    """AI Refiner 대시보드 통합 데이터"""
+    try:
+        from app.services.cost_tracker import cost_tracker
+        from datetime import date
+        
+        # 1. 시스템 상태
+        try:
+            status_res = supabase.table("system_config").select("value").eq("key", "AI_REFINER_STATUS").execute()
+            system_status = status_res.data[0]["value"] if status_res.data else "ACTIVE"
+        except:
+            system_status = "ACTIVE"
+        
+        # 2. 비용 정보
+        cost_summary = await cost_tracker.get_usage_summary()
+        
+        # 3. 큐 상태 - Pending (ai_refined = false)
+        pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).execute()
+        pending_count = pending_res.count or 0
+        
+        # 4. 오늘 처리된 개수 (ai_refined = true AND today)
+        today = date.today().isoformat()
+        enriched_res = supabase.table("golden_set_library")\
+            .select("count", count="exact")\
+            .eq("ai_refined", True)\
+            .gte("created_at", f"{today}T00:00:00")\
+            .execute()
+        enriched_today = enriched_res.count or 0
+        
+        return {
+            "system_status": system_status,
+            "cost": cost_summary,
+            "queue": {
+                "pending": pending_count,
+                "enriched_today": enriched_today
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/refiner/recent-logs")
+async def get_refiner_recent_logs(limit: int = 5):
+    """최근 AI Refiner 처리 결과"""
+    try:
+        res = supabase.table("golden_set_library")\
+            .select("id, name, outcome_type, failure_reason, properties, smiles_code, created_at")\
+            .eq("ai_refined", True)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
