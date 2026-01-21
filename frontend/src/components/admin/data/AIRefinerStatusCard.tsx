@@ -59,7 +59,81 @@ export function AIRefinerStatusCard() {
     const [recentLogs, setRecentLogs] = useState<RecentLog[]>([])
     const [logsLoading, setLogsLoading] = useState(false)
 
-    // ... (fetchDashboard, toggleSystem, runRefinerNow, openSpotCheck remain same)
+    const fetchDashboard = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/dashboard`)
+            if (res.ok) {
+                const data = await res.json()
+                setDashboard(data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch dashboard', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const toggleSystem = async () => {
+        setToggling(true)
+        try {
+            const action = dashboard?.system_status === 'ACTIVE' ? 'pause' : 'resume'
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/system/${action}`, { method: 'POST' })
+            if (res.ok) {
+                toast.success(`System ${action}d successfully`)
+                fetchDashboard()
+            }
+        } catch (error) {
+            toast.error('Failed to toggle system')
+        } finally {
+            setToggling(false)
+        }
+    }
+
+    const runRefinerNow = async () => {
+        setRunning(true)
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run?limit=50`, { method: 'POST' })
+            if (res.ok) {
+                toast.success('AI Refiner triggered successfully')
+                fetchDashboard()
+            }
+        } catch (error) {
+            toast.error('Failed to trigger refiner')
+        } finally {
+            setRunning(false)
+        }
+    }
+
+    const fetchRecentLogs = async (type: 'clinical' | 'pubmed' = 'clinical') => {
+        setLogsLoading(true)
+        try {
+            // endpoint needs to support type filtering
+            const endpoint = type === 'clinical'
+                ? `${API_BASE_URL}/api/admin/refiner/logs`
+                : `${API_BASE_URL}/api/admin/knowledge/logs` // Assuming this endpoint exists or will be created
+
+            const res = await fetch(endpoint)
+            if (res.ok) {
+                const data = await res.json()
+                setRecentLogs(data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch logs', error)
+        } finally {
+            setLogsLoading(false)
+        }
+    }
+
+    const openSpotCheck = (type: 'clinical' | 'pubmed') => {
+        setSpotCheckOpen(true)
+        fetchRecentLogs(type)
+    }
+
+    useEffect(() => {
+        fetchDashboard()
+        const interval = setInterval(fetchDashboard, 30000)
+        return () => clearInterval(interval)
+    }, [])
 
     const runKnowledgeRefiner = async () => {
         setKnowledgeRunning(true)
@@ -195,21 +269,31 @@ export function AIRefinerStatusCard() {
                                     </p>
                                 </div>
 
-                                <Button
-                                    variant="outline"
-                                    className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10 h-12"
-                                    onClick={runKnowledgeRefiner}
-                                    disabled={knowledgeRunning}
-                                >
-                                    {knowledgeRunning ? (
-                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    ) : (
-                                        <Zap className="w-5 h-5 mr-2" />
-                                    )}
-                                    Run Knowledge Refiner (50 items)
-                                </Button>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        variant="outline"
+                                        className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                                        onClick={runKnowledgeRefiner}
+                                        disabled={knowledgeRunning}
+                                    >
+                                        {knowledgeRunning ? (
+                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        ) : (
+                                            <Zap className="w-5 h-5 mr-2" />
+                                        )}
+                                        Run Now
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                                        onClick={() => openSpotCheck('pubmed')}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        Spot Check
+                                    </Button>
+                                </div>
 
-                                <div className="text-center">
+                                <div className="text-center mt-2">
                                     <p className="text-xs text-slate-500">
                                         * Automatically runs daily via scheduler.<br />
                                         * Use this button for immediate processing of pending items.
