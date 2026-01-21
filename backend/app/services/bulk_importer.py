@@ -16,9 +16,20 @@ logger = logging.getLogger(__name__)
 # ClinicalTrials.gov API v2 설정
 API_BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
-# ADC 관련 검색어 (Broad Search Mode)
+# ADC 관련 검색어 (Broad Search Mode - 확장된 쿼리)
+# 약어, 하이픈 변형, 주요 승인/개발 약물 이름 포함
 ADC_SEARCH_TERMS = [
-    "Antibody Drug Conjugate OR ADC OR Immunoconjugate"
+    # 기본 용어 + 주요 ADC 약물 이름
+    'Antibody Drug Conjugate OR "Antibody-Drug Conjugate" OR ADC OR Immunoconjugate OR '
+    'Trastuzumab Deruxtecan OR Enhertu OR DS-8201 OR '
+    'Sacituzumab Govitecan OR Trodelvy OR '
+    'Brentuximab Vedotin OR Adcetris OR '
+    'Ado-trastuzumab Emtansine OR Kadcyla OR T-DM1 OR '
+    'Polatuzumab Vedotin OR Polivy OR '
+    'Loncastuximab Tesirine OR Zynlonta OR '
+    'Tisotumab Vedotin OR Tivdak OR '
+    'Mirvetuximab Soravtansine OR Elahere OR '
+    'Datopotamab Deruxtecan OR Dato-DXd'
 ]
 
 # 타겟 키워드 (drug name 추출용)
@@ -42,9 +53,9 @@ class BulkImporter:
         nct_id = id_module.get("nctId", "")
         title = id_module.get("officialTitle") or id_module.get("briefTitle", "No Title")
         
-        # 약물 정보 추출
+        # 약물 정보 추출 (DRUG + BIOLOGICAL 타입 포함 - ADC는 종종 Biological로 등록됨)
         interventions = arms_module.get("interventions", [])
-        drug_names = [i.get("name", "") for i in interventions if i.get("type") == "DRUG"]
+        drug_names = [i.get("name", "") for i in interventions if i.get("type") in ["DRUG", "BIOLOGICAL"]]
         
         return {
             "name": title[:200] if title else "Unknown",
@@ -157,7 +168,7 @@ class BulkImporter:
                     params["filter.lastUpdatePostDate"] = last_update_date
                 
                 try:
-                    async with session.get(API_BASE_URL, params=params, timeout=aiohttp.ClientTimeout(total=60)) as response:
+                    async with session.get(API_BASE_URL, params=params, timeout=aiohttp.ClientTimeout(total=120)) as response:
                         if response.status != 200:
                             logger.error(f"API Error: HTTP {response.status}")
                             break

@@ -5,7 +5,7 @@ DB 기반 상태 관리(Supabase) 및 PubChem 화학 정보 연동
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 import aiohttp
 import asyncio
@@ -144,11 +144,17 @@ async def process_clinical_trials_data(job_id: str, max_records: int = 1000):
                     await update_job_status(job_id, status="stopped")
                     return
 
-                params = {"query.term": "antibody drug conjugate", "pageSize": 50, "format": "json"}
+                # Broad Search: 확장된 쿼리 + 모든 상태 필터
+                params = {
+                    "query.term": 'Antibody Drug Conjugate OR "Antibody-Drug Conjugate" OR ADC OR Immunoconjugate OR Trastuzumab Deruxtecan OR Enhertu OR Sacituzumab Govitecan OR Trodelvy',
+                    "filter.overallStatus": "COMPLETED,TERMINATED,WITHDRAWN,SUSPENDED,RECRUITING,ACTIVE_NOT_RECRUITING,ENROLLING_BY_INVITATION,NOT_YET_RECRUITING",
+                    "pageSize": 100,
+                    "format": "json"
+                }
                 if next_token: params["pageToken"] = next_token
 
                 try:
-                    async with session.get(base_url, params=params, timeout=aiohttp.ClientTimeout(total=60)) as res:
+                    async with session.get(base_url, params=params, timeout=aiohttp.ClientTimeout(total=120)) as res:
                         if res.status == 403:
                             errors.append("ClinicalTrials API returned 403 Forbidden - API access restricted")
                             logger.error("ClinicalTrials API 403 Forbidden")
