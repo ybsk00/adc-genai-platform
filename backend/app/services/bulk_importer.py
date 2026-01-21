@@ -16,14 +16,9 @@ logger = logging.getLogger(__name__)
 # ClinicalTrials.gov API v2 설정
 API_BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
-# ADC 관련 검색어
+# ADC 관련 검색어 (Broad Search Mode)
 ADC_SEARCH_TERMS = [
-    "Antibody Drug Conjugate OR ADC OR Immunoconjugate", # 통합 쿼리 (Deep Scraping)
-    "trastuzumab deruxtecan",
-    "sacituzumab govitecan",
-    "enfortumab vedotin",
-    "HER2 conjugate",
-    "TROP2 conjugate"
+    "Antibody Drug Conjugate OR ADC OR Immunoconjugate"
 ]
 
 # 타겟 키워드 (drug name 추출용)
@@ -199,23 +194,24 @@ class BulkImporter:
         if job_id:
             await update_job_status(job_id, status="running")
         
-        logger.info(f"🚀 [API v2 Importer] Starting ClinicalTrials.gov data collection (Mode: {mode})...")
+        logger.info(f"🚀 [API v2 Importer] Starting ClinicalTrials.gov Broad Search (Mode: {mode})...")
         
         batch = []
         batch_size = 50
         
         try:
-            # 상태 필터: 완료, 종료, 진행 중
-            status_filters = [
-                ["COMPLETED", "TERMINATED"],  # 결과가 있는 것
-                ["ACTIVE_NOT_RECRUITING"],    # 진행 중이지만 데이터 있음
+            # 상태 필터: 모든 상태 포함 (Broad Search)
+            status_filter = [
+                "COMPLETED", "TERMINATED", "WITHDRAWN", 
+                "SUSPENDED", "RECRUITING", "ACTIVE_NOT_RECRUITING",
+                "ENROLLING_BY_INVITATION", "NOT_YET_RECRUITING", "UNKNOWN"
             ]
             
             total_fetched = 0
             
-            # Full 모드일 때는 페이지 제한을 넉넉하게 (5000건 / 100 = 50페이지 이상)
-            # Daily 모드일 때는 적게
-            max_pages_per_term = 100 if mode == "full" else 5
+            # Full 모드일 때는 페이지 제한을 넉넉하게
+            # Daily 모드일 때는 적게 (어차피 날짜 필터로 걸러짐)
+            max_pages_per_term = 100 if mode == "full" else 10
             
             for search_term in ADC_SEARCH_TERMS:
                 if self.total_imported >= max_studies:
@@ -228,35 +224,35 @@ class BulkImporter:
                     await update_job_status(job_id, status="stopped")
                     return
                 
-                for status_filter in status_filters:
-                    studies = await self.fetch_studies(
-                        search_term=search_term,
-                        status_filter=status_filter,
-                        page_size=100,
-                        max_pages=max_pages_per_term,
-                        mode=mode
-                    )
+                # 단일 통합 쿼리로 모든 상태 조회
+                studies = await self.fetch_studies(
+                    search_term=search_term,
+                    status_filter=status_filter,
+                    page_size=100,
+                    max_pages=max_pages_per_term,
+                    mode=mode
+                )
+                
+                for study in studies:
+                    if self.total_imported >= max_studies:
+                        break
                     
-                    for study in studies:
-                        if self.total_imported >= max_studies:
-                            break
+                    entry = self.extract_study_info(study)
+                    batch.append(entry)
+                    total_fetched += 1
+                    
+                    # 배치 저장
+                    if len(batch) >= batch_size:
+                        saved = await self.save_batch(batch, job_id)
+                        logger.info(f"💾 Batch saved: {saved} new records")
+                        batch = []
                         
-                        entry = self.extract_study_info(study)
-                        batch.append(entry)
-                        total_fetched += 1
-                        
-                        # 배치 저장
-                        if len(batch) >= batch_size:
-                            saved = await self.save_batch(batch, job_id)
-                            logger.info(f"💾 Batch saved: {saved} new records")
-                            batch = []
-                            
-                            if job_id:
-                                await update_job_status(
-                                    job_id, 
-                                    records_found=total_fetched,
-                                    records_drafted=self.total_imported
-                                )
+                        if job_id:
+                            await update_job_status(
+                                job_id, 
+                                records_found=total_fetched,
+                                records_drafted=self.total_imported
+                            )
             
             # 남은 배치 저장
             if batch:

@@ -252,7 +252,7 @@ export function AIRefinerStatusCard() {
                                     <Button
                                         variant="outline"
                                         className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                                        onClick={openSpotCheck}
+                                        onClick={() => openSpotCheck('clinical')}
                                     >
                                         <Eye className="w-4 h-4 mr-2" />
                                         Spot Check
