@@ -149,10 +149,26 @@ async def grant_credits(req: CreditGrantRequest):
         supabase.table("profiles").update({"credits": new_balance}).eq("id", req.user_id).execute()
         
         # 3. Log transaction
-        supabase.table("transactions").insert({
+        trans_res = supabase.table("transactions").insert({
+            "user_id": req.user_id,
+            "amount": req.amount,
+            "type": "admin_grant",
+            "description": req.reason
+        }).execute()
+        
+        transaction_id = "pending"
+        if trans_res.data:
+            transaction_id = trans_res.data[0]["id"]
 
-
-# ============================================================
+        return {
+            "status": "success",
+            "user_id": req.user_id,
+            "amount": req.amount,
+            "new_balance": new_balance,
+            "transaction_id": transaction_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))# ============================================================
 # User Management
 # ============================================================
 
