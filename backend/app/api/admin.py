@@ -94,6 +94,37 @@ async def get_admin_stats():
     try:
         # 1. Total Users
         users_res = supabase.table("profiles").select("id", count="exact").execute()
+        total_users = users_res.count or 0
+        
+        # 2. Active Simulations (Processing)
+        sims_res = supabase.table("projects").select("id", count="exact").eq("status", "processing").execute()
+        active_sims = sims_res.count or 0
+        
+        # 3. Pending Golden Set Items
+        pending_res = supabase.table("golden_set_library").select("id", count="exact").eq("status", "draft").execute()
+        pending_count = pending_res.count or 0
+        
+        return {
+            "total_users": total_users,
+            "active_simulations": active_sims,
+            "pending_reviews": pending_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/refiner/run")
+async def run_ai_refiner(background_tasks: BackgroundTasks):
+    """
+    AI Refiner 수동 실행 (즉시 트리거)
+    """
+    try:
+        from app.services.ai_refiner import ai_refiner
+        # 백그라운드에서 실행 (최대 20개씩 처리)
+        background_tasks.add_task(ai_refiner.process_pending_records, max_records=20)
+        return {"status": "started", "message": "AI Refiner started in background"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================
