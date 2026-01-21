@@ -87,8 +87,14 @@ class BulkImporter:
         elif status in ["WITHDRAWN", "SUSPENDED"]:
             return "Terminated"
         elif status in ["RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]:
-            return "Ongoing"
-        return "Unknown"
+            # DB Constraint: outcome_type in ('Success', 'Failure', 'Terminated')
+            # 'Ongoing' is not yet supported in DB constraint, so mapping to 'Unknown' (or null)
+            # But 'Unknown' is not in the check list either?
+            # Let's check the init.sql again: check (outcome_type in ('Success', 'Failure', 'Terminated'))
+            # So 'Unknown' is ALSO not allowed if it's not null.
+            # However, the column is nullable. So we should return None.
+            return None 
+        return None
 
     async def save_batch(self, batch: List[Dict[str, Any]], job_id: Optional[str] = None):
         """배치 단위로 DB에 저장 (upsert)"""

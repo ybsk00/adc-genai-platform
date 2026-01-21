@@ -37,12 +37,12 @@ export function DataSourcesTab() {
     const [sources, setSources] = useState<DataSource[]>([
         {
             id: 'bulk_import',
-            name: 'ClinicalTrials.gov (Bulk Import)',
-            description: 'Download full ADC trials dump (bypasses API limits)',
+            name: 'ClinicalTrials.gov (API v2)',
+            description: 'Sync latest ADC trials via API v2',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
-            estimatedTime: '10-30 min',
+            estimatedTime: '1-3 min',
             endpoint: `${API_BASE_URL}/api/scheduler/bulk/import`
         },
         {
