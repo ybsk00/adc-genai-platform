@@ -123,81 +123,12 @@ async def refine_drug_data_with_llm(title: str, text_content: str, raw_status: O
 # --- ClinicalTrials.gov Worker (DB Status & Paging) ---
 
 async def process_clinical_trials_data(job_id: str, max_records: int = 1000):
-    """ClinicalTrials.gov 대량 수집 워커 (DB 기반)"""
-    await update_job_status(job_id, status="running")
+    """ClinicalTrials.gov 대량 수집 워커 (BulkImporter 통합)"""
+    from app.services.bulk_importer import BulkImporter
     
-    base_url = "https://clinicaltrials.gov/api/v2/studies"
-    next_token = None
-    total_collected = 0
-    drafted = 0
-    errors = []
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
-    }
-
-    try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            while total_collected < max_records:
-                if await is_cancelled(job_id):
-                    await update_job_status(job_id, status="stopped")
-                    return
-
-                # Broad Search: 확장된 쿼리 + 모든 상태 필터
-                params = {
-                    "query.term": 'Antibody Drug Conjugate OR "Antibody-Drug Conjugate" OR ADC OR Immunoconjugate OR Trastuzumab Deruxtecan OR Enhertu OR Sacituzumab Govitecan OR Trodelvy',
-                    "filter.overallStatus": "COMPLETED,TERMINATED,WITHDRAWN,SUSPENDED,RECRUITING,ACTIVE_NOT_RECRUITING,ENROLLING_BY_INVITATION,NOT_YET_RECRUITING",
-                    "pageSize": 100,
-                    "format": "json"
-                }
-                if next_token: params["pageToken"] = next_token
-
-                try:
-                    async with session.get(base_url, params=params, timeout=aiohttp.ClientTimeout(total=120)) as res:
-                        if res.status == 403:
-                            errors.append("ClinicalTrials API returned 403 Forbidden - API access restricted")
-                            logger.error("ClinicalTrials API 403 Forbidden")
-                            break
-                        if res.status != 200:
-                            errors.append(f"ClinicalTrials API error: {res.status}")
-                            break
-                        
-                        data = await res.json()
-                        studies = data.get("studies", [])
-                        if not studies: break
-
-                        # 발견 즉시 DB 업데이트
-                        job = await get_job_from_db(job_id)
-                        current_found = job.get("records_found", 0) if job else 0
-                        await update_job_status(job_id, records_found=current_found + len(studies))
-                        
-                        # 단순 저장 (LLM 없이)
-                        for study in studies:
-                            if await is_cancelled(job_id):
-                                await update_job_status(job_id, status="stopped")
-                                return
-                            try:
-                                result = await process_single_study_simple(study)
-                                if result: drafted += 1
-                            except Exception as e:
-                                errors.append(str(e)[:100])
-                        
-                        await update_job_status(job_id, records_drafted=drafted, errors=errors[:20])
-
-                        total_collected += len(studies)
-                        next_token = data.get("nextPageToken")
-                        if not next_token: break
-                        await asyncio.sleep(0.5)
-                except Exception as e:
-                    errors.append(f"Request error: {str(e)[:100]}")
-                    logger.error(f"ClinicalTrials request error: {e}")
-                    break
-
-        await update_job_status(job_id, status="completed", completed_at=datetime.utcnow().isoformat(), errors=errors[:20])
-    except Exception as e:
-        logger.error(f"ClinicalTrials Global Error: {e}")
-        await update_job_status(job_id, status="failed", errors=[str(e)])
+    importer = BulkImporter()
+    # 기본적으로 daily 모드로 동작 (필요 시 mode 파라미터 확장 가능)
+    await importer.run_import(job_id, max_studies=max_records, mode="daily")
 
 async def process_single_study_simple(study: dict) -> bool:
     """단순화된 스터디 저장 (LLM 없이)"""

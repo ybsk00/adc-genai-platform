@@ -16,20 +16,32 @@ logger = logging.getLogger(__name__)
 # ClinicalTrials.gov API v2 설정
 API_BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
-# ADC 관련 검색어 (Broad Search Mode - 확장된 쿼리)
-# 약어, 하이픈 변형, 주요 승인/개발 약물 이름 포함
+# ADC 관련 검색어 (Split Mode - 안정성 및 진행률 표시 최적화)
 ADC_SEARCH_TERMS = [
-    # 기본 용어 + 주요 ADC 약물 이름
-    'Antibody Drug Conjugate OR "Antibody-Drug Conjugate" OR ADC OR Immunoconjugate OR '
-    'Trastuzumab Deruxtecan OR Enhertu OR DS-8201 OR '
-    'Sacituzumab Govitecan OR Trodelvy OR '
-    'Brentuximab Vedotin OR Adcetris OR '
-    'Ado-trastuzumab Emtansine OR Kadcyla OR T-DM1 OR '
-    'Polatuzumab Vedotin OR Polivy OR '
-    'Loncastuximab Tesirine OR Zynlonta OR '
-    'Tisotumab Vedotin OR Tivdak OR '
-    'Mirvetuximab Soravtansine OR Elahere OR '
-    'Datopotamab Deruxtecan OR Dato-DXd'
+    'Antibody Drug Conjugate',
+    '"Antibody-Drug Conjugate"',
+    'ADC AND (Cancer OR Tumor OR Oncology OR Neoplasm)', # 노이즈 방지용 컨텍스트 추가
+    'Immunoconjugate',
+    'Trastuzumab Deruxtecan',
+    'Enhertu',
+    'DS-8201',
+    'Sacituzumab Govitecan',
+    'Trodelvy',
+    'Brentuximab Vedotin',
+    'Adcetris',
+    'Ado-trastuzumab Emtansine',
+    'Kadcyla',
+    'T-DM1',
+    'Polatuzumab Vedotin',
+    'Polivy',
+    'Loncastuximab Tesirine',
+    'Zynlonta',
+    'Tisotumab Vedotin',
+    'Tivdak',
+    'Mirvetuximab Soravtansine',
+    'Elahere',
+    'Datopotamab Deruxtecan',
+    'Dato-DXd'
 ]
 
 # 타겟 키워드 (drug name 추출용)
@@ -138,9 +150,8 @@ class BulkImporter:
         
         return saved_count
 
-    async def fetch_studies(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 100, mode: str = "daily") -> List[dict]:
-        """API v2로 임상시험 데이터 조회 (페이지네이션 & 모드 지원)"""
-        all_studies = []
+    async def fetch_studies_generator(self, search_term: str, status_filter: List[str], page_size: int = 100, max_pages: int = 100, mode: str = "daily"):
+        """API v2로 임상시험 데이터 조회 (제너레이터 방식 - 증분 처리 지원)"""
         next_page_token = None
         page = 0
         
@@ -179,21 +190,18 @@ class BulkImporter:
                         if not studies:
                             break
                         
-                        all_studies.extend(studies)
-                        logger.info(f"📥 Fetched {len(studies)} studies (page {page + 1}, term: {search_term[:30]}...)")
+                        yield studies
                         
                         next_page_token = data.get("nextPageToken")
                         if not next_page_token:
                             break
                         
                         page += 1
-                        await asyncio.sleep(0.5)  # Rate limiting (0.5초 휴식)
+                        await asyncio.sleep(0.5)  # Rate limiting
                         
                 except Exception as e:
                     logger.error(f"Fetch error: {e}")
                     break
-        
-        return all_studies
 
     async def run_import(self, job_id: Optional[str] = None, max_studies: int = 5000, mode: str = "daily"):
         """
@@ -205,10 +213,7 @@ class BulkImporter:
         if job_id:
             await update_job_status(job_id, status="running")
         
-        logger.info(f"🚀 [API v2 Importer] Starting ClinicalTrials.gov Broad Search (Mode: {mode})...")
-        
-        batch = []
-        batch_size = 50
+        logger.info(f"🚀 [API v2 Importer] Starting ClinicalTrials.gov Split Search (Mode: {mode})...")
         
         try:
             # 상태 필터: 모든 상태 포함 (Broad Search)
@@ -235,39 +240,41 @@ class BulkImporter:
                     await update_job_status(job_id, status="stopped")
                     return
                 
-                # 단일 통합 쿼리로 모든 상태 조회
-                studies = await self.fetch_studies(
+                logger.info(f"🔍 Searching for: {search_term}")
+                
+                # 페이지 단위로 즉시 처리
+                async for studies_page in self.fetch_studies_generator(
                     search_term=search_term,
                     status_filter=status_filter,
                     page_size=100,
                     max_pages=max_pages_per_term,
                     mode=mode
-                )
-                
-                for study in studies:
-                    if self.total_imported >= max_studies:
-                        break
+                ):
+                    total_fetched += len(studies_page)
                     
-                    entry = self.extract_study_info(study)
-                    batch.append(entry)
-                    total_fetched += 1
-                    
-                    # 배치 저장
-                    if len(batch) >= batch_size:
-                        saved = await self.save_batch(batch, job_id)
-                        logger.info(f"💾 Batch saved: {saved} new records")
-                        batch = []
+                    batch = []
+                    for study in studies_page:
+                        if self.total_imported >= max_studies:
+                            break
                         
+                        entry = self.extract_study_info(study)
+                        batch.append(entry)
+                    
+                    # 페이지 단위 즉시 저장
+                    if batch:
+                        saved = await self.save_batch(batch, job_id)
+                        logger.info(f"💾 Page saved: {saved} new records (Term: {search_term[:20]}...)")
+                        
+                        # 진행률 실시간 업데이트
                         if job_id:
                             await update_job_status(
                                 job_id, 
                                 records_found=total_fetched,
                                 records_drafted=self.total_imported
                             )
-            
-            # 남은 배치 저장
-            if batch:
-                await self.save_batch(batch, job_id)
+                    
+                    if self.total_imported >= max_studies:
+                        break
             
             logger.info(f"""
             ✅ [API v2 Import Complete]
