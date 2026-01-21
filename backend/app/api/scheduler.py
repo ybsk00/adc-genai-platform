@@ -263,15 +263,26 @@ async def process_pubmed_data(job_id: str, max_records: int = 500, mode: str = "
     errors = []
     
     # 모드에 따른 설정
-    days_back = 2 if mode == "daily" else 3650 # Daily: 2일, Full: 10년
+    days_back = 2 if mode == "daily" else 3650 # Daily: 2일, Full: 10년 (기본값)
+    
+    # Smart Trawl 전략: 2015년 이후 데이터만 (Full Load 시)
+    mindate = "2015/01/01" if mode == "full" else None
+    
     if mode == "full":
         max_records = 2000 # Full load 시 더 많이 수집
     
     try:
         loop = asyncio.get_event_loop()
-        search_term = "Antibody-Drug Conjugate OR ADC OR ADC drug OR ADC therapy"
         
-        id_list = await loop.run_in_executor(None, lambda: fetch_pubmed_ids(search_term, max_records, days_back))
+        # Smart Trawl Query Construction
+        # 1. Target Keywords
+        target_terms = '(Antibody-Drug Conjugate[Title/Abstract] OR ADC[Title/Abstract] OR Immunoconjugate[Title/Abstract])'
+        # 2. Context Keywords (Safety Guard)
+        context_terms = '(Cancer[Title/Abstract] OR Tumor[Title/Abstract] OR Oncology[Title/Abstract] OR Neoplasms[MeSH Terms])'
+        # 3. Final Query
+        search_term = f"{target_terms} AND {context_terms}"
+        
+        id_list = await loop.run_in_executor(None, lambda: fetch_pubmed_ids(search_term, max_records, days_back, mindate))
         await update_job_status(job_id, records_found=len(id_list))
         
         if not id_list:
@@ -345,10 +356,16 @@ async def process_single_article(article: dict, job_id: str) -> bool:
         logger.error(f"PubMed save error: {e}")
         return False
 
-def fetch_pubmed_ids(term: str, max_results: int, days_back: int = 7):
+def fetch_pubmed_ids(term: str, max_results: int, days_back: int = 7, mindate: Optional[str] = None):
     # 날짜 필터링
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=days_back)
+    
+    # mindate가 명시되면 그것을 사용, 아니면 days_back 사용
+    if mindate:
+        start_date_str = mindate
+    else:
+        start_date = end_date - timedelta(days=days_back)
+        start_date_str = start_date.strftime("%Y/%m/%d")
     
     handle = Entrez.esearch(
         db="pubmed", 
@@ -356,7 +373,7 @@ def fetch_pubmed_ids(term: str, max_results: int, days_back: int = 7):
         retmax=max_results, 
         sort="pub_date",
         datetype="pdat",
-        mindate=start_date.strftime("%Y/%m/%d"),
+        mindate=start_date_str,
         maxdate=end_date.strftime("%Y/%m/%d")
     )
     record = Entrez.read(handle)

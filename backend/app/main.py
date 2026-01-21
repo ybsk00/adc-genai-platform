@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base
+from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base, design_runs, assay_results
 from app.core.config import settings
 from app.services.scheduler_engine import scheduler_engine
 
@@ -39,6 +39,8 @@ app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
 app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
 app.include_router(knowledge_base.router, prefix="/api/knowledge-base", tags=["knowledge-base"])
+app.include_router(design_runs.router, prefix="/api/design-runs", tags=["design-runs"])
+app.include_router(assay_results.router, prefix="/api/assay-results", tags=["assay-results"])
 
 
 @app.get("/health")

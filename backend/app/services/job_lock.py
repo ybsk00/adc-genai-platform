@@ -72,6 +72,66 @@ class JobLock:
         except Exception:
             return False
 
+    # --- Component Locking (Async-Precompute) ---
+
+    async def acquire_component_lock(self, component_id: str, worker_id: str, estimated_wait: int = 60) -> bool:
+        """
+        컴포넌트(분자) 단위 잠금 획득
+        - component_catalog 테이블의 lock_status 업데이트
+        """
+        try:
+            # 1. 현재 상태 확인
+            res = supabase.table("component_catalog")\
+                .select("lock_status, lock_holder")\
+                .eq("id", component_id)\
+                .execute()
+            
+            if not res.data:
+                return False # 컴포넌트가 없음
+            
+            item = res.data[0]
+            if item.get("lock_status") == "computing":
+                # 이미 계산 중
+                logger.info(f"🔒 Component {component_id} is already being computed by {item.get('lock_holder')}")
+                return False
+            
+            # 2. 잠금 시도 (Update)
+            update_data = {
+                "lock_status": "computing",
+                "lock_holder": worker_id,
+                "estimated_wait_time": estimated_wait,
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            supabase.table("component_catalog")\
+                .update(update_data)\
+                .eq("id", component_id)\
+                .execute()
+                
+            return True
+            
+        except Exception as e:
+            logger.error(f"Component lock error: {e}")
+            return False
+
+    async def release_component_lock(self, component_id: str):
+        """컴포넌트 잠금 해제"""
+        try:
+            update_data = {
+                "lock_status": "available",
+                "lock_holder": None,
+                "estimated_wait_time": 0,
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            supabase.table("component_catalog")\
+                .update(update_data)\
+                .eq("id", component_id)\
+                .execute()
+                
+        except Exception as e:
+            logger.error(f"Component unlock error: {e}")
+
 
 # 싱글톤 인스턴스
 job_lock = JobLock()
