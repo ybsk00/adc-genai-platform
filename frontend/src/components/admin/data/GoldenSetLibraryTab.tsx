@@ -105,6 +105,7 @@ export function GoldenSetLibraryTab() {
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [rowSelection, setRowSelection] = useState({})
     const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [sourceFilter, setSourceFilter] = useState<string>('all')
 
     // Manual Entry State
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -188,11 +189,27 @@ export function GoldenSetLibraryTab() {
     }
 
     const filteredData = data.filter(item => {
-        if (statusFilter === 'all') return true
-        if (statusFilter === 'approved') return item.outcome_type === 'Success'
-        if (statusFilter === 'failed') return item.outcome_type === 'Failure'
-        if (statusFilter === 'ongoing') return item.status === 'ongoing'
-        return true
+        // Status Filter
+        const statusMatch = statusFilter === 'all'
+            ? true
+            : statusFilter === 'approved'
+                ? item.outcome_type === 'Success'
+                : statusFilter === 'failed'
+                    ? item.outcome_type === 'Failure'
+                    : statusFilter === 'ongoing'
+                        ? item.status === 'ongoing'
+                        : true
+
+        // Source Filter
+        const sourceMatch = sourceFilter === 'all'
+            ? true
+            : sourceFilter === 'ai'
+                ? item.enrichment_source === 'AI-Generated'
+                : sourceFilter === 'pubchem'
+                    ? item.enrichment_source === 'PubChem'
+                    : true
+
+        return statusMatch && sourceMatch
     })
 
     const columns: ColumnDef<GoldenSetItem>[] = [
@@ -316,6 +333,14 @@ export function GoldenSetLibraryTab() {
                         <TabsTrigger value="approved" className="data-[state=active]:bg-slate-800 text-green-400">Approved</TabsTrigger>
                         <TabsTrigger value="failed" className="data-[state=active]:bg-slate-800 text-red-400">Failed</TabsTrigger>
                         <TabsTrigger value="ongoing" className="data-[state=active]:bg-slate-800 text-blue-400">Ongoing</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+
+                <Tabs value={sourceFilter} onValueChange={setSourceFilter} className="w-[300px]">
+                    <TabsList className="bg-slate-900 border border-slate-800">
+                        <TabsTrigger value="all" className="data-[state=active]:bg-slate-800">All Sources</TabsTrigger>
+                        <TabsTrigger value="pubchem" className="data-[state=active]:bg-slate-800 text-blue-400">PubChem</TabsTrigger>
+                        <TabsTrigger value="ai" className="data-[state=active]:bg-slate-800 text-purple-400">AI-Generated</TabsTrigger>
                     </TabsList>
                 </Tabs>
 
