@@ -256,17 +256,22 @@ async def process_single_study(study: dict, job_id: str) -> bool:
 
 # --- PubMed Worker (DB Status & Paging) ---
 
-async def process_pubmed_data(job_id: str, max_records: int = 500):
+async def process_pubmed_data(job_id: str, max_records: int = 500, mode: str = "daily"):
     """PubMed 대량 수집 워커 (DB 기반)"""
     await update_job_status(job_id, status="running")
     drafted = 0
     errors = []
     
+    # 모드에 따른 설정
+    days_back = 2 if mode == "daily" else 3650 # Daily: 2일, Full: 10년
+    if mode == "full":
+        max_records = 2000 # Full load 시 더 많이 수집
+    
     try:
         loop = asyncio.get_event_loop()
         search_term = "Antibody-Drug Conjugate OR ADC OR ADC drug OR ADC therapy"
         
-        id_list = await loop.run_in_executor(None, lambda: fetch_pubmed_ids(search_term, max_records))
+        id_list = await loop.run_in_executor(None, lambda: fetch_pubmed_ids(search_term, max_records, days_back))
         await update_job_status(job_id, records_found=len(id_list))
         
         if not id_list:
@@ -340,8 +345,20 @@ async def process_single_article(article: dict, job_id: str) -> bool:
         logger.error(f"PubMed save error: {e}")
         return False
 
-def fetch_pubmed_ids(term: str, max_results: int):
-    handle = Entrez.esearch(db="pubmed", term=term, retmax=max_results, sort="pub_date")
+def fetch_pubmed_ids(term: str, max_results: int, days_back: int = 7):
+    # 날짜 필터링
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days_back)
+    
+    handle = Entrez.esearch(
+        db="pubmed", 
+        term=term, 
+        retmax=max_results, 
+        sort="pub_date",
+        datetype="pdat",
+        mindate=start_date.strftime("%Y/%m/%d"),
+        maxdate=end_date.strftime("%Y/%m/%d")
+    )
     record = Entrez.read(handle)
     handle.close()
     return record.get("IdList", [])
@@ -363,12 +380,12 @@ async def sync_clinical_trials(background_tasks: BackgroundTasks):
     return SyncJobResponse(job_id=job_id, status="queued", message="ClinicalTrials.gov sync started.")
 
 @router.post("/sync/pubmed", response_model=SyncJobResponse)
-async def sync_pubmed(background_tasks: BackgroundTasks):
+async def sync_pubmed(background_tasks: BackgroundTasks, mode: str = "daily"):
     job_id = f"sync_pubmed_{uuid4().hex[:8]}"
     data = {"id": job_id, "status": "queued", "source": "pubmed", "started_at": datetime.utcnow().isoformat()}
     supabase.table("sync_jobs").insert(data).execute()
-    background_tasks.add_task(process_pubmed_data, job_id)
-    return SyncJobResponse(job_id=job_id, status="queued", message="PubMed sync started.")
+    background_tasks.add_task(process_pubmed_data, job_id, 500, mode) # Pass mode
+    return SyncJobResponse(job_id=job_id, status="queued", message=f"PubMed sync started (mode: {mode}).")
 
 @router.post("/sync/openfda", response_model=SyncJobResponse)
 async def sync_openfda(background_tasks: BackgroundTasks):

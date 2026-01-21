@@ -264,7 +264,7 @@ export function DataSourcesTab() {
                                                 <Settings className="w-4 h-4" />
                                             </Button>
 
-                                            {source.id === 'bulk_import' ? (
+                                            {source.id === 'bulk_import' || source.id === 'pubmed' ? (
                                                 <>
                                                     <Button
                                                         variant="outline"
