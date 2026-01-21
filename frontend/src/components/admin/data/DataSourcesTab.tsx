@@ -133,7 +133,7 @@ export function DataSourcesTab() {
         }
     }
 
-    const handleSync = async (sourceId: string, endpoint?: string) => {
+    const handleSync = async (sourceId: string, endpoint?: string, params?: Record<string, string>) => {
         if (!endpoint) {
             toast.info('This source is coming soon.')
             return
@@ -142,7 +142,14 @@ export function DataSourcesTab() {
         setSyncingIds(prev => [...prev, sourceId])
 
         try {
-            const response = await fetch(endpoint, { method: 'POST' })
+            const url = new URL(endpoint)
+            if (params) {
+                Object.entries(params).forEach(([key, value]) => {
+                    url.searchParams.append(key, value)
+                })
+            }
+
+            const response = await fetch(url.toString(), { method: 'POST' })
             if (!response.ok) throw new Error('Sync failed')
 
             const result = await response.json()
@@ -256,18 +263,42 @@ export function DataSourcesTab() {
                                             >
                                                 <Settings className="w-4 h-4" />
                                             </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-slate-700 text-slate-300 hover:text-white"
-                                                onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint)}
-                                            >
-                                                {isSyncing ? (
-                                                    <Square className="w-4 h-4 text-red-400 fill-red-400" />
-                                                ) : (
-                                                    <RefreshCw className="w-4 h-4" />
-                                                )}
-                                            </Button>
+
+                                            {source.id === 'bulk_import' ? (
+                                                <>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-slate-700 text-slate-300 hover:text-white"
+                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint, { mode: 'daily' })}
+                                                        disabled={isSyncing}
+                                                    >
+                                                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Daily"}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-slate-700 text-slate-300 hover:text-white"
+                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint, { mode: 'full' })}
+                                                        disabled={isSyncing}
+                                                    >
+                                                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Full Load"}
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="border-slate-700 text-slate-300 hover:text-white"
+                                                    onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint)}
+                                                >
+                                                    {isSyncing ? (
+                                                        <Square className="w-4 h-4 text-red-400 fill-red-400" />
+                                                    ) : (
+                                                        <RefreshCw className="w-4 h-4" />
+                                                    )}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
