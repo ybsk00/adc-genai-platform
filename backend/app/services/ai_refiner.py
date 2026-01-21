@@ -10,9 +10,9 @@ from datetime import datetime
 
 from app.core.supabase import supabase
 from app.core.config import settings
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+import google.generativeai as genai
 from app.services.cost_tracker import cost_tracker
+from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +31,19 @@ class AIRefiner:
             return False
 
     async def refine_single_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """단일 레코드 LLM 분석"""
+        """단일 레코드 LLM 분석 (Google SDK 직접 호출)"""
         try:
             # 비용 한도 체크
             if await cost_tracker.is_over_limit():
                 logger.warning("⚠️ Daily LLM cost limit reached. Skipping analysis.")
                 return None
             
-            llm = ChatOpenAI(
-                model=settings.FAST_LLM,
-                temperature=0,
-                api_key=settings.OPENAI_API_KEY
-            )
+            # SDK 설정
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
             
             # 원본 데이터에서 분석에 필요한 정보 추출
             properties = record.get("properties", {})
-            raw_data = properties.get("raw_data", {})
-            protocol = raw_data.get("protocolSection", {}) if raw_data else {}
-            
             title = record.get("name", "No Title")
             description = properties.get("brief_summary", "")
             overall_status = properties.get("overall_status", "")
@@ -65,69 +60,97 @@ Output ONLY valid JSON in this exact format:
     "target": "molecular target (e.g., HER2, TROP2) or null",
     "outcome_type": "Success|Failure|Ongoing|Unknown",
     "failure_reason": "reason if failed, null otherwise",
+    "relevance_score": 0.0-1.0 (relevance to ADC research),
     "confidence": 0.0-1.0
 }
 
 Rules:
 - outcome_type: "Success" if completed with positive results, "Failure" if terminated/withdrawn/negative, "Ongoing" if active, "Unknown" if unclear
 - failure_reason: Only fill if outcome_type is "Failure"
-- Be concise and accurate"""
+- Be concise and accurate
 
-            user_prompt = f"""Clinical Trial Analysis:
+IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ... ```.
+"""
+
+            full_prompt = f"""{system_prompt}
+
+Clinical Trial Analysis:
 Title: {title}
 Phase: {phase}
 Status: {overall_status}
 Why Stopped: {why_stopped}
 Description: {description[:1000] if description else 'N/A'}"""
 
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_prompt),
-                ("user", user_prompt)
-            ])
+            logger.info(f"🚀 Requesting Gemini (Direct SDK) for record {record.get('id')}...")
             
-            chain = prompt | llm
-            response = await chain.ainvoke({})
-            content = response.content.strip()
+            # 동기 호출을 비동기로 실행
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: model.generate_content(full_prompt))
             
-            # 비용 추적
-            usage = response.response_metadata.get('token_usage', {})
+            content = response.text.strip()
+            
+            # 비용 추적 (Gemini 2.0 Flash 대략적 토큰 계산 - SDK에서 직접 가져오기 어려울 경우 대비)
+            # 실제로는 response.usage_metadata에 있음
+            usage = response.usage_metadata
             await cost_tracker.track_usage(
-                settings.FAST_LLM,
-                usage.get('prompt_tokens', 0),
-                usage.get('completion_tokens', 0)
+                "gemini-2.0-flash",
+                usage.prompt_token_count,
+                usage.candidates_token_count
             )
             
-            # JSON 파싱
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
+            # JSON 파싱 (json-repair 도입으로 백틱 공격 및 깨진 형식 방어)
+            try:
+                repaired_content = repair_json(content)
+                analysis = json.loads(repaired_content)
+            except Exception as parse_e:
+                logger.warning(f"Standard parsing failed, trying manual strip: {parse_e}")
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0]
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0]
+                analysis = json.loads(content.strip())
             
-            analysis = json.loads(content)
-            
+            # 3단계 파이프라인: 1. 스마트 필터링 & 추출
             return {
                 "drug_name": analysis.get("drug_name"),
                 "target": analysis.get("target"),
                 "outcome_type": analysis.get("outcome_type", "Unknown"),
                 "failure_reason": analysis.get("failure_reason"),
-                "ai_confidence": analysis.get("confidence", 0.5)
+                "ai_confidence": analysis.get("confidence", 0.5),
+                "relevance_score": analysis.get("relevance_score", 0.0) # 프롬프트에 추가 필요
             }
         
         except Exception as e:
             logger.error(f"LLM Analysis Error for record {record.get('id')}: {e}")
-            return None
+            return {"error": str(e)}
 
-    async def enrich_with_smiles(self, drug_name: Optional[str]) -> Optional[str]:
-        """PubChem에서 SMILES 코드 조회"""
+    async def enrich_with_pubchem(self, drug_name: Optional[str]) -> Dict[str, Any]:
+        """2단계: PubChem 화학 구조 자동 매핑"""
         if not drug_name:
-            return None
+            return {}
         
         try:
-            from app.services.chemical_resolver import chemical_resolver
-            return chemical_resolver.fetch_verified_smiles(drug_name)
+            # pubchempy는 동기 라이브러리이므로 비동기로 실행
+            import pubchempy as pcp
+            loop = asyncio.get_event_loop()
+            
+            def fetch_pubchem():
+                compounds = pcp.get_compounds(drug_name, 'name')
+                if compounds:
+                    c = compounds[0]
+                    return {
+                        "smiles_code": c.isomeric_smiles,
+                        "canonical_smiles": c.canonical_smiles,
+                        "molecular_weight": float(c.molecular_weight) if c.molecular_weight else None
+                    }
+                return None
+
+            result = await loop.run_in_executor(None, fetch_pubchem)
+            return result
+            
         except Exception as e:
-            logger.error(f"SMILES lookup error for {drug_name}: {e}")
-            return None
+            logger.error(f"PubChem lookup error for {drug_name}: {e}")
+            return {"error": "PubChem Error"}
 
     async def process_pending_records(self, job_id: Optional[str] = None, max_records: int = 50):
         """
@@ -206,33 +229,48 @@ Description: {description[:1000] if description else 'N/A'}"""
                             "target": item.get("properties", {}).get("target")
                         }
                     
-                    if analysis:
+                    if analysis and "error" not in analysis:
                         drug_name = analysis.get("drug_name") or existing_drug_name
+                        relevance_score = analysis.get("relevance_score", 0.0)
                         
-                        # 2️⃣ SMILES 조회 (없을 때만 PubChem 호출)
-                        if existing_smiles:
-                            logger.info(f"⏩ PubChem Skip: {drug_name[:30]} (SMILES exists)")
-                            smiles = existing_smiles
-                        else:
-                            logger.info(f"🔬 PubChem lookup: {drug_name}")
-                            smiles = await self.enrich_with_smiles(drug_name)
+                        # 2️⃣ 화학 구조 매핑 (관련성 높을 때만)
+                        pubchem_data = None
+                        processing_error = None
+                        
+                        if relevance_score > 0.5 and drug_name:
+                            if existing_smiles:
+                                logger.info(f"⏩ PubChem Skip: {drug_name[:30]} (SMILES exists)")
+                                pubchem_data = {"smiles_code": existing_smiles}
+                            else:
+                                logger.info(f"🔬 PubChem lookup: {drug_name}")
+                                pubchem_data = await self.enrich_with_pubchem(drug_name)
+                                
+                                if not pubchem_data:
+                                    # [실패 대응] PubChem 조회 실패 시 흔적 남기기
+                                    processing_error = "PubChem Not Found"
+                                    logger.warning(f"⚠️ PubChem Not Found for: {drug_name}")
                         
                         # 기존 properties에 AI 분석 결과 추가
                         updated_properties = item.get("properties", {})
                         updated_properties["ai_analysis"] = analysis
-                        # raw_data는 너무 크므로 제거
                         if "raw_data" in updated_properties:
                             del updated_properties["raw_data"]
                         
-                        # DB 업데이트
+                        # 3️⃣ DB 상태 업데이트
                         update_payload = {
                             "name": drug_name or item.get("name"),
                             "outcome_type": analysis.get("outcome_type", "Unknown"),
                             "failure_reason": analysis.get("failure_reason"),
-                            "smiles_code": smiles,
+                            "relevance_score": relevance_score,
                             "ai_refined": True,
+                            "rag_status": "processed", # 성공 처리
+                            "processing_error": processing_error, # PubChem 실패 시 기록
                             "properties": updated_properties
                         }
+                        
+                        # PubChem 데이터 병합
+                        if pubchem_data and "error" not in pubchem_data:
+                            update_payload.update(pubchem_data)
                         
                         supabase.table("golden_set_library")\
                             .update(update_payload)\
@@ -240,13 +278,15 @@ Description: {description[:1000] if description else 'N/A'}"""
                             .execute()
                         
                         refined_count += 1
-                        logger.info(f"✅ Refined: {drug_name[:50] if drug_name else 'Unknown'}...")
+                        logger.info(f"✅ Refined: {drug_name[:50] if drug_name else 'Unknown'} (Score: {relevance_score})")
                     else:
-                        # 분석 실패 시 에러 기록
+                        # 분석 실패 시 상세 에러 기록
+                        error_msg = analysis.get("error") if analysis else "Unknown LLM Error"
                         supabase.table("golden_set_library")\
                             .update({
-                                "processing_error": "LLM analysis failed",
-                                "ai_refined": True  # 재시도 방지를 위해 true로 설정
+                                "processing_error": error_msg,
+                                "ai_refined": True,
+                                "rag_status": "failed"
                             })\
                             .eq("id", item["id"])\
                             .execute()

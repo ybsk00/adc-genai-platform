@@ -10,7 +10,8 @@ import {
     Clock,
     AlertTriangle,
     Settings,
-    Square
+    Square,
+    ShieldAlert
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DataSourceSettingsDialog } from './DataSourceSettingsDialog'
@@ -185,6 +186,24 @@ export function DataSourcesTab() {
         }
     }
 
+    const handleResetAll = async () => {
+        if (!confirm("Are you sure you want to force stop ALL workers and clear locks? This should only be used if workers are stuck.")) return
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/scheduler/workers/reset`, { method: 'POST' })
+            if (res.ok) {
+                toast.success('All workers reset and locks cleared.')
+                // Force refresh status
+                setSyncingIds([])
+                fetchRecordCounts()
+            } else {
+                throw new Error('Reset failed')
+            }
+        } catch (e) {
+            toast.error('Failed to reset workers')
+        }
+    }
+
     const openSettings = (source: DataSource) => {
         setSelectedSource({ id: source.id, name: source.name })
         setSettingsOpen(true)
@@ -198,6 +217,18 @@ export function DataSourcesTab() {
             className="grid gap-4"
         >
             {/* AI Refiner Status Card */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">Data Sources</h2>
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleResetAll}
+                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+                >
+                    <ShieldAlert className="w-4 h-4 mr-2" />
+                    Force Stop All Workers
+                </Button>
+            </div>
             <AIRefinerStatusCard />
 
             {sources.map((source, index) => {

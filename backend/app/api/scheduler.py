@@ -369,6 +369,25 @@ async def stop_sync_job(job_id: str):
     await update_job_status(job_id, cancel_requested=True)
     return {"message": "Stop request sent to DB."}
 
+@router.post("/workers/reset")
+async def reset_all_workers():
+    """모든 워커 강제 중단 및 잠금 해제"""
+    try:
+        # 1. 모든 잠금 해제
+        supabase.table("job_locks").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        
+        # 2. 실행 중인 작업 상태 변경
+        supabase.table("sync_jobs").update({
+            "status": "stopped",
+            "errors": ["Force stopped by admin"],
+            "completed_at": datetime.utcnow().isoformat()
+        }).eq("status", "running").execute()
+        
+        return {"message": "All workers have been reset and locks released."}
+    except Exception as e:
+        logger.error(f"Failed to reset workers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- Bulk Import & AI Refiner Endpoints ---
 
 @router.post("/bulk/import", response_model=SyncJobResponse)

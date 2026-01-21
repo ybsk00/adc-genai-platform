@@ -10,20 +10,15 @@ from datetime import datetime
 
 from app.core.config import settings
 from app.core.supabase import supabase
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
+import google.generativeai as genai
+from app.services.cost_tracker import cost_tracker
+from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
 
 class KnowledgeBaseRefiner:
     def __init__(self):
-        # Gemini 2.0 Flash (빠르고 저렴함)
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp", # 또는 사용 가능한 최신 Flash 모델
-            google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0,
-            convert_system_message_to_human=True
-        )
+        pass
 
     async def process_pending_items(self, job_id: Optional[str] = None, batch_size: int = 20):
         """rag_status='pending'인 항목을 가져와서 AI 분석 수행"""
@@ -41,7 +36,10 @@ class KnowledgeBaseRefiner:
                 return 0
 
             processed_count = 0
-            
+            if job_id:
+                from app.api.scheduler import update_job_status
+                await update_job_status(job_id, records_found=len(items))
+
             # 2. Process each item
             for item in items:
                 try:
@@ -57,15 +55,16 @@ class KnowledgeBaseRefiner:
                     }).eq("id", item["id"]).execute()
                     
                     processed_count += 1
+                    if job_id:
+                        await update_job_status(job_id, records_drafted=processed_count)
+                    
                     logger.info(f"✅ Refined Knowledge Base Item: {item['id']}")
                     
-                    # Rate limiting (Gemini Flash is fast but still good to be safe)
+                    # Rate limiting
                     await asyncio.sleep(0.5)
                     
                 except Exception as e:
                     logger.error(f"Failed to refine item {item['id']}: {e}")
-                    # 실패 시 status를 error로 바꾸거나 retry count를 늘리는 로직이 있으면 좋음
-                    # 여기서는 일단 pending으로 유지 (다음 실행 때 재시도)
             
             return processed_count
 
@@ -74,7 +73,7 @@ class KnowledgeBaseRefiner:
             return 0
 
     async def analyze_abstract(self, abstract_text: str) -> Dict[str, Any]:
-        """Gemini Flash를 사용하여 초록 분석 (JSON 출력 강제)"""
+        """Gemini Flash를 사용하여 초록 분석 (Google SDK 직접 호출)"""
         
         system_prompt = """You are an expert researcher in Antibody-Drug Conjugates (ADC) for oncology.
 Analyze the provided scientific abstract.
@@ -90,34 +89,40 @@ Output MUST be a JSON object with these fields:
 IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ... ```.
 """
         
-        user_prompt = f"Abstract:\n{abstract_text}"
+        full_prompt = f"{system_prompt}\n\nAbstract:\n{abstract_text}"
         
         try:
-            # LangChain의 bind를 사용하여 response_mime_type 설정 (Gemini 전용)
-            # 또는 프롬프트 엔지니어링으로 해결. 
-            # langchain-google-genai 최신 버전에서는 bind(generation_config=...) 지원
+            # SDK 설정
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
             
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_prompt),
-                ("user", user_prompt)
-            ])
+            logger.info(f"🚀 Requesting Gemini (Direct SDK) for PubMed abstract...")
             
-            chain = prompt | self.llm
+            # 동기 호출을 비동기로 실행
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: model.generate_content(full_prompt))
             
-            # JSON 모드 강제 (모델 파라미터 지원 시)
-            # 현재 라이브러리 버전에 따라 다를 수 있으므로 프롬프트에 의존하되, 
-            # 파싱 로직을 견고하게 작성
+            content = response.text.strip()
             
-            response = await chain.ainvoke({})
-            content = response.content.strip()
+            # 비용 추적
+            usage = response.usage_metadata
+            await cost_tracker.track_usage(
+                "gemini-2.0-flash",
+                usage.prompt_token_count,
+                usage.candidates_token_count
+            )
             
-            # Markdown code block 제거
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
-            
-            return json.loads(content.strip())
+            # JSON 파싱 (json-repair 도입으로 백틱 공격 및 깨진 형식 방어)
+            try:
+                repaired_content = repair_json(content)
+                return json.loads(repaired_content)
+            except Exception as parse_e:
+                logger.warning(f"Standard parsing failed for PubMed, trying manual strip: {parse_e}")
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0]
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0]
+                return json.loads(content.strip())
             
         except Exception as e:
             logger.error(f"AI Analysis Error: {e}")
