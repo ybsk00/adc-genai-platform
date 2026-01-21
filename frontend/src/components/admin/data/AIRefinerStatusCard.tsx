@@ -9,7 +9,8 @@ import {
     Pause,
     Play,
     Eye,
-    Loader2
+    Loader2,
+    Zap
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { API_BASE_URL } from '@/lib/api'
@@ -47,6 +48,7 @@ interface RecentLog {
 export function AIRefinerStatusCard() {
     const [loading, setLoading] = useState(true)
     const [toggling, setToggling] = useState(false)
+    const [running, setRunning] = useState(false) // 수동 실행 상태
     const [dashboard, setDashboard] = useState<DashboardData | null>(null)
     const [spotCheckOpen, setSpotCheckOpen] = useState(false)
     const [recentLogs, setRecentLogs] = useState<RecentLog[]>([])
@@ -95,6 +97,26 @@ export function AIRefinerStatusCard() {
             toast.error('네트워크 오류')
         } finally {
             setToggling(false)
+        }
+    }
+
+    const runRefinerNow = async () => {
+        setRunning(true)
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run`, {
+                method: 'POST'
+            })
+            if (res.ok) {
+                toast.success('🚀 AI Refiner가 즉시 실행되었습니다!')
+                // 잠시 후 대시보드 갱신
+                setTimeout(fetchDashboard, 2000)
+            } else {
+                toast.error('실행 실패')
+            }
+        } catch {
+            toast.error('네트워크 오류')
+        } finally {
+            setRunning(false)
         }
     }
 
@@ -189,15 +211,30 @@ export function AIRefinerStatusCard() {
                             </div>
                         </div>
 
-                        {/* Spot Check Button */}
-                        <Button
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                variant="outline"
+                                className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                onClick={runRefinerNow}
+                                disabled={running || dashboard.system_status === 'PAUSED'}
+                            >
+                                {running ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Zap className="w-4 h-4 mr-2" />
+                                )}
+                                Run Now
+                            </Button>
+                            <Button
                             variant="outline"
                             className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
                             onClick={openSpotCheck}
                         >
                             <Eye className="w-4 h-4 mr-2" />
                             Spot Check
-                        </Button>
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </motion.div>

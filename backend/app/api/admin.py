@@ -94,26 +94,6 @@ async def get_admin_stats():
     try:
         # 1. Total Users
         users_res = supabase.table("profiles").select("id", count="exact").execute()
-        total_users = users_res.count or 0
-        
-        # 2. Active Simulations (Processing)
-        sims_res = supabase.table("projects").select("id", count="exact").eq("status", "processing").execute()
-        active_simulations = sims_res.count or 0
-        
-        # 3. Pending Drafts
-        drafts_res = supabase.table("golden_set_library").select("id", count="exact").eq("status", "draft").execute()
-        pending_drafts = drafts_res.count or 0
-        
-        return {
-            "mrr": 12450, # TODO: 결제 연동 시 실제 계산
-            "total_users": total_users,
-            "new_users_today": 0, # TODO: created_at 필터링
-            "active_simulations": active_simulations,
-            "error_rate": 0.0, # TODO: failed projects / total projects
-            "pending_drafts": pending_drafts,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================
