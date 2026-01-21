@@ -150,21 +150,6 @@ async def grant_credits(req: CreditGrantRequest):
         
         # 3. Log transaction
         supabase.table("transactions").insert({
-            "user_id": req.user_id,
-            "amount": req.amount,
-            "type": "bonus",
-            "description": req.reason
-        }).execute()
-        
-        return CreditGrantResponse(
-            status="success",
-            user_id=req.user_id,
-            amount=req.amount,
-            new_balance=new_balance,
-            transaction_id=f"txn_{uuid4().hex[:8]}"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================

@@ -45,95 +45,37 @@ interface RecentLog {
     created_at: string
 }
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+// ... (imports remain same)
+
 export function AIRefinerStatusCard() {
     const [loading, setLoading] = useState(true)
     const [toggling, setToggling] = useState(false)
-    const [running, setRunning] = useState(false) // 수동 실행 상태
+    const [running, setRunning] = useState(false) // Clinical Refiner 상태
+    const [knowledgeRunning, setKnowledgeRunning] = useState(false) // Knowledge Refiner 상태
     const [dashboard, setDashboard] = useState<DashboardData | null>(null)
     const [spotCheckOpen, setSpotCheckOpen] = useState(false)
     const [recentLogs, setRecentLogs] = useState<RecentLog[]>([])
     const [logsLoading, setLogsLoading] = useState(false)
 
-    const fetchDashboard = async () => {
+    // ... (fetchDashboard, toggleSystem, runRefinerNow, openSpotCheck remain same)
+
+    const runKnowledgeRefiner = async () => {
+        setKnowledgeRunning(true)
         try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/dashboard`)
-            if (res.ok) {
-                const data = await res.json()
-                setDashboard(data)
-            }
-        } catch (e) {
-            console.error('Failed to fetch dashboard', e)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    useEffect(() => {
-        fetchDashboard()
-        const interval = setInterval(fetchDashboard, 30000) // 30초마다 갱신
-        return () => clearInterval(interval)
-    }, [])
-
-    const toggleSystem = async () => {
-        if (!dashboard) return
-        setToggling(true)
-
-        const newStatus = dashboard.system_status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/system/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            })
-
-            if (res.ok) {
-                setDashboard(prev => prev ? { ...prev, system_status: newStatus } : null)
-                toast.success(newStatus === 'PAUSED' ? '⏸️ AI Refiner 일시정지됨' : '▶️ AI Refiner 재개됨')
-            } else {
-                toast.error('상태 변경 실패')
-            }
-        } catch {
-            toast.error('네트워크 오류')
-        } finally {
-            setToggling(false)
-        }
-    }
-
-    const runRefinerNow = async () => {
-        setRunning(true)
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run`, {
+            const res = await fetch(`${API_BASE_URL}/api/admin/knowledge/refine?limit=50`, {
                 method: 'POST'
             })
             if (res.ok) {
-                toast.success('🚀 AI Refiner가 즉시 실행되었습니다!')
-                // 잠시 후 대시보드 갱신
-                setTimeout(fetchDashboard, 2000)
+                toast.success('📚 Knowledge Refiner가 실행되었습니다! (50건)')
             } else {
                 toast.error('실행 실패')
             }
         } catch {
             toast.error('네트워크 오류')
         } finally {
-            setRunning(false)
-        }
-    }
-
-    const openSpotCheck = async () => {
-        setSpotCheckOpen(true)
-        setLogsLoading(true)
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/recent-logs?limit=5`)
-            if (res.ok) {
-                const data = await res.json()
-                setRecentLogs(data)
-            }
-        } catch (e) {
-            console.error('Failed to fetch logs', e)
-        } finally {
-            setLogsLoading(false)
+            setKnowledgeRunning(false)
         }
     }
 
@@ -184,62 +126,102 @@ export function AIRefinerStatusCard() {
                             </div>
                         </div>
 
-                        {/* Cost Progress */}
-                        <div className="mb-4">
-                            <div className="flex justify-between text-sm mb-1">
-                                <span className="text-slate-400">Today's Cost</span>
-                                <span className={costPercent >= 80 ? 'text-red-400' : 'text-slate-300'}>
-                                    ${dashboard.cost.daily_usage_usd.toFixed(2)} / ${dashboard.cost.daily_limit_usd}
-                                </span>
-                            </div>
-                            <Progress
-                                value={costPercent}
-                                className="h-2"
-                            />
-                            <div className={`h-2 rounded-full ${costColor}`} style={{ width: `${Math.min(costPercent, 100)}%`, marginTop: '-8px' }} />
-                        </div>
+                        <Tabs defaultValue="clinical" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 mb-4 bg-slate-800/50">
+                                <TabsTrigger value="clinical">Clinical Trials</TabsTrigger>
+                                <TabsTrigger value="pubmed">PubMed / BioRxiv</TabsTrigger>
+                            </TabsList>
 
-                        {/* Queue Stats */}
-                        <div className="grid grid-cols-2 gap-4 text-center mb-4">
-                            <div className="bg-slate-800/50 rounded-lg p-3">
-                                <p className="text-2xl font-bold text-orange-400">{dashboard.queue.pending.toLocaleString()}</p>
-                                <p className="text-xs text-slate-400">Pending</p>
-                            </div>
-                            <div className="bg-slate-800/50 rounded-lg p-3">
-                                <p className="text-2xl font-bold text-green-400">{dashboard.queue.enriched_today.toLocaleString()}</p>
-                                <p className="text-xs text-slate-400">Enriched Today</p>
-                            </div>
-                        </div>
+                            <TabsContent value="clinical" className="space-y-4">
+                                {/* Cost Progress */}
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span className="text-slate-400">Today's Cost</span>
+                                        <span className={costPercent >= 80 ? 'text-red-400' : 'text-slate-300'}>
+                                            ${dashboard.cost.daily_usage_usd.toFixed(2)} / ${dashboard.cost.daily_limit_usd}
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        value={costPercent}
+                                        className="h-2"
+                                    />
+                                    <div className={`h-2 rounded-full ${costColor}`} style={{ width: `${Math.min(costPercent, 100)}%`, marginTop: '-8px' }} />
+                                </div>
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <Button
-                                variant="outline"
-                                className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                                onClick={runRefinerNow}
-                                disabled={running || dashboard.system_status === 'PAUSED'}
-                            >
-                                {running ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Zap className="w-4 h-4 mr-2" />
-                                )}
-                                Run Now
-                            </Button>
-                            <Button
-                            variant="outline"
-                            className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                            onClick={openSpotCheck}
-                        >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Spot Check
-                            </Button>
-                        </div>
+                                {/* Queue Stats */}
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-orange-400">{dashboard.queue.pending.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400">Pending</p>
+                                    </div>
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-green-400">{dashboard.queue.enriched_today.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400">Enriched Today</p>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        variant="outline"
+                                        className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                        onClick={runRefinerNow}
+                                        disabled={running || dashboard.system_status === 'PAUSED'}
+                                    >
+                                        {running ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Zap className="w-4 h-4 mr-2" />
+                                        )}
+                                        Run Now
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                        onClick={openSpotCheck}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        Spot Check
+                                    </Button>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="pubmed" className="space-y-4">
+                                <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-blue-500/20">
+                                    <p className="text-sm text-blue-300 font-medium mb-1">Knowledge Base Refiner</p>
+                                    <p className="text-xs text-slate-400">
+                                        Analyzes PubMed/BioRxiv abstracts using Gemini Flash.<br />
+                                        Extracts Summary, Relevance Score, and AI Reasoning.
+                                    </p>
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10 h-12"
+                                    onClick={runKnowledgeRefiner}
+                                    disabled={knowledgeRunning}
+                                >
+                                    {knowledgeRunning ? (
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    ) : (
+                                        <Zap className="w-5 h-5 mr-2" />
+                                    )}
+                                    Run Knowledge Refiner (50 items)
+                                </Button>
+
+                                <div className="text-center">
+                                    <p className="text-xs text-slate-500">
+                                        * Automatically runs daily via scheduler.<br />
+                                        * Use this button for immediate processing of pending items.
+                                    </p>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
             </motion.div>
 
-            {/* Spot Check Modal */}
+            {/* Spot Check Modal (Existing) */}
             <Dialog open={spotCheckOpen} onOpenChange={setSpotCheckOpen}>
                 <DialogContent className="max-w-2xl bg-slate-900 border-slate-700">
                     <DialogHeader>
@@ -257,8 +239,8 @@ export function AIRefinerStatusCard() {
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-medium text-white">{log.name || 'Unknown'}</h4>
                                         <span className={`text-xs px-2 py-1 rounded ${log.outcome_type === 'Success' ? 'bg-green-500/20 text-green-400' :
-                                                log.outcome_type === 'Failure' ? 'bg-red-500/20 text-red-400' :
-                                                    'bg-slate-500/20 text-slate-400'
+                                            log.outcome_type === 'Failure' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-slate-500/20 text-slate-400'
                                             }`}>
                                             {log.outcome_type || 'Unknown'}
                                         </span>
