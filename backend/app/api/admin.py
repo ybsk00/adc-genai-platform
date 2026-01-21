@@ -595,3 +595,50 @@ async def get_refiner_recent_logs(limit: int = 5):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================
+# Knowledge Base Refiner (PubMed/BioRxiv)
+# ============================================================
+
+@router.post("/knowledge/refine")
+async def run_knowledge_refiner(background_tasks: BackgroundTasks, limit: int = 20):
+    """
+    Knowledge Base Refiner 수동 실행 (PubMed/BioRxiv 분석)
+    """
+    try:
+        from app.services.knowledge_refiner import knowledge_refiner
+        background_tasks.add_task(knowledge_refiner.process_pending_items, batch_size=limit)
+        return {"status": "started", "message": f"Knowledge Refiner started (limit: {limit})"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge/logs")
+async def get_knowledge_logs(limit: int = 10):
+    """최근 Knowledge Base Refiner 처리 결과 (Spot Check용)"""
+    try:
+        # rag_status가 processed인 항목 조회
+        res = supabase.table("knowledge_base")\
+            .select("id, title, summary, relevance_score, ai_reasoning, updated_at")\
+            .eq("rag_status", "processed")\
+            .order("updated_at", desc=True)\
+            .limit(limit)\
+            .execute()
+            
+        # 프론트엔드 포맷에 맞게 매핑 (RecentLog 인터페이스 호환)
+        logs = []
+        for item in res.data:
+            logs.append({
+                "id": item.get("id"),
+                "name": item.get("title")[:50] + "..." if item.get("title") else "Unknown",
+                "outcome_type": f"Score: {item.get('relevance_score', 0)}",
+                "failure_reason": item.get("ai_reasoning"), # Spot Check 모달에서 Reason으로 표시됨
+                "properties": {},
+                "smiles_code": None,
+                "created_at": item.get("updated_at")
+            })
+            
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
