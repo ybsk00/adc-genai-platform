@@ -373,10 +373,15 @@ class OpenFDAService:
                     drafted += 1
                     logger.info(f"✅ Inserted: {drug_name}")
 
-                # Update progress every 5 records
-                if job_id and (drafted + updated) % 5 == 0:
-                    await update_job_status(job_id, records_drafted=drafted + updated)
-                    logger.info(f"📊 Progress: {drafted + updated}/{len(labels)} (Inserted: {drafted}, Updated: {updated})")
+                # Update progress every record (실시간 역동적 표시)
+                if job_id:
+                    await update_job_status(
+                        job_id, 
+                        records_drafted=drafted + updated,
+                        message=f"Processing {idx+1}/{len(labels)} ({drafted} inserted, {updated} updated)"
+                    )
+                    if (drafted + updated) % 10 == 0:
+                        logger.info(f"📊 Progress: {drafted + updated}/{len(labels)} (Inserted: {drafted}, Updated: {updated})")
 
             except Exception as e:
                 errors += 1

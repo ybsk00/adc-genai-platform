@@ -46,23 +46,41 @@ class AIRefiner:
             # 원본 데이터에서 분석에 필요한 정보 추출
             properties = record.get("properties", {})
             title = record.get("name", "No Title")
-            description = properties.get("brief_summary", "")
+            
+            # enrichment_source에 따라 텍스트 추출 분기
+            source = record.get("enrichment_source")
+            
+            if source == "open_fda_api":
+                # OpenFDA: fda_label에서 데이터 추출
+                fda_label = properties.get("fda_label", {})
+                # 1순위: indication, 2순위: description
+                description = fda_label.get("indication", "") or properties.get("indication", "")
+                if not description:
+                    description = fda_label.get("description", "") or properties.get("description", "")
+                # mechanism_of_action 추출 (타겟 정보 포함)
+                moa = fda_label.get("mechanism_of_action", "") or properties.get("mechanism_of_action", "")
+                boxed_warning = fda_label.get("boxed_warning", "") or properties.get("boxed_warning", "")
+                generic_name = fda_label.get("generic_name", "") or properties.get("generic_name", "")
+            else:
+                # Clinical Trials: brief_summary 사용
+                description = properties.get("brief_summary", "")
+                moa = ""
+                boxed_warning = ""
+                generic_name = ""
+            
             overall_status = properties.get("overall_status", "")
             why_stopped = properties.get("why_stopped", "")
             phase = properties.get("phase", "")
             
-            # 3단계 파이프라인: 1. 스마트 필터링 & 추출
-            source = record.get("enrichment_source")
-            
             if source == "open_fda_api":
-                # OpenFDA 전용 프롬프트
+                # OpenFDA 전용 프롬프트 (MoA 포함)
                 system_prompt = """You are a Pharmaceutical Regulatory Affairs Specialist.
 Analyze the FDA Drug Label data for an ADC (Antibody-Drug Conjugate).
 
 Output ONLY valid JSON:
 {
     "drug_name": "extracted drug name",
-    "target": "molecular target (e.g., HER2) or null",
+    "target": "molecular target (e.g., HER2, CD19, FRα, TROP2) or null",
     "outcome_type": "Success",
     "approval_status": "Approved",
     "boxed_warning": "Summary of Boxed Warning or 'None'",
@@ -75,8 +93,10 @@ Output ONLY valid JSON:
 
 FDA Label Data:
 Name: {title}
-Description: {description}
-Properties: {json.dumps(properties, indent=2)}
+Generic Name: {generic_name}
+Indication: {description[:500] if description else "N/A"}
+Mechanism of Action: {moa[:800] if moa else "N/A"}
+Boxed Warning: {boxed_warning[:300] if boxed_warning else "N/A"}
 """
             else:
                 # 기존 Clinical Trials 프롬프트
