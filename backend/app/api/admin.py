@@ -117,7 +117,8 @@ async def get_admin_stats():
 async def run_ai_refiner(
     background_tasks: BackgroundTasks, 
     limit: int = 50, 
-    mode: str = "partial" # partial, full, daily_import
+    mode: str = "partial", # partial, full, daily_import
+    source: Optional[str] = None # clinical_trials, open_fda_api
 ):
     """
     AI Refiner 수동 실행 (즉시 트리거)
@@ -129,21 +130,39 @@ async def run_ai_refiner(
         from app.services.ai_refiner import ai_refiner
         
         if mode == "daily_import":
-            from app.services.bulk_importer import BulkImporter
-            importer = BulkImporter()
-            # 백그라운드에서 Daily Import 실행
-            background_tasks.add_task(importer.run_import, max_studies=5000, mode="daily")
-            return {
-                "status": "started", 
-                "message": "Daily Bulk Import started in background",
-                "mode": "daily_import"
-            }
+            # Source에 따라 Import 로직 분기
+            if source == "open_fda_api":
+                from app.services.openfda_service import openfda_service
+                job_id = f"sync_openfda_{uuid4().hex[:8]}"
+                # DB에 잡 등록
+                supabase.table("sync_jobs").insert({
+                    "id": job_id, "status": "queued", "source": "openfda", "started_at": datetime.utcnow().isoformat()
+                }).execute()
+                background_tasks.add_task(openfda_service.sync_to_db, job_id, mode="daily", limit=100)
+                return {
+                    "status": "started", 
+                    "message": "OpenFDA Daily Import started in background", 
+                    "mode": "daily_import",
+                    "source": "open_fda_api"
+                }
+            else:
+                from app.services.bulk_importer import BulkImporter
+                importer = BulkImporter()
+                background_tasks.add_task(importer.run_import, max_studies=5000, mode="daily")
+                return {
+                    "status": "started", 
+                    "message": "ClinicalTrials Daily Import started in background",
+                    "mode": "daily_import"
+                }
             
         # Full 모드일 경우 pending 개수 조회
         target_limit = limit
         if mode == "full":
             # Pending 개수 조회
-            pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).execute()
+            query = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False)
+            if source:
+                query = query.eq("enrichment_source", source)
+            pending_res = query.execute()
             pending_count = pending_res.count or 0
             
             if pending_count == 0:
@@ -153,14 +172,14 @@ async def run_ai_refiner(
             target_limit = min(pending_count, 10000)
             
         # 백그라운드에서 실행
-        background_tasks.add_task(ai_refiner.process_pending_records, max_records=target_limit)
+        background_tasks.add_task(ai_refiner.process_pending_records, max_records=target_limit, source_filter=source)
         
         # 예상 소요 시간 (개당 2초)
         estimated_seconds = target_limit * 2
         
         return {
             "status": "started", 
-            "message": f"AI Refiner started in background ({target_limit} items)",
+            "message": f"AI Refiner started in background ({target_limit} items, source: {source or 'All'})",
             "count": target_limit,
             "estimated_seconds": estimated_seconds,
             "mode": mode
@@ -601,6 +620,10 @@ async def get_refiner_dashboard():
         pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).execute()
         pending_count = pending_res.count or 0
         
+        # 3.1 OpenFDA Pending
+        openfda_pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).eq("enrichment_source", "open_fda_api").execute()
+        openfda_pending = openfda_pending_res.count or 0
+        
         # 4. 오늘 처리된 개수 (ai_refined = true AND today)
         today = date.today().isoformat()
         enriched_res = supabase.table("golden_set_library")\
@@ -615,6 +638,7 @@ async def get_refiner_dashboard():
             "cost": cost_summary,
             "queue": {
                 "pending": pending_count,
+                "openfda_pending": openfda_pending,
                 "enriched_today": enriched_today
             }
         }

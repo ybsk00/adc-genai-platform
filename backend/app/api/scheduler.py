@@ -342,12 +342,12 @@ async def sync_pubmed(background_tasks: BackgroundTasks, mode: str = "daily"):
     return SyncJobResponse(job_id=job_id, status="queued", message=f"PubMed sync started (mode: {mode}).")
 
 @router.post("/sync/openfda", response_model=SyncJobResponse)
-async def sync_openfda(background_tasks: BackgroundTasks):
+async def sync_openfda(background_tasks: BackgroundTasks, mode: str = "daily", limit: int = 100):
     job_id = f"sync_openfda_{uuid4().hex[:8]}"
     data = {"id": job_id, "status": "queued", "source": "openfda", "started_at": datetime.utcnow().isoformat()}
     supabase.table("sync_jobs").insert(data).execute()
-    background_tasks.add_task(openfda_service.sync_to_db, job_id)
-    return SyncJobResponse(job_id=job_id, status="queued", message="OpenFDA sync started.")
+    background_tasks.add_task(openfda_service.sync_to_db, job_id, mode, limit)
+    return SyncJobResponse(job_id=job_id, status="queued", message=f"OpenFDA sync started (mode: {mode}, limit: {limit}).")
 
 @router.post("/crawler/creative/run", response_model=SyncJobResponse)
 async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):

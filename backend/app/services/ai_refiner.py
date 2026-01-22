@@ -51,8 +51,36 @@ class AIRefiner:
             why_stopped = properties.get("why_stopped", "")
             phase = properties.get("phase", "")
             
-            # LLM 프롬프트
-            system_prompt = """You are a Clinical Trial Analyst specializing in ADC (Antibody-Drug Conjugate) research.
+            # 3단계 파이프라인: 1. 스마트 필터링 & 추출
+            source = record.get("enrichment_source")
+            
+            if source == "open_fda_api":
+                # OpenFDA 전용 프롬프트
+                system_prompt = """You are a Pharmaceutical Regulatory Affairs Specialist.
+Analyze the FDA Drug Label data for an ADC (Antibody-Drug Conjugate).
+
+Output ONLY valid JSON:
+{
+    "drug_name": "extracted drug name",
+    "target": "molecular target (e.g., HER2) or null",
+    "outcome_type": "Success",
+    "approval_status": "Approved",
+    "boxed_warning": "Summary of Boxed Warning or 'None'",
+    "indication": "Primary indication (e.g., Breast Cancer)",
+    "relevance_score": 1.0,
+    "confidence": 0.0-1.0
+}
+"""
+                full_prompt = f"""{system_prompt}
+
+FDA Label Data:
+Name: {title}
+Description: {description}
+Properties: {json.dumps(properties, indent=2)}
+"""
+            else:
+                # 기존 Clinical Trials 프롬프트
+                system_prompt = """You are a Clinical Trial Analyst specializing in ADC (Antibody-Drug Conjugate) research.
 Analyze the clinical trial data and extract structured information.
 
 Output ONLY valid JSON in this exact format:
@@ -72,8 +100,7 @@ Rules:
 
 IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ... ```.
 """
-
-            full_prompt = f"""{system_prompt}
+                full_prompt = f"""{system_prompt}
 
 Clinical Trial Analysis:
 Title: {title}
@@ -82,7 +109,7 @@ Status: {overall_status}
 Why Stopped: {why_stopped}
 Description: {description[:1000] if description else 'N/A'}"""
 
-            logger.info(f"🚀 Requesting Gemini (Direct SDK) for record {record.get('id')}...")
+            logger.info(f"🚀 Requesting Gemini (Direct SDK) for record {record.get('id')} ({source})...")
             
             # 동기 호출을 비동기로 실행
             loop = asyncio.get_event_loop()
@@ -111,14 +138,15 @@ Description: {description[:1000] if description else 'N/A'}"""
                     content = content.split("```")[1].split("```")[0]
                 analysis = json.loads(content.strip())
             
-            # 3단계 파이프라인: 1. 스마트 필터링 & 추출
             return {
                 "drug_name": analysis.get("drug_name"),
                 "target": analysis.get("target"),
                 "outcome_type": analysis.get("outcome_type", "Unknown"),
                 "failure_reason": analysis.get("failure_reason"),
                 "ai_confidence": analysis.get("confidence", 0.5),
-                "relevance_score": analysis.get("relevance_score", 0.0) # 프롬프트에 추가 필요
+                "relevance_score": analysis.get("relevance_score", 0.0),
+                "boxed_warning": analysis.get("boxed_warning"), # OpenFDA specific
+                "indication": analysis.get("indication") # OpenFDA specific
             }
         
         except Exception as e:
@@ -190,7 +218,7 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
             logger.error(f"AI SMILES generation failed: {e}")
             return {"error": str(e)}
 
-    async def process_pending_records(self, job_id: Optional[str] = None, max_records: int = 50):
+    async def process_pending_records(self, job_id: Optional[str] = None, max_records: int = 50, source_filter: Optional[str] = None):
         """
         미정제 레코드 배치 처리
         - ai_refined = false 인 레코드 조회
@@ -210,15 +238,18 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
         if job_id:
             await update_job_status(job_id, status="running")
         
-        logger.info("🧹 [AI Refiner] Checking for pending records...")
+        logger.info(f"🧹 [AI Refiner] Checking for pending records (Source: {source_filter or 'All'})...")
         
         try:
             # 미정제 레코드 조회
-            response = supabase.table("golden_set_library")\
+            query = supabase.table("golden_set_library")\
                 .select("*")\
-                .eq("ai_refined", False)\
-                .limit(max_records)\
-                .execute()
+                .eq("ai_refined", False)
+            
+            if source_filter:
+                query = query.eq("enrichment_source", source_filter)
+                
+            response = query.limit(max_records).execute()
             
             pending_items = response.data
             

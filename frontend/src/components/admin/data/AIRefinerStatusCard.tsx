@@ -38,6 +38,7 @@ interface DashboardData {
     }
     queue: {
         pending: number
+        openfda_pending: number
         enriched_today: number
     }
 }
@@ -61,6 +62,7 @@ export function AIRefinerStatusCard() {
     const [toggling, setToggling] = useState(false)
     const [running, setRunning] = useState(false) // Clinical Refiner 상태
     const [knowledgeRunning, setKnowledgeRunning] = useState(false) // Knowledge Refiner 상태
+    const [openfdaRunning, setOpenfdaRunning] = useState(false) // OpenFDA Refiner 상태
     const [dashboard, setDashboard] = useState<DashboardData | null>(null)
     const [spotCheckOpen, setSpotCheckOpen] = useState(false)
     const [recentLogs, setRecentLogs] = useState<RecentLog[]>([])
@@ -96,11 +98,14 @@ export function AIRefinerStatusCard() {
         }
     }
 
-    const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial') => {
-        setRunning(true)
+    const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial', source: string = 'clinical_trials') => {
+        if (source === 'open_fda_api') setOpenfdaRunning(true)
+        else setRunning(true)
+
         try {
             const limit = mode === 'partial' ? 50 : 10000
-            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run?limit=${limit}&mode=${mode}`, { method: 'POST' })
+            // source param added
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run?limit=${limit}&mode=${mode}&source=${source}`, { method: 'POST' })
             if (res.ok) {
                 const data = await res.json()
 
@@ -112,9 +117,9 @@ export function AIRefinerStatusCard() {
                     const estMinutes = Math.ceil(estSeconds / 60)
 
                     if (mode === 'daily_import') {
-                        toast.success('Daily Bulk Import started in background')
+                        toast.success(`${source === 'open_fda_api' ? 'OpenFDA' : 'ClinicalTrials'} Daily Import started`)
                     } else {
-                        toast.success(`Started analysis for ${count} items. Approx ${estMinutes} mins.`)
+                        toast.success(`Started analysis for ${count} items (${source}). Approx ${estMinutes} mins.`)
                     }
                     fetchDashboard()
                 }
@@ -122,17 +127,24 @@ export function AIRefinerStatusCard() {
         } catch (error) {
             toast.error('Failed to trigger refiner')
         } finally {
-            setRunning(false)
+            if (source === 'open_fda_api') setOpenfdaRunning(false)
+            else setRunning(false)
         }
     }
 
-    const fetchRecentLogs = async (type: 'clinical' | 'pubmed' = 'clinical') => {
+    const fetchRecentLogs = async (type: 'clinical' | 'pubmed' | 'openfda' = 'clinical') => {
         setLogsLoading(true)
         try {
             // endpoint needs to support type filtering
-            const endpoint = type === 'clinical'
-                ? `${API_BASE_URL}/api/admin/refiner/logs`
-                : `${API_BASE_URL}/api/admin/knowledge/logs` // Assuming this endpoint exists or will be created
+            let endpoint = `${API_BASE_URL}/api/admin/refiner/logs`
+            if (type === 'pubmed') {
+                endpoint = `${API_BASE_URL}/api/admin/knowledge/logs`
+            }
+            // For OpenFDA, we might need to filter logs by source if the API supports it, 
+            // or just use the general refiner logs which include all sources.
+            // Currently /refiner/recent-logs returns all refined items.
+            // Ideally we should add ?source=open_fda_api to the API.
+            // For now, let's just fetch recent logs, they will show mixed content which is fine or we can filter client side if needed.
 
             const res = await fetch(endpoint)
             if (res.ok) {
@@ -146,7 +158,7 @@ export function AIRefinerStatusCard() {
         }
     }
 
-    const openSpotCheck = (type: 'clinical' | 'pubmed') => {
+    const openSpotCheck = (type: 'clinical' | 'pubmed' | 'openfda') => {
         setSpotCheckOpen(true)
         fetchRecentLogs(type)
     }
@@ -223,32 +235,33 @@ export function AIRefinerStatusCard() {
                         </div>
 
                         <Tabs defaultValue="clinical" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-4 bg-slate-800/50">
+                            <TabsList className="grid w-full grid-cols-3 mb-4 bg-slate-800/50">
                                 <TabsTrigger value="clinical">Clinical Trials</TabsTrigger>
+                                <TabsTrigger value="openfda">OpenFDA</TabsTrigger>
                                 <TabsTrigger value="pubmed">PubMed / BioRxiv</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="clinical" className="space-y-4">
-                                {/* Cost Progress */}
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="text-slate-400">Today's Cost</span>
-                                        <span className={costPercent >= 80 ? 'text-red-400' : 'text-slate-300'}>
-                                            ${dashboard.cost.daily_usage_usd.toFixed(2)} / ${dashboard.cost.daily_limit_usd}
-                                        </span>
-                                    </div>
-                                    <Progress
-                                        value={costPercent}
-                                        className="h-2"
-                                    />
-                                    <div className={`h-2 rounded-full ${costColor}`} style={{ width: `${Math.min(costPercent, 100)}%`, marginTop: '-8px' }} />
+                            {/* Common Cost Progress */}
+                            <div className="mb-4">
+                                <div className="flex justify-between text-sm mb-1">
+                                    <span className="text-slate-400">Today's Cost</span>
+                                    <span className={costPercent >= 80 ? 'text-red-400' : 'text-slate-300'}>
+                                        ${dashboard.cost.daily_usage_usd.toFixed(2)} / ${dashboard.cost.daily_limit_usd}
+                                    </span>
                                 </div>
+                                <Progress
+                                    value={costPercent}
+                                    className="h-2"
+                                />
+                                <div className={`h-2 rounded-full ${costColor}`} style={{ width: `${Math.min(costPercent, 100)}%`, marginTop: '-8px' }} />
+                            </div>
 
+                            <TabsContent value="clinical" className="space-y-4">
                                 {/* Queue Stats */}
                                 <div className="grid grid-cols-2 gap-4 text-center">
                                     <div className="bg-slate-800/50 rounded-lg p-3">
                                         <p className="text-2xl font-bold text-orange-400">{dashboard.queue.pending.toLocaleString()}</p>
-                                        <p className="text-xs text-slate-400">Pending</p>
+                                        <p className="text-xs text-slate-400">Pending (Total)</p>
                                     </div>
                                     <div className="bg-slate-800/50 rounded-lg p-3">
                                         <p className="text-2xl font-bold text-green-400">{dashboard.queue.enriched_today.toLocaleString()}</p>
@@ -275,13 +288,13 @@ export function AIRefinerStatusCard() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
-                                            <DropdownMenuItem onClick={() => runRefinerNow('partial')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('partial', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Batch (50)
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => runRefinerNow('full')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('full', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Full (All Pending)
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Daily Import
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -297,9 +310,69 @@ export function AIRefinerStatusCard() {
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="pubmed" className="space-y-4">
+                            <TabsContent value="openfda" className="space-y-4">
                                 <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-blue-500/20">
-                                    <p className="text-sm text-blue-300 font-medium mb-1">Knowledge Base Refiner</p>
+                                    <p className="text-sm text-blue-300 font-medium mb-1">OpenFDA Refiner</p>
+                                    <p className="text-xs text-slate-400">
+                                        Analyzes FDA Drug Labels for Boxed Warnings & Approval Status.<br />
+                                        Generates SMILES if missing.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-blue-400">{dashboard.queue.openfda_pending.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400">OpenFDA Pending</p>
+                                    </div>
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-green-400">{dashboard.queue.enriched_today.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400">Enriched Today</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10 w-full"
+                                                disabled={openfdaRunning || dashboard.system_status === 'PAUSED'}
+                                            >
+                                                {openfdaRunning ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4 mr-2" />
+                                                )}
+                                                Run Now
+                                                <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('partial', 'open_fda_api')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Batch (50)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => runRefinerNow('full', 'open_fda_api')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Full (All Pending)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import', 'open_fda_api')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Daily Import
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                                        onClick={() => openSpotCheck('openfda')}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        Spot Check
+                                    </Button>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="pubmed" className="space-y-4">
+                                <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-green-500/20">
+                                    <p className="text-sm text-green-300 font-medium mb-1">Knowledge Base Refiner</p>
                                     <p className="text-xs text-slate-400">
                                         Analyzes PubMed/BioRxiv abstracts using Gemini Flash.<br />
                                         Extracts Summary, Relevance Score, and AI Reasoning.
@@ -309,7 +382,7 @@ export function AIRefinerStatusCard() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <Button
                                         variant="outline"
-                                        className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                                        className="border-green-500/30 text-green-300 hover:bg-green-500/10"
                                         onClick={runKnowledgeRefiner}
                                         disabled={knowledgeRunning}
                                     >
@@ -322,7 +395,7 @@ export function AIRefinerStatusCard() {
                                     </Button>
                                     <Button
                                         variant="outline"
-                                        className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                                        className="border-green-500/30 text-green-300 hover:bg-green-500/10"
                                         onClick={() => openSpotCheck('pubmed')}
                                     >
                                         <Eye className="w-4 h-4 mr-2" />
