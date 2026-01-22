@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,9 @@ export function DataSourcesTab() {
     const [syncingIds, setSyncingIds] = useState<string[]>([])
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [selectedSource, setSelectedSource] = useState<{ id: string, name: string } | null>(null)
+
+    // Polling intervals ref for cleanup
+    const pollingIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
     const [sources, setSources] = useState<DataSource[]>([
         {
             id: 'bulk_import',
@@ -89,7 +92,14 @@ export function DataSourcesTab() {
     ])
 
 
+
     const pollJobStatus = async (jobId: string, sourceId: string) => {
+        // Clear any existing interval for this source
+        const existingInterval = pollingIntervalsRef.current.get(sourceId)
+        if (existingInterval) {
+            clearInterval(existingInterval)
+        }
+
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/scheduler/sync/${jobId}`)
@@ -99,7 +109,8 @@ export function DataSourcesTab() {
                         ...s,
                         status: status.status === 'running' ? 'syncing' :
                             status.status === 'completed' ? 'synced' :
-                                status.status === 'failed' ? 'error' : s.status,
+                                status.status === 'failed' ? 'error' :
+                                    status.status === 'stopped' ? 'synced' : s.status,
                         recordCount: status.records_drafted || s.recordCount,
                         lastSync: status.completed_at ? 'Just now' : s.lastSync,
                         jobId: jobId
@@ -107,15 +118,20 @@ export function DataSourcesTab() {
 
                     if (status.status === 'completed' || status.status === 'failed' || status.status === 'stopped') {
                         clearInterval(interval)
+                        pollingIntervalsRef.current.delete(sourceId)
                         setSyncingIds(prev => prev.filter(id => id !== sourceId))
                     }
                 }
             } catch (e) {
                 console.error("Polling failed", e)
                 clearInterval(interval)
+                pollingIntervalsRef.current.delete(sourceId)
                 setSyncingIds(prev => prev.filter(id => id !== sourceId))
             }
         }, 2000)
+
+        // Store interval reference for cleanup
+        pollingIntervalsRef.current.set(sourceId, interval)
     }
 
     const fetchRecordCounts = async () => {
@@ -193,8 +209,25 @@ export function DataSourcesTab() {
             const res = await fetch(`${API_BASE_URL}/api/scheduler/workers/reset`, { method: 'POST' })
             if (res.ok) {
                 toast.success('All workers reset and locks cleared.')
-                // Force refresh status
+
+                // Clear all polling intervals
+                pollingIntervalsRef.current.forEach((interval, sourceId) => {
+                    clearInterval(interval)
+                    console.log(`Cleared polling for ${sourceId}`)
+                })
+                pollingIntervalsRef.current.clear()
+
+                // Reset all syncing states
                 setSyncingIds([])
+
+                // Reset all source statuses to synced
+                setSources(prev => prev.map(s => ({
+                    ...s,
+                    status: 'synced' as const,
+                    jobId: undefined
+                })))
+
+                // Refresh counts
                 fetchRecordCounts()
             } else {
                 throw new Error('Reset failed')
