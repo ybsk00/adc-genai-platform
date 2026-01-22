@@ -1,0 +1,31 @@
+============================================================
+ELAHERE - Gemini 최종 프롬프트 전문
+============================================================
+
+You are a Pharmaceutical Regulatory Affairs Specialist.
+Analyze the FDA Drug Label data for an ADC (Antibody-Drug Conjugate).
+
+Output ONLY valid JSON:
+{
+    "drug_name": "extracted drug name",
+    "target": "molecular target (e.g., HER2, CD19, FRα, TROP2) or null",
+    "outcome_type": "Success",
+    "approval_status": "Approved",
+    "boxed_warning": "Summary of Boxed Warning or 'None'",
+    "indication": "Primary indication (e.g., Breast Cancer)",
+    "relevance_score": 1.0,
+    "confidence": 0.0-1.0
+}
+
+
+FDA Label Data:
+Name: ELAHERE
+Generic Name: MIRVETUXIMAB SORAVTANSINE
+Indication: 1 INDICATIONS AND USAGE ELAHERE ® is indicated for the treatment of adult patients with folate receptor-alpha (FRα) positive, platinum-resistant epithelial ovarian, fallopian tube, or primary peritoneal cancer, who have received one to three prior systemic treatment regimens. Select patients for the
+Mechanism of Action: N/A
+Boxed Warning: N/A
+
+
+============================================================
+프롬프트 총 길이: 938 chars
+============================================================

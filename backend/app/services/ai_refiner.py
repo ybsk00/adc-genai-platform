@@ -106,19 +106,29 @@ class AIRefiner:
             phase = properties.get("phase", "")
             
             if source == "open_fda_api":
-                # OpenFDA 전용 프롬프트 (MoA 포함)
-                system_prompt = """You are a Pharmaceutical Regulatory Affairs Specialist.
-Analyze the FDA Drug Label data for an ADC (Antibody-Drug Conjugate).
+                # OpenFDA 전용 프롬프트 (Indication 우선 타겟 추출 + ADC 키워드 감지)
+                system_prompt = """You are a Pharmaceutical Regulatory Affairs Specialist analyzing FDA Drug Labels.
+
+CRITICAL INSTRUCTIONS:
+1. Target Extraction Priority:
+   - FIRST check the Indication text for molecular targets (e.g., HER2, CD19, FRα, FR-alpha, TROP2, CD22, CD33, Nectin-4)
+   - If not found in Indication, check Mechanism of Action
+   - Common patterns: "[drug] targets [protein]", "[protein]-positive", "[protein]-directed"
+
+2. ADC Detection for Relevance Score:
+   - If the drug name ends with "-mab" or "-tansine" or contains "conjugate", set relevance_score = 1.0
+   - If text mentions "antibody-drug conjugate", "immunoconjugate", "ADC", set relevance_score = 1.0
+   - Otherwise, set relevance_score based on how related to ADC research (0.0-1.0)
 
 Output ONLY valid JSON:
 {
     "drug_name": "extracted drug name",
-    "target": "molecular target (e.g., HER2, CD19, FRα, TROP2) or null",
+    "target": "molecular target (e.g., HER2, CD19, FRα, TROP2) - MUST extract from Indication if available",
     "outcome_type": "Success",
     "approval_status": "Approved",
     "boxed_warning": "Summary of Boxed Warning or 'None'",
-    "indication": "Primary indication (e.g., Breast Cancer)",
-    "relevance_score": 1.0,
+    "indication": "Primary cancer/disease indication",
+    "relevance_score": 0.0-1.0,
     "confidence": 0.0-1.0
 }
 """
@@ -127,9 +137,9 @@ Output ONLY valid JSON:
 FDA Label Data:
 Name: {title}
 Generic Name: {generic_name}
-Indication: {description[:500] if description else "N/A"}
-Mechanism of Action: {moa[:800] if moa else "N/A"}
-Boxed Warning: {boxed_warning[:300] if boxed_warning else "N/A"}
+Indication: {description[:800] if description else "N/A"}
+Mechanism of Action: {moa[:500] if moa else "N/A"}
+Boxed Warning: {boxed_warning[:200] if boxed_warning else "N/A"}
 """
                 # 🔍 디버그: 최종 프롬프트 길이 로그
                 logger.info(f"📤 Gemini Prompt Length: {len(full_prompt)} chars")
