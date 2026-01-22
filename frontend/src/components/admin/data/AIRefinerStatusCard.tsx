@@ -10,7 +10,8 @@ import {
     Play,
     Eye,
     Loader2,
-    Zap
+    Zap,
+    ChevronDown
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { API_BASE_URL } from '@/lib/api'
@@ -20,6 +21,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface DashboardData {
     system_status: 'ACTIVE' | 'PAUSED'
@@ -89,13 +96,28 @@ export function AIRefinerStatusCard() {
         }
     }
 
-    const runRefinerNow = async () => {
+    const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial') => {
         setRunning(true)
         try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run?limit=50`, { method: 'POST' })
+            const limit = mode === 'partial' ? 50 : 10000
+            const res = await fetch(`${API_BASE_URL}/api/admin/refiner/run?limit=${limit}&mode=${mode}`, { method: 'POST' })
             if (res.ok) {
-                toast.success('AI Refiner triggered successfully')
-                fetchDashboard()
+                const data = await res.json()
+
+                if (data.status === 'skipped') {
+                    toast.info(data.message)
+                } else {
+                    const count = data.count || (mode === 'partial' ? 50 : 'All')
+                    const estSeconds = data.estimated_seconds || (typeof count === 'number' ? count * 2 : 0)
+                    const estMinutes = Math.ceil(estSeconds / 60)
+
+                    if (mode === 'daily_import') {
+                        toast.success('Daily Bulk Import started in background')
+                    } else {
+                        toast.success(`Started analysis for ${count} items. Approx ${estMinutes} mins.`)
+                    }
+                    fetchDashboard()
+                }
             }
         } catch (error) {
             toast.error('Failed to trigger refiner')
@@ -236,19 +258,34 @@ export function AIRefinerStatusCard() {
 
                                 {/* Action Buttons */}
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Button
-                                        variant="outline"
-                                        className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                                        onClick={runRefinerNow}
-                                        disabled={running || dashboard.system_status === 'PAUSED'}
-                                    >
-                                        {running ? (
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <Zap className="w-4 h-4 mr-2" />
-                                        )}
-                                        Run Now
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10 w-full"
+                                                disabled={running || dashboard.system_status === 'PAUSED'}
+                                            >
+                                                {running ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4 mr-2" />
+                                                )}
+                                                Run Now
+                                                <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('partial')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Batch (50)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => runRefinerNow('full')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Full (All Pending)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Daily Import
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     <Button
                                         variant="outline"
                                         className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10"

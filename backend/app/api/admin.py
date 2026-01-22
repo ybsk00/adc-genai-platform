@@ -114,15 +114,57 @@ async def get_admin_stats():
 
 
 @router.post("/refiner/run")
-async def run_ai_refiner(background_tasks: BackgroundTasks):
+async def run_ai_refiner(
+    background_tasks: BackgroundTasks, 
+    limit: int = 50, 
+    mode: str = "partial" # partial, full, daily_import
+):
     """
     AI Refiner 수동 실행 (즉시 트리거)
+    - mode="partial": limit 만큼 실행 (기본 50)
+    - mode="full": 대기 중인 모든 항목 실행 (Safety Net: Max 10,000)
+    - mode="daily_import": Daily Bulk Import 실행
     """
     try:
         from app.services.ai_refiner import ai_refiner
-        # 백그라운드에서 실행 (최대 20개씩 처리)
-        background_tasks.add_task(ai_refiner.process_pending_records, max_records=20)
-        return {"status": "started", "message": "AI Refiner started in background"}
+        
+        if mode == "daily_import":
+            from app.services.bulk_importer import BulkImporter
+            importer = BulkImporter()
+            # 백그라운드에서 Daily Import 실행
+            background_tasks.add_task(importer.run_import, max_studies=5000, mode="daily")
+            return {
+                "status": "started", 
+                "message": "Daily Bulk Import started in background",
+                "mode": "daily_import"
+            }
+            
+        # Full 모드일 경우 pending 개수 조회
+        target_limit = limit
+        if mode == "full":
+            # Pending 개수 조회
+            pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).execute()
+            pending_count = pending_res.count or 0
+            
+            if pending_count == 0:
+                return {"status": "skipped", "message": "No pending items to refine"}
+                
+            # Safety Net: 최대 10,000개
+            target_limit = min(pending_count, 10000)
+            
+        # 백그라운드에서 실행
+        background_tasks.add_task(ai_refiner.process_pending_records, max_records=target_limit)
+        
+        # 예상 소요 시간 (개당 2초)
+        estimated_seconds = target_limit * 2
+        
+        return {
+            "status": "started", 
+            "message": f"AI Refiner started in background ({target_limit} items)",
+            "count": target_limit,
+            "estimated_seconds": estimated_seconds,
+            "mode": mode
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -49,3 +49,4 @@ apscheduler==3.10.4
 aiohttp==3.10.10
 pubchempy==1.0.4
 json-repair==0.30.0
+pytz

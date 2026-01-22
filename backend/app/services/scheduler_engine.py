@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 class SchedulerEngine:
     def __init__(self):
-        self.scheduler = AsyncIOScheduler()
+        # Timezone 설정 (KST)
+        from pytz import timezone
+        kst = timezone('Asia/Seoul')
+        self.scheduler = AsyncIOScheduler(timezone=kst)
         self.is_started = False
 
     def start(self):
@@ -20,7 +23,14 @@ class SchedulerEngine:
             # 자동 스케줄 등록
             self._register_default_jobs()
             
-            logger.info("🚀 Global AsyncIO Scheduler Started!")
+            logger.info("🚀 Global AsyncIO Scheduler Started! (Timezone: Asia/Seoul)")
+            self._log_scheduled_jobs()
+
+    def _log_scheduled_jobs(self):
+        """등록된 작업들의 다음 실행 시간 로깅"""
+        jobs = self.scheduler.get_jobs()
+        for job in jobs:
+            logger.info(f"📅 Job [{job.id}] next run: {job.next_run_time}")
 
     def _register_default_jobs(self):
         """기본 예약 작업 등록"""
@@ -33,7 +43,6 @@ class SchedulerEngine:
             replace_existing=True,
             misfire_grace_time=3600
         )
-        logger.info("⏰ Registered: Daily Bulk Import at 04:00 AM")
         
         # 2. 매 30분마다 AI Refiner 실행 (소량 배치)
         self.scheduler.add_job(
@@ -43,7 +52,6 @@ class SchedulerEngine:
             replace_existing=True,
             misfire_grace_time=1800
         )
-        logger.info("⏰ Registered: Periodic AI Refiner every 30 minutes")
 
     async def _daily_bulk_import(self):
         """새벽 4시 자동 Bulk Import"""
