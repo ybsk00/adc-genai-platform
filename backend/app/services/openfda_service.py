@@ -265,27 +265,37 @@ class OpenFDAService:
         generic_name = openfda.get("generic_name", ["Unknown"])[0] if openfda.get("generic_name") else "Unknown"
         manufacturer = openfda.get("manufacturer_name", ["Unknown"])[0] if openfda.get("manufacturer_name") else "Unknown"
         
-        # 독성 정보 (Boxed Warning) 추출
+        # 독성 정보 (Boxed Warning) 추출 - 전체 저장
         boxed_warning = label_data.get("boxed_warning", ["No specific warning"])
         if isinstance(boxed_warning, list) and boxed_warning:
-            boxed_warning = boxed_warning[0][:500]  # Truncate long warnings
+            boxed_warning = boxed_warning[0]
         else:
             boxed_warning = "No specific warning"
         
-        # Indication 추출
+        # Indication 추출 - 전체 저장
         indications = label_data.get("indications_and_usage", [""])
-        indication_text = indications[0][:300] if isinstance(indications, list) and indications else ""
+        indication_text = indications[0] if isinstance(indications, list) and indications else ""
+        
+        # Mechanism of Action 추출 - 전체 저장 (NEW)
+        moa = label_data.get("mechanism_of_action", [""])
+        moa_text = moa[0] if isinstance(moa, list) and moa else ""
+
+        # Description 추출 - 전체 저장
+        desc = label_data.get("description", [""])
+        desc_text = desc[0] if isinstance(desc, list) and desc else ""
         
         return {
             "name": brand_name if brand_name != "Unknown" else generic_name,
             "category": "ADC",
-            "description": f"FDA Approved: {generic_name} ({brand_name}) by {manufacturer}. {indication_text[:100]}",
+            "description": f"FDA Approved: {generic_name} ({brand_name}) by {manufacturer}. {indication_text[:200]}...", # UI 표시용은 일부만
             "properties": {
                 "brand_name": brand_name,
                 "generic_name": generic_name,
                 "manufacturer": manufacturer,
-                "boxed_warning": boxed_warning,
-                "indication": indication_text,
+                "boxed_warning": boxed_warning, # Full text
+                "indication": indication_text,   # Full text
+                "mechanism_of_action": moa_text, # Full text
+                "description": desc_text,        # Full text
                 "fda_label_id": label_data.get("id"),
                 "approval_status": "Approved",
                 "last_updated": label_data.get("effective_time", datetime.utcnow().strftime("%Y%m%d"))

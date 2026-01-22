@@ -56,31 +56,31 @@ class AIRefiner:
                 
                 # 1. Indication 추출 (여러 필드 순차 시도)
                 description = (
-                    fda_label.get("indications_and_usage", "") or 
-                    fda_label.get("indication", "") or 
-                    properties.get("indications_and_usage", "") or
                     properties.get("indication", "") or
+                    fda_label.get("indication", "") or 
+                    fda_label.get("indications_and_usage", "") or 
+                    properties.get("indications_and_usage", "") or
                     fda_label.get("description", "") or 
                     properties.get("description", "")
                 )
                 
                 # 2. Mechanism of Action 추출 (타겟 정보 포함)
                 moa = (
-                    fda_label.get("mechanism_of_action", "") or 
-                    properties.get("mechanism_of_action", "")
+                    properties.get("mechanism_of_action", "") or
+                    fda_label.get("mechanism_of_action", "")
                 )
                 
                 # 3. Boxed Warning 추출
                 boxed_warning = (
+                    properties.get("boxed_warning", "") or
                     fda_label.get("boxed_warning", "") or 
-                    fda_label.get("warnings", "") or
-                    properties.get("boxed_warning", "")
+                    fda_label.get("warnings", "")
                 )
                 
                 # 4. Generic Name 추출
                 generic_name = (
-                    fda_label.get("generic_name", "") or 
-                    properties.get("generic_name", "")
+                    properties.get("generic_name", "") or
+                    fda_label.get("generic_name", "")
                 )
                 
                 # 🔍 디버그 로그: 추출된 텍스트 확인
@@ -211,41 +211,44 @@ Description: {description[:1000] if description else 'N/A'}"""
                 "ai_confidence": analysis.get("confidence", 0.5),
                 "relevance_score": analysis.get("relevance_score", 0.0),
                 "boxed_warning": analysis.get("boxed_warning"), # OpenFDA specific
-                "indication": analysis.get("indication") # OpenFDA specific
+                "indication": analysis.get("indication"), # OpenFDA specific
+                "generic_name": generic_name # Pass generic name back
             }
         
         except Exception as e:
             logger.error(f"LLM Analysis Error for record {record.get('id')}: {e}")
             return {"error": str(e)}
 
-    async def enrich_with_pubchem(self, drug_name: Optional[str]) -> Dict[str, Any]:
+    async def enrich_with_pubchem(self, drug_name: Optional[str], generic_name: Optional[str] = None) -> Dict[str, Any]:
         """2단계: PubChem 화학 구조 자동 매핑 (Fuzzy Matching 포함)"""
-        if not drug_name:
+        if not drug_name and not generic_name:
             return {}
         
         try:
             import pubchempy as pcp
+            from app.services.chemical_resolver import chemical_resolver
+            
             loop = asyncio.get_event_loop()
             
             def fetch_pubchem():
-                # 1차: 정확한 이름 검색
-                compounds = pcp.get_compounds(drug_name, 'name')
-                if not compounds:
-                    # 2차: Fuzzy/Autocomplete (유사어 검색) - 여기서는 간단히 이름 변형 시도 또는 생략
-                    # PUG REST API의 Autocomplete는 별도 호출 필요하지만, pubchempy는 기본적으로 유연함.
-                    # 여기서는 검색 실패 시 None 반환
-                    return None
+                # Chemical Resolver의 향상된 fetch_safe_smiles 사용 (Generic Fallback 포함)
+                result = chemical_resolver.fetch_safe_smiles(drug_name, generic_name)
                 
-                c = compounds[0]
-                return {
-                    "smiles_code": c.isomeric_smiles,
-                    "canonical_smiles": c.canonical_smiles,
-                    "molecular_weight": float(c.molecular_weight) if c.molecular_weight else None,
-                    "enrichment_source": "PubChem"
-                }
+                if result["smiles"]:
+                    return {
+                        "smiles_code": result["smiles"],
+                        "canonical_smiles": result["smiles"], # fetch_safe_smiles returns isomeric/canonical
+                        "molecular_weight": result["mw"],
+                        "enrichment_source": "PubChem"
+                    }
+                return None
 
             result = await loop.run_in_executor(None, fetch_pubchem)
             return result
+            
+        except Exception as e:
+            logger.error(f"PubChem lookup error for {drug_name}: {e}")
+            return {"error": "PubChem Error"}
             
         except Exception as e:
             logger.error(f"PubChem lookup error for {drug_name}: {e}")
@@ -367,28 +370,34 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
                         if analysis and "error" not in analysis:
                             drug_name = analysis.get("drug_name") or existing_drug_name
                             relevance_score = analysis.get("relevance_score", 0.0)
+                            generic_name = analysis.get("generic_name") or item.get("properties", {}).get("generic_name")
                             
-                            # 2️⃣ 화학 구조 매핑 (관련성 높을 때만)
+                            # 2️⃣ 화학 구조 매핑 (관련성 점수와 무관하게 이름이 있으면 시도)
+                            # 사용자 요청: "브랜드명으로 SMILES 못 찾으면 성분명으로 끝까지 찾아내는 로직이 핵심"
                             pubchem_data = None
                             processing_error = None
                             
-                            if relevance_score > 0.5 and drug_name:
+                            # SMILES 조회 조건 완화: 이름만 있으면 무조건 시도
+                            if drug_name or generic_name:
                                 if existing_smiles:
                                     logger.info(f"⏩ PubChem Skip: {drug_name[:30]} (SMILES exists)")
                                     pubchem_data = {"smiles_code": existing_smiles, "enrichment_source": "Existing"}
                                 else:
-                                    # 2-1. PubChem Lookup
-                                    logger.info(f"🔬 PubChem lookup: {drug_name}")
-                                    pubchem_data = await self.enrich_with_pubchem(drug_name)
+                                    # 2-1. PubChem Lookup (with Generic Fallback)
+                                    logger.info(f"🔬 PubChem lookup: {drug_name} (Generic: {generic_name})")
+                                    pubchem_data = await self.enrich_with_pubchem(drug_name, generic_name)
                                     
-                                    # 2-2. Fallback to AI
+                                    # 2-2. Fallback to AI (Only if PubChem failed completely)
                                     if not pubchem_data or "error" in pubchem_data:
-                                        logger.info(f"🧪 AI Fallback: Generating SMILES for {drug_name}")
-                                        pubchem_data = await self.generate_smiles_with_ai(drug_name)
+                                        target_name = drug_name or generic_name
+                                        logger.info(f"🧪 AI Fallback: Generating SMILES for {target_name}")
+                                        pubchem_data = await self.generate_smiles_with_ai(target_name)
                                         
                                         if not pubchem_data or "error" in pubchem_data:
                                             processing_error = "SMILES Not Found (PubChem & AI Failed)"
-                                            logger.warning(f"⚠️ All methods failed for: {drug_name}")
+                                            logger.warning(f"⚠️ All methods failed for: {target_name}")
+                            else:
+                                logger.warning(f"⚠️ No drug name found for SMILES lookup: {item.get('id')}")
                             
                             # 기존 properties에 AI 분석 결과 추가
                             updated_properties = item.get("properties", {})

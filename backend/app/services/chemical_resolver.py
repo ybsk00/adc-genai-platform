@@ -39,25 +39,37 @@ class ChemicalResolver:
             ChemicalResolver._last_call = time.time()
     
     @staticmethod
-    def fetch_safe_smiles(drug_name: str) -> Dict[str, Any]:
+    def fetch_safe_smiles(drug_name: str, generic_name: Optional[str] = None) -> Dict[str, Any]:
         """
         안전하게 PubChem에서 SMILES를 가져오는 방탄 함수
         RDKit으로 화학적 무결성 검증
+        Generic Name Fallback 지원
         """
         result = {"smiles": None, "status": "NOT_FOUND", "mw": 0, "cid": None}
         
         if not drug_name or drug_name.lower() in ["unknown", "n/a", "none"]:
-            return result
+            if generic_name and generic_name.lower() not in ["unknown", "n/a", "none"]:
+                drug_name = generic_name # Primary가 없으면 Generic으로 바로 시도
+            else:
+                return result
         
         # Rate limit 적용
         ChemicalResolver._wait_for_rate_limit()
         
         try:
-            # 1. PubChem 검색
+            # 1. PubChem 검색 (Primary Name)
             compounds = pcp.get_compounds(drug_name, 'name')
             
+            # 1-1. Fallback to Generic Name if Primary failed
+            if not compounds and generic_name and generic_name != drug_name:
+                logger.info(f"⚠️ PubChem: '{drug_name}' not found. Trying generic name: '{generic_name}'")
+                ChemicalResolver._wait_for_rate_limit()
+                compounds = pcp.get_compounds(generic_name, 'name')
+                if compounds:
+                    logger.info(f"✅ Found via generic name: {generic_name}")
+            
             if not compounds:
-                logger.warning(f"⚠️ PubChem: '{drug_name}' 검색 결과 없음.")
+                logger.warning(f"⚠️ PubChem: '{drug_name}' (and generic) 검색 결과 없음.")
                 return result
             
             # 2. 첫 번째 후보 가져오기
