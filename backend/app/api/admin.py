@@ -255,34 +255,72 @@ async def get_all_users():
 # Golden Set Management (Human-in-the-Loop)
 # ============================================================
 
-@router.get("/goldenset/drafts", response_model=List[GoldenSetDraft])
-async def get_golden_set_drafts():
+@router.get("/goldenset/drafts")
+async def get_golden_set_drafts(
+    limit: int = 20,
+    offset: int = 0,
+    search: str = "",
+    source: str = ""
+):
     """
-    검토 대기 중인 Golden Set 목록 조회
+    검토 대기 중인 Golden Set 목록 조회 (페이지네이션 + 검색/필터)
+    - limit: 한 페이지당 개수 (기본 20)
+    - offset: 오프셋 (페이지 * limit)
+    - search: 약물명 검색 (ILIKE)
+    - source: enrichment_source 필터 (open_fda_api, clinical_trials_api_v2 등)
     """
     try:
-        response = supabase.table("golden_set_library") \
+        # Count 쿼리 (전체 개수)
+        count_query = supabase.table("golden_set_library") \
+            .select("*", count="exact") \
+            .eq("status", "draft")
+        
+        if search:
+            count_query = count_query.ilike("name", f"%{search}%")
+        if source:
+            count_query = count_query.eq("enrichment_source", source)
+        
+        count_result = count_query.execute()
+        total_count = count_result.count or 0
+        
+        # 데이터 쿼리 (페이지네이션)
+        data_query = supabase.table("golden_set_library") \
             .select("*") \
-            .eq("status", "draft") \
+            .eq("status", "draft")
+        
+        if search:
+            data_query = data_query.ilike("name", f"%{search}%")
+        if source:
+            data_query = data_query.eq("enrichment_source", source)
+        
+        response = data_query \
             .order("created_at", desc=True) \
+            .range(offset, offset + limit - 1) \
             .execute()
             
         drafts = []
         for item in response.data:
-            drafts.append(GoldenSetDraft(
-                id=item.get("id"),
-                drug_name=item.get("name") or "Unknown",
-                target=item.get("properties", {}).get("target") or "Unknown",
-                payload=item.get("properties", {}).get("payload"),
-                linker=item.get("properties", {}).get("linker"),
-                enrichment_source=item.get("enrichment_source") or "unknown",
-                created_at=item.get("created_at"),
-                outcome_type=item.get("outcome_type"),
-                failure_reason=item.get("failure_reason"),
-                is_ai_extracted=item.get("is_ai_extracted") or False
-            ))
+            drafts.append({
+                "id": item.get("id"),
+                "drug_name": item.get("name") or "Unknown",
+                "target": item.get("properties", {}).get("target") or "Unknown",
+                "payload": item.get("properties", {}).get("payload"),
+                "linker": item.get("properties", {}).get("linker"),
+                "smiles_code": item.get("smiles_code"),  # SMILES 추가
+                "enrichment_source": item.get("enrichment_source") or "unknown",
+                "created_at": item.get("created_at"),
+                "outcome_type": item.get("outcome_type"),
+                "failure_reason": item.get("failure_reason"),
+                "is_ai_extracted": item.get("ai_refined") or False,
+                "properties": item.get("properties", {})  # 전체 properties도 포함
+            })
             
-        return drafts
+        return {
+            "data": drafts,
+            "total": total_count,
+            "limit": limit,
+            "offset": offset
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -303,6 +341,74 @@ async def get_golden_set_detail(golden_set_id: str):
             raise HTTPException(status_code=404, detail="Golden Set not found")
             
         return response.data[0]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/goldenset/{golden_set_id}/refine")
+async def refine_single_golden_set(golden_set_id: str, background_tasks: BackgroundTasks):
+    """
+    개별 레코드 AI 재분석 + SMILES 생성
+    스테이징 에어리어에서 즉시 분석 버튼용
+    """
+    try:
+        from app.services.ai_refiner import ai_refiner
+        
+        # 1. 레코드 조회
+        item_res = supabase.table("golden_set_library").select("*").eq("id", golden_set_id).execute()
+        if not item_res.data:
+            raise HTTPException(status_code=404, detail="Record not found")
+        
+        record = item_res.data[0]
+        
+        # 2. AI Refiner로 분석 (동기 실행)
+        import asyncio
+        analysis = await ai_refiner.refine_single_record(record)
+        
+        if analysis and "error" not in analysis:
+            drug_name = analysis.get("drug_name") or record.get("name")
+            
+            # 3. SMILES 생성 (PubChem → AI Fallback)
+            smiles_data = {}
+            if drug_name and not record.get("smiles_code"):
+                smiles_data = await ai_refiner.enrich_with_pubchem(drug_name)
+                if not smiles_data or "error" in smiles_data:
+                    smiles_data = await ai_refiner.generate_smiles_with_ai(drug_name)
+            
+            # 4. DB 업데이트
+            existing_props = record.get("properties", {}) or {}
+            existing_props["ai_analysis"] = analysis
+            
+            update_payload = {
+                "name": drug_name or record.get("name"),
+                "outcome_type": analysis.get("outcome_type", "Unknown"),
+                "failure_reason": analysis.get("failure_reason"),
+                "relevance_score": analysis.get("relevance_score", 0.0),
+                "ai_refined": True,
+                "properties": existing_props
+            }
+            
+            # SMILES 추가
+            if smiles_data and "error" not in smiles_data:
+                update_payload["smiles_code"] = smiles_data.get("smiles_code")
+            
+            supabase.table("golden_set_library").update(update_payload).eq("id", golden_set_id).execute()
+            
+            return {
+                "status": "success",
+                "id": golden_set_id,
+                "analysis": analysis,
+                "smiles_code": update_payload.get("smiles_code") or record.get("smiles_code"),
+                "message": "AI 분석 완료"
+            }
+        else:
+            error_msg = analysis.get("error") if analysis else "Unknown Error"
+            return {
+                "status": "error",
+                "id": golden_set_id,
+                "message": f"AI 분석 실패: {error_msg}"
+            }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

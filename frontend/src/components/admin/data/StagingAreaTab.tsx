@@ -1,17 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import {
     Dialog,
     DialogContent,
@@ -22,9 +22,12 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
+import {
+    CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles,
+    AlertCircle, Clock, CheckCircle2, ChevronLeft, ChevronRight, Search, Brain
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase, getSession } from '@/lib/supabase'
+import { getSession } from '@/lib/supabase'
 import { API_BASE_URL } from '@/lib/api'
 
 interface GoldenSetDraft {
@@ -33,12 +36,21 @@ interface GoldenSetDraft {
     target: string
     payload?: string
     linker?: string
+    smiles_code?: string
     enrichment_source: string
     created_at: string
     outcome_type?: string
     failure_reason?: string
     is_ai_extracted?: boolean
     raw_data?: string
+    properties?: Record<string, unknown>
+}
+
+interface DraftsResponse {
+    data: GoldenSetDraft[]
+    total: number
+    limit: number
+    offset: number
 }
 
 export function StagingAreaTab() {
@@ -47,29 +59,82 @@ export function StagingAreaTab() {
     const [rejectReason, setRejectReason] = useState('')
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
 
-    // Fetch Drafts
-    const { data: drafts, isLoading } = useQuery({
-        queryKey: ['goldenSetDrafts'],
-        queryFn: async () => {
-            // Using direct supabase call or API endpoint
-            // Since we have an API endpoint, let's use fetch or supabase client if configured for API
-            // For now, let's use the supabase client directly if the API is just a wrapper, 
-            // BUT the plan says "Use actual Backend API". 
-            // Let's assume we have a fetch wrapper or just use fetch.
-            // However, authentication might be tricky with raw fetch if not handled globally.
-            // Let's use supabase-js to call the edge function or just standard fetch if we have a token.
-            // Given the setup, I'll use the supabase client to get the session and then fetch.
+    // Pagination & Search State
+    const [page, setPage] = useState(1)
+    const [pageSize] = useState(20)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [sourceFilter, setSourceFilter] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
 
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    // Fetch Drafts with Pagination
+    const { data: draftsResponse, isLoading } = useQuery({
+        queryKey: ['goldenSetDrafts', page, pageSize, debouncedSearch, sourceFilter],
+        queryFn: async () => {
             const { session } = await getSession()
             if (!session) throw new Error('No session')
 
-            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts`, {
+            const offset = (page - 1) * pageSize
+            const params = new URLSearchParams({
+                limit: String(pageSize),
+                offset: String(offset),
+                ...(debouncedSearch && { search: debouncedSearch }),
+                ...(sourceFilter && { source: sourceFilter })
+            })
+
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts?${params}`, {
                 headers: {
                     Authorization: `Bearer ${session.access_token}`
                 }
             })
             if (!response.ok) throw new Error('Failed to fetch drafts')
-            return response.json() as Promise<GoldenSetDraft[]>
+            return response.json() as Promise<DraftsResponse>
+        }
+    })
+
+    const drafts = draftsResponse?.data || []
+    const totalCount = draftsResponse?.total || 0
+    const totalPages = Math.ceil(totalCount / pageSize)
+
+    // AI Refine Single Mutation
+    const refineMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { session } = await getSession()
+            if (!session) throw new Error('No session')
+
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/refine`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`
+                }
+            })
+            if (!response.ok) throw new Error('Failed to refine')
+            return response.json()
+        },
+        onSuccess: (data) => {
+            if (data.status === 'success') {
+                toast.success(`AI 분석 완료: Target=${data.analysis?.target || 'Unknown'}`)
+                queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })
+                // 선택된 드래프트 업데이트
+                if (selectedDraft) {
+                    setSelectedDraft({
+                        ...selectedDraft,
+                        target: data.analysis?.target || selectedDraft.target,
+                        smiles_code: data.smiles_code || selectedDraft.smiles_code
+                    })
+                }
+            } else {
+                toast.error(data.message || 'AI 분석 실패')
+            }
+        },
+        onError: () => {
+            toast.error('AI 분석 요청 실패')
         }
     })
 
@@ -144,18 +209,47 @@ export function StagingAreaTab() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
             {/* Inbox List */}
             <Card className="bg-slate-900 border-slate-800 lg:col-span-1 flex flex-col">
-                <CardHeader>
+                <CardHeader className="pb-2">
                     <CardTitle className="text-white flex items-center justify-between">
                         <span>Inbox</span>
                         <Badge variant="secondary" className="bg-purple-500/20 text-purple-300">
-                            {drafts?.length || 0} Pending
+                            {totalCount} Total
                         </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-400">
                         AI가 추출한 검토 대기 항목
                     </CardDescription>
+
+                    {/* Search & Filter Bar */}
+                    <div className="flex gap-2 mt-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
+                            <Input
+                                placeholder="약물명 검색..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value)
+                                    setPage(1)
+                                }}
+                                className="pl-8 bg-slate-800 border-slate-700 text-white text-sm"
+                            />
+                        </div>
+                        <Select value={sourceFilter} onValueChange={(v) => {
+                            setSourceFilter(v === 'all' ? '' : v)
+                            setPage(1)
+                        }}>
+                            <SelectTrigger className="w-[130px] bg-slate-800 border-slate-700 text-white text-sm">
+                                <SelectValue placeholder="Source" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-900 border-slate-700">
+                                <SelectItem value="all">All Sources</SelectItem>
+                                <SelectItem value="open_fda_api">OpenFDA</SelectItem>
+                                <SelectItem value="clinical_trials_api_v2">ClinicalTrials</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-0">
+                <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
                     <ScrollArea className="h-full">
                         {isLoading ? (
                             <div className="flex justify-center p-8">
@@ -196,6 +290,35 @@ export function StagingAreaTab() {
                             </div>
                         )}
                     </ScrollArea>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between p-3 border-t border-slate-800 bg-slate-900/50">
+                            <span className="text-xs text-slate-500">
+                                {page} / {totalPages} 페이지
+                            </span>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="h-7 w-7 p-0"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
+                                    className="h-7 w-7 p-0"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -246,6 +369,19 @@ export function StagingAreaTab() {
                                         Reject
                                     </Button>
                                     <Button
+                                        variant="outline"
+                                        className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                        onClick={() => refineMutation.mutate(selectedDraft.id)}
+                                        disabled={refineMutation.isPending}
+                                    >
+                                        {refineMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Brain className="w-4 h-4 mr-2" />
+                                        )}
+                                        AI 분석
+                                    </Button>
+                                    <Button
                                         className="bg-green-500 hover:bg-green-600 text-white"
                                         onClick={() => handleApproveClick(selectedDraft)}
                                     >
@@ -279,14 +415,16 @@ export function StagingAreaTab() {
                                         <CheckCircle className="w-4 h-4" />
                                         Extracted Structured Data
                                     </h4>
-                                    <pre className="text-sm text-slate-300 font-mono bg-slate-950 p-4 rounded-lg border border-slate-800">
+                                    <pre className="text-sm text-slate-300 font-mono bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-auto max-h-64">
                                         {JSON.stringify({
                                             name: selectedDraft.drug_name,
                                             target: selectedDraft.target,
                                             payload: selectedDraft.payload,
                                             linker: selectedDraft.linker,
+                                            smiles_code: selectedDraft.smiles_code || null,
+                                            outcome_type: selectedDraft.outcome_type,
                                             source: selectedDraft.enrichment_source,
-                                            status: 'draft'
+                                            ai_analysis: selectedDraft.properties?.ai_analysis || null
                                         }, null, 2)}
                                     </pre>
                                 </div>

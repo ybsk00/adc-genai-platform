@@ -5,7 +5,7 @@ UPDATE golden_set_library
 SET 
     ai_refined = false, 
     relevance_score = 0, 
-    outcome_type = 'Pending',
+    outcome_type = 'Unknown',  -- 'Pending'은 체크 제약 위반, 'Unknown' 사용
     properties = properties - 'ai_analysis'
 WHERE enrichment_source = 'open_fda_api' 
   AND (
