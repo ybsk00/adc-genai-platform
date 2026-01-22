@@ -1,0 +1,14 @@
+Drug Name       | SMILES     | Target          | Score | Refined
+----------------------------------------------------------------------
+Mylotarg        | ✅ Found    | null            | 0     | YES    
+
+   👉 Mylotarg Details:
+      - Generic Name: None
+      - SMILES: CC(C)S[C@@H]1C(C=CC2C(=O)C#CC(=O)C=C(C)C12)=COC3C(...      - MoA Length: 0
+      - Indication Length: 0
+HERZUMA         | ❌ Missing  | null            | 0     | YES    
+Besponsa        | ✅ Found    | null            | 0     | YES    
+ELAHERE         | ✅ Found    | null            | 0     | YES    
+ZYNLONTA        | ✅ Found    | null            | 0     | YES    
+Ontruzant       | ❌ Missing  | null            | 0     | YES    
+Blenrep         | ✅ Found    | null            | 0     | YES    
