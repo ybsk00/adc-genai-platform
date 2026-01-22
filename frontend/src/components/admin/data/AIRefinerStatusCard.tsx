@@ -98,7 +98,7 @@ export function AIRefinerStatusCard() {
         }
     }
 
-    const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial', source: string = 'clinical_trials') => {
+    const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial', source: string = '') => {
         if (source === 'open_fda_api') setOpenfdaRunning(true)
         else setRunning(true)
 
@@ -288,13 +288,13 @@ export function AIRefinerStatusCard() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
-                                            <DropdownMenuItem onClick={() => runRefinerNow('partial', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('partial', 'clinical_trials_api_v2')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Batch (50)
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => runRefinerNow('full', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('full', 'clinical_trials_api_v2')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Full (All Pending)
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import', 'clinical_trials')} className="hover:bg-slate-800 cursor-pointer">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('daily_import', 'clinical_trials_api_v2')} className="hover:bg-slate-800 cursor-pointer">
                                                 Run Daily Import
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
