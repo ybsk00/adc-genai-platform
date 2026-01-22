@@ -56,89 +56,204 @@ class OpenFDAService:
         'openfda.substance_name:"conjugate"',
         'openfda.pharm_class_epc:"antibody-drug conjugate"',
     ]
+    
+    # ============================================================
+    # BROADENED SEARCH QUERIES - Full-text 검색 (와일드카드 제거)
+    # ============================================================
+    BROADENED_QUERIES = [
+        # 라벨 전문(Full Text) 검색 - ADC 관련 키워드
+        'description:"antibody-drug conjugate"',
+        'description:"antibody drug conjugate"',
+        'description:"immunoconjugate"',
+        'indications_and_usage:"conjugate"',
+        'mechanism_of_action:"linker"',
+        'mechanism_of_action:"payload"',
+        'mechanism_of_action:"cytotoxic"',
+        
+        # 약리학적 분류(Pharmacologic Class) 검색
+        'openfda.pharm_class_moa:"monoclonal antibody"',
+        'openfda.pharm_class_cs:"antineoplastic"',
+        
+        # 암 면역치료제 관련 키워드
+        'indications_and_usage:"cancer"',
+        'indications_and_usage:"lymphoma"',
+        'indications_and_usage:"leukemia"',
+        'indications_and_usage:"myeloma"',
+        'indications_and_usage:"carcinoma"',
+    ]
+    
+    def _get_clinical_trial_drug_names(self) -> List[str]:
+        """ClinicalTrials에서 이미 수집된 약물명 리스트 추출 (Targeted Search용)"""
+        try:
+            result = supabase.table("golden_set_library")\
+                .select("name")\
+                .eq("enrichment_source", "clinical_trials_api_v2")\
+                .execute()
+            
+            if result.data:
+                names = [r["name"] for r in result.data if r.get("name")]
+                logger.info(f"📋 Found {len(names)} drug names from ClinicalTrials for targeted search")
+                return names
+            return []
+        except Exception as e:
+            logger.error(f"Failed to fetch ClinicalTrials drug names: {e}")
+            return []
+    
+    def _generate_date_ranges(self, start_year: int = 2000) -> List[str]:
+        """연도별 날짜 범위 생성 (Skip 1,000 한계 우회용)"""
+        current_year = datetime.utcnow().year
+        ranges = []
+        for year in range(start_year, current_year + 1):
+            start = f"{year}0101"
+            end = f"{year}1231"
+            ranges.append(f"effective_time:[{start}+TO+{end}]")
+        return ranges
+    
+    # ============================================================
+    # Rate Limiting & Retry Configuration
+    # ============================================================
+    REQUEST_DELAY = 1.0  # 요청 간 최소 지연 시간 (초)
+    MAX_RETRIES = 3      # 최대 재시도 횟수
+    INITIAL_BACKOFF = 2  # 첫 재시도 대기 시간 (초)
+    
+    async def _fetch_with_retry(self, client: httpx.AsyncClient, url: str, params: dict, max_retries: int = 3) -> Optional[httpx.Response]:
+        """지수 백오프(Exponential Backoff)를 사용한 재시도 로직"""
+        for attempt in range(max_retries):
+            try:
+                res = await client.get(url, params=params)
+                
+                # 성공 또는 404 (데이터 없음)
+                if res.status_code in [200, 404]:
+                    return res
+                
+                # 502, 503, 429 등 재시도 가능한 에러
+                if res.status_code in [429, 500, 502, 503, 504]:
+                    wait_time = self.INITIAL_BACKOFF * (2 ** attempt)  # 2, 4, 8초
+                    logger.warning(f"⚠️ OpenFDA {res.status_code} error. Retry {attempt + 1}/{max_retries} in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                
+                # 다른 에러는 즉시 반환
+                return res
+                
+            except (httpx.TimeoutException, httpx.ConnectError) as e:
+                wait_time = self.INITIAL_BACKOFF * (2 ** attempt)
+                logger.warning(f"⚠️ Connection error: {e}. Retry {attempt + 1}/{max_retries} in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+                continue
+            except Exception as e:
+                logger.error(f"❌ Unexpected error in fetch: {e}")
+                return None
+        
+        logger.error(f"❌ Max retries ({max_retries}) exceeded.")
+        return None
 
-    async def fetch_all_approved_adcs(self, limit: int = 100, mode: str = "full") -> List[Dict[Any, Any]]:
+    async def fetch_all_approved_adcs(self, limit: int = 100, mode: str = "full", use_broad_search: bool = True, use_targeted_search: bool = True) -> List[Dict[Any, Any]]:
         """
-        OpenFDA에서 ADC 라벨 정보 수집 (Expanded)
-        mode="full": 전체 데이터 수집 (Pagination)
+        OpenFDA에서 ADC 라벨 정보 수집 (Rate Limited + Retry)
+        mode="full": 전체 데이터 수집
         mode="daily": 최근 7일 업데이트된 데이터만 수집
+        use_broad_search: True면 BROADENED_QUERIES도 함께 사용
+        use_targeted_search: True면 ClinicalTrials 약물명으로 정밀 검색 추가
         """
         all_results = []
         seen_ids = set()
         
+        # 1. 기본 쿼리 목록 합성
+        queries_to_run = self.SEARCH_QUERIES.copy()
+        if use_broad_search:
+            queries_to_run.extend(self.BROADENED_QUERIES)
+        
+        # 2. Targeted Search: ClinicalTrials 약물명 기반 쿼리 추가
+        if use_targeted_search:
+            drug_names = self._get_clinical_trial_drug_names()
+            for name in drug_names:
+                # 약물명을 brand_name과 generic_name으로 모두 검색
+                safe_name = name.replace('"', '\\"')  # 따옴표 이스케이프
+                queries_to_run.append(f'openfda.brand_name:"{safe_name}"')
+                queries_to_run.append(f'openfda.generic_name:"{safe_name}"')
+        
+        total_queries = len(queries_to_run)
+        logger.info(f"🚀 Starting OpenFDA fetch with {total_queries} queries (mode={mode}, broad={use_broad_search}, targeted={use_targeted_search})")
+        logger.info(f"⏱️ Rate limiting: {self.REQUEST_DELAY}s delay, {self.MAX_RETRIES} retries with exponential backoff")
+        
         async with httpx.AsyncClient(timeout=60.0) as client:
-            for idx, query in enumerate(self.SEARCH_QUERIES):
+            for idx, query in enumerate(queries_to_run):
                 skip = 0
                 total_found = 0
                 query_results = 0
                 
-                # Daily mode: Add date filter (7 days for better coverage)
-                final_query = query
+                # Build final query with date filter for daily mode
                 if mode == "daily":
                     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y%m%d")
                     final_query = f"{query}+AND+effective_time:[{week_ago}+TO+*]"
+                else:
+                    final_query = query
 
-                # 1. Check Total Count first (Smart Check)
-                try:
-                    check_params = {"search": final_query, "limit": 1}
-                    check_res = await client.get(self.BASE_URL, params=check_params)
-                    if check_res.status_code == 200:
-                        meta = check_res.json().get("meta", {})
-                        total_found = meta.get("results", {}).get("total", 0)
-                        logger.info(f"🔍 [{idx+1}/{len(self.SEARCH_QUERIES)}] Query '{query[:40]}...' found {total_found} records.")
-                    elif check_res.status_code == 404:
-                        # No results for this query
-                        logger.debug(f"No results for query: {query[:40]}")
-                        continue
-                    else:
-                        logger.warning(f"OpenFDA Check failed for '{query[:40]}': {check_res.status_code}")
-                        continue
-                except Exception as e:
-                    logger.error(f"OpenFDA Check Error: {e}")
+                # 1. Check Total Count first (Smart Check) - with retry
+                check_params = {"search": final_query, "limit": 1}
+                check_res = await self._fetch_with_retry(client, self.BASE_URL, check_params, self.MAX_RETRIES)
+                
+                if check_res is None:
+                    continue
+                    
+                if check_res.status_code == 200:
+                    meta = check_res.json().get("meta", {})
+                    total_found = meta.get("results", {}).get("total", 0)
+                    if total_found > 0:
+                        logger.info(f"🔍 [{idx+1}/{total_queries}] '{query[:40]}...' → {total_found} records")
+                elif check_res.status_code == 404:
+                    continue
+                else:
+                    logger.warning(f"OpenFDA Check failed for '{query[:40]}': {check_res.status_code}")
                     continue
 
                 if total_found == 0:
                     continue
 
-                # 2. Fetch Loop (All Pages)
+                # Rate limiting - 쿼리 사이에 대기
+                await asyncio.sleep(self.REQUEST_DELAY)
+
+                # 2. Fetch Loop (All Pages) - with retry
                 max_skip = 1000  # OpenFDA has a max skip limit
                 while skip < min(total_found, max_skip):
-                    try:
-                        params = {
-                            "search": final_query,
-                            "limit": min(limit, 100),  # Max 100 per request
-                            "skip": skip
-                        }
-                        res = await client.get(self.BASE_URL, params=params)
+                    params = {
+                        "search": final_query,
+                        "limit": min(limit, 100),  # Max 100 per request
+                        "skip": skip
+                    }
+                    
+                    res = await self._fetch_with_retry(client, self.BASE_URL, params, self.MAX_RETRIES)
+                    
+                    if res is None:
+                        break
+                    
+                    if res.status_code == 200:
+                        data = res.json()
+                        results = data.get("results", [])
+                        if not results:
+                            break
+                            
+                        for r in results:
+                            label_id = r.get("id")
+                            if label_id and label_id not in seen_ids:
+                                seen_ids.add(label_id)
+                                all_results.append(r)
+                                query_results += 1
                         
-                        if res.status_code == 200:
-                            data = res.json()
-                            results = data.get("results", [])
-                            if not results:
-                                break
-                                
-                            for r in results:
-                                label_id = r.get("id")
-                                if label_id and label_id not in seen_ids:
-                                    seen_ids.add(label_id)
-                                    all_results.append(r)
-                                    query_results += 1
-                            
-                            if len(results) < limit:
-                                break # End of results
-                            
-                            skip += limit
-                            await asyncio.sleep(0.1) # Rate limiting
-                        elif res.status_code == 404:
-                            break
-                        else:
-                            logger.error(f"OpenFDA Fetch Error: {res.status_code}")
-                            break
-                    except Exception as e:
-                        logger.error(f"OpenFDA Loop Exception: {e}")
+                        if len(results) < limit:
+                            break  # End of results
+                        
+                        skip += limit
+                        await asyncio.sleep(self.REQUEST_DELAY)  # Rate limiting - 1초 대기
+                    elif res.status_code == 404:
+                        break
+                    else:
+                        logger.error(f"OpenFDA Fetch Error: {res.status_code}")
                         break
                 
-                logger.info(f"   ↳ Added {query_results} unique records from this query.")
+                if query_results > 0:
+                    logger.info(f"   ↳ Added {query_results} unique records from this query.")
         
         logger.info(f"🎉 Total unique FDA labels fetched: {len(all_results)}")
         return all_results
