@@ -606,7 +606,7 @@ async def get_refiner_dashboard():
         enriched_res = supabase.table("golden_set_library")\
             .select("count", count="exact")\
             .eq("ai_refined", True)\
-            .gte("created_at", f"{today}T00:00:00")\
+            .gte("updated_at", f"{today}T00:00:00")\
             .execute()
         enriched_today = enriched_res.count or 0
         
