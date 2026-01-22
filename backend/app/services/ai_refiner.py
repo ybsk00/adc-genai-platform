@@ -51,16 +51,49 @@ class AIRefiner:
             source = record.get("enrichment_source")
             
             if source == "open_fda_api":
-                # OpenFDA: fda_label에서 데이터 추출
+                # OpenFDA: fda_label에서 데이터 추출 (다중 경로 시도)
                 fda_label = properties.get("fda_label", {})
-                # 1순위: indication, 2순위: description
-                description = fda_label.get("indication", "") or properties.get("indication", "")
-                if not description:
-                    description = fda_label.get("description", "") or properties.get("description", "")
-                # mechanism_of_action 추출 (타겟 정보 포함)
-                moa = fda_label.get("mechanism_of_action", "") or properties.get("mechanism_of_action", "")
-                boxed_warning = fda_label.get("boxed_warning", "") or properties.get("boxed_warning", "")
-                generic_name = fda_label.get("generic_name", "") or properties.get("generic_name", "")
+                
+                # 1. Indication 추출 (여러 필드 순차 시도)
+                description = (
+                    fda_label.get("indications_and_usage", "") or 
+                    fda_label.get("indication", "") or 
+                    properties.get("indications_and_usage", "") or
+                    properties.get("indication", "") or
+                    fda_label.get("description", "") or 
+                    properties.get("description", "")
+                )
+                
+                # 2. Mechanism of Action 추출 (타겟 정보 포함)
+                moa = (
+                    fda_label.get("mechanism_of_action", "") or 
+                    properties.get("mechanism_of_action", "")
+                )
+                
+                # 3. Boxed Warning 추출
+                boxed_warning = (
+                    fda_label.get("boxed_warning", "") or 
+                    fda_label.get("warnings", "") or
+                    properties.get("boxed_warning", "")
+                )
+                
+                # 4. Generic Name 추출
+                generic_name = (
+                    fda_label.get("generic_name", "") or 
+                    properties.get("generic_name", "")
+                )
+                
+                # 🔍 디버그 로그: 추출된 텍스트 확인
+                logger.info(f"📋 [OpenFDA Parse] Drug: {title}")
+                logger.info(f"   - Description length: {len(description)} chars")
+                logger.info(f"   - MoA length: {len(moa)} chars")
+                logger.info(f"   - Generic Name: {generic_name or 'N/A'}")
+                
+                # 빈 텍스트 경고
+                if not description and not moa:
+                    logger.warning(f"⚠️ No text found for {title}! Properties keys: {list(properties.keys())}")
+                    if fda_label:
+                        logger.warning(f"   fda_label keys: {list(fda_label.keys())}")
             else:
                 # Clinical Trials: brief_summary 사용
                 description = properties.get("brief_summary", "")
@@ -98,6 +131,8 @@ Indication: {description[:500] if description else "N/A"}
 Mechanism of Action: {moa[:800] if moa else "N/A"}
 Boxed Warning: {boxed_warning[:300] if boxed_warning else "N/A"}
 """
+                # 🔍 디버그: 최종 프롬프트 길이 로그
+                logger.info(f"📤 Gemini Prompt Length: {len(full_prompt)} chars")
             else:
                 # 기존 Clinical Trials 프롬프트
                 system_prompt = """You are a Clinical Trial Analyst specializing in ADC (Antibody-Drug Conjugate) research.
