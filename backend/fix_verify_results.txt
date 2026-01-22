@@ -1,0 +1,12 @@
+
+Drug Name       | Source          | Indication Len  | MoA Len        
+----------------------------------------------------------------------
+Blenrep         | open_fda_api    | 660             | 833            
+   ⚠️ WARNING: Indication text for Blenrep is short (660 chars).
+ZYNLONTA        | open_fda_api    | 1169            | 666            
+ELAHERE         | open_fda_api    | 757             | 517            
+   ⚠️ WARNING: Indication text for ELAHERE is short (757 chars).
+Besponsa        | open_fda_api    | 449             | 736            
+   ⚠️ WARNING: Indication text for Besponsa is short (449 chars).
+Mylotarg        | open_fda_api    | 765             | 765            
+   ⚠️ WARNING: Indication text for Mylotarg is short (765 chars).
