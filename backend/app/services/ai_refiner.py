@@ -17,11 +17,60 @@ from json_repair import repair_json
 logger = logging.getLogger(__name__)
 
 class AIRefiner:
+    # ADC 관련 키워드 (Pre-filtering용)
+    ADC_KEYWORDS = [
+        "antibody-drug conjugate", "adc", "immunoconjugate",
+        "trastuzumab", "vedotin", "emtansine", "ozogamicin", 
+        "deruxtecan", "govitecan", "mertansine", "ravtansine",
+        "duocarmycin", "maytansine", "auristatin", "calicheamicin",
+        "her2", "trop2", "cd19", "cd22", "cd33", "cd79", "bcma",
+        "nectin-4", "folate receptor", "egfr", "psma"
+    ]
+    
+    # Non-cancer 질환 제외 키워드
+    EXCLUDE_KEYWORDS = [
+        "alzheimer", "diabetes", "parkinson", "arthritis",
+        "hypertension", "cardiovascular", "obesity", "asthma",
+        "copd", "depression", "anxiety", "schizophrenia"
+    ]
+    
+    # Gemini Safety Settings (의학 용어 차단 해제)
+    SAFETY_SETTINGS = [
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+    ]
+    
     def __init__(self):
         self.batch_size = 10  # 한 번에 처리할 레코드 수
         self.processed_count = 0
         self.error_count = 0
         self.semaphore = asyncio.Semaphore(10) # 동시성 제어 (최대 10개)
+    
+    def is_adc_relevant(self, record: Dict[str, Any]) -> bool:
+        """ADC 관련 데이터인지 Pre-filter 체크"""
+        properties = record.get("properties", {})
+        title = (record.get("name", "") or "").lower()
+        description = (properties.get("brief_summary", "") or "").lower()
+        indication = (properties.get("indication", "") or "").lower()
+        moa = (properties.get("mechanism_of_action", "") or "").lower()
+        
+        combined_text = f"{title} {description} {indication} {moa}"
+        
+        # 1. Non-cancer 질환 제외
+        for exclude in self.EXCLUDE_KEYWORDS:
+            if exclude in combined_text:
+                logger.info(f"⛔ Pre-filter SKIP (Non-cancer): {record.get('name', 'Unknown')[:40]} - contains '{exclude}'")
+                return False
+        
+        # 2. ADC 키워드 필수 포함 체크
+        for keyword in self.ADC_KEYWORDS:
+            if keyword in combined_text:
+                return True
+        
+        logger.info(f"⛔ Pre-filter SKIP (No ADC keyword): {record.get('name', 'Unknown')[:40]}")
+        return False
 
     async def _is_system_paused(self) -> bool:
         """시스템 일시정지 상태 확인"""
@@ -176,9 +225,12 @@ Description: {description[:1000] if description else 'N/A'}"""
 
             logger.info(f"🚀 Requesting Gemini (Direct SDK) for record {record.get('id')} ({source})...")
             
-            # 동기 호출을 비동기로 실행
+            # 동기 호출을 비동기로 실행 (Safety Settings 적용)
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(None, lambda: model.generate_content(full_prompt))
+            response = await loop.run_in_executor(None, lambda: model.generate_content(
+                full_prompt,
+                safety_settings=self.SAFETY_SETTINGS
+            ))
             
             content = response.text.strip()
             
@@ -346,6 +398,20 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
                     logger.info("Refiner cancelled by user")
                     await update_job_status(job_id, status="stopped")
                     return
+                
+                # ⚡ Pre-filter: ADC 관련 데이터만 처리 (비용 절감)
+                if not self.is_adc_relevant(item):
+                    # 노이즈 데이터는 Skip 처리하고 마킹
+                    supabase.table("golden_set_library")\
+                        .update({
+                            "ai_refined": True,
+                            "rag_status": "excluded",
+                            "processing_error": "Pre-filter: Not ADC related",
+                            "relevance_score": 0.0
+                        })\
+                        .eq("id", item["id"])\
+                        .execute()
+                    continue
                 
                 try:
                     # ============ Smart Skip Logic ============

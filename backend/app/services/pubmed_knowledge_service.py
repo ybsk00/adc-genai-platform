@@ -35,6 +35,14 @@ class PubMedKnowledgeService:
     MAX_PAPERS_PER_DRUG = 5
     YEARS_BACK = 5  # 최근 5년 논문만
     
+    # Gemini Safety Settings (의학 용어 차단 해제)
+    SAFETY_SETTINGS = [
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+    ]
+    
     def __init__(self):
         self.processed_count = 0
         self.error_count = 0
@@ -240,7 +248,10 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None, 
-                lambda: model.generate_content(full_prompt)
+                lambda: model.generate_content(
+                    full_prompt,
+                    safety_settings=self.SAFETY_SETTINGS
+                )
             )
             
             content = response.text.strip()

@@ -17,8 +17,25 @@ from json_repair import repair_json
 logger = logging.getLogger(__name__)
 
 class KnowledgeBaseRefiner:
+    # Gemini Safety Settings (의학 용어 차단 해제)
+    SAFETY_SETTINGS = [
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+    ]
+    
+    # ADC 키워드 체크용
+    ADC_KEYWORDS = ["adc", "antibody-drug conjugate", "immunoconjugate", "vedotin", "emtansine", "deruxtecan", 
+                    "her2", "trop2", "cd19", "cd22", "cd33", "bcma", "nectin"]
+    
     def __init__(self):
         pass
+    
+    def is_adc_relevant(self, text: str) -> bool:
+        """ADC 관련 콘텐츠인지 체크"""
+        text_lower = (text or "").lower()
+        return any(kw in text_lower for kw in self.ADC_KEYWORDS)
 
     async def process_pending_items(self, job_id: Optional[str] = None, batch_size: int = 20):
         """rag_status='pending'인 항목을 가져와서 AI 분석 수행"""
@@ -98,9 +115,12 @@ IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ...
             
             logger.info(f"🚀 Requesting Gemini (Direct SDK) for PubMed abstract...")
             
-            # 동기 호출을 비동기로 실행
+            # 동기 호출을 비동기로 실행 (Safety Settings 적용)
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(None, lambda: model.generate_content(full_prompt))
+            response = await loop.run_in_executor(None, lambda: model.generate_content(
+                full_prompt,
+                safety_settings=self.SAFETY_SETTINGS
+            ))
             
             content = response.text.strip()
             
