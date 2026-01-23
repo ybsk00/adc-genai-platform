@@ -21,17 +21,17 @@ class CreativeBiolabsCrawler:
     
     BASE_URL = "https://www.creative-biolabs.com/adc/"
     
-    # Categories to crawl
+    # Categories to crawl (Updated URLs)
     CATEGORIES = {
-        "ADC Linker-Payload": "https://www.creative-biolabs.com/adc/adc-linker-payloads.htm",
-        "ADC Cytotoxin": "https://www.creative-biolabs.com/adc/adc-cytotoxins.htm",
-        "ADC Linker": "https://www.creative-biolabs.com/adc/adc-linkers.htm"
+        "ADC Linker": "https://www.creative-biolabs.com/adc/classify-adc-linker-products-7.htm",
+        "ADC Toxin": "https://www.creative-biolabs.com/adc/classify-adc-toxin-products-6.htm",
+        "Drug-Linker Complex": "https://www.creative-biolabs.com/adc/classify-drug-linker-complex-products-8.htm"
     }
     
     def __init__(self):
         self.ua = UserAgent()
         self.request_count = 0
-        self.break_threshold = 50  # Break every 50 requests
+        self.break_threshold = 100  # Break every 100 requests
         
         # Configure Gemini
         genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -66,8 +66,8 @@ class CreativeBiolabsCrawler:
         
         self.request_count += 1
         if self.request_count >= self.break_threshold:
-            break_time = random.uniform(300, 600)  # 5-10 minutes
-            logger.warning(f"☕ Break Time! Sleeping for {break_time/60:.1f} minutes...")
+            break_time = 600  # 10 minutes
+            logger.warning(f"☕ Break Time! Sleeping for {break_time/60:.1f} minutes to avoid ban...")
             await asyncio.sleep(break_time)
             self.request_count = 0
 
@@ -98,6 +98,7 @@ class CreativeBiolabsCrawler:
         1. Target: The specific antigen target (e.g., HER2, TROP2, CD19). If not specified, return null.
            - Normalize "HER2-directed" to "HER2".
         2. Properties: Extract Purity, Molecular Weight (MW), Formula if present.
+        3. Summary: A concise 3-sentence summary of the product, focusing on its application and key characteristics, suitable for researchers.
         
         Return JSON format:
         {{
@@ -106,7 +107,8 @@ class CreativeBiolabsCrawler:
                 "purity": ">98%",
                 "mw": "1234.56",
                 "formula": "C50H60N10O12"
-            }}
+            }},
+            "summary": "This product is a..."
         }}
         """
         
@@ -131,48 +133,89 @@ class CreativeBiolabsCrawler:
             logger.error(f"Embedding generation failed: {e}")
             return []
 
-    async def crawl_category(self, category_name: str, url: str, limit: int = 10) -> int:
-        """Crawl a specific category"""
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
+        """Crawl a specific category with pagination"""
         logger.info(f"🚀 Starting crawl for {category_name}...")
         
         count = 0
+        page_num = 1
+        max_pages = 116  # Hard limit based on user request
+        
+        # If limit is very high (e.g. > 1000), we assume full crawl
+        is_full_crawl = limit > 1000
+        
         async with async_playwright() as p:
             context = await self._init_browser(p)
             page = await context.new_page()
             
             try:
-                await page.goto(url, wait_until="networkidle")
-                await self._smart_delay()
-                
-                # Get product links (simplified selector, needs adjustment based on actual site)
-                # Assuming standard list structure. We might need to adjust this after first run.
-                # For now, let's try to find links that look like products.
-                # Creative Biolabs usually has a product list table or grid.
-                
-                # Try to find product links. This is a guess, we might need to refine.
-                # Look for links containing 'adc' and ending in '.htm' but not the category page itself
-                links = await page.evaluate("""
-                    Array.from(document.querySelectorAll('a[href*="/adc/"]'))
-                        .map(a => a.href)
-                        .filter(href => href.endsWith('.htm') && href.length > 50) 
-                """)
-                
-                # Remove duplicates
-                links = list(set(links))
-                logger.info(f"Found {len(links)} potential product links.")
-                
-                for link in links:
-                    if count >= limit:
+                while True:
+                    # Check limits
+                    if not is_full_crawl and count >= limit:
                         break
+                    if page_num > max_pages:
+                        logger.info(f"🏁 Reached max pages ({max_pages}). Stopping.")
+                        break
+
+                    # Construct URL with pagination
+                    if page_num == 1:
+                        url = base_url
+                    else:
+                        url = f"{base_url}?page={page_num}"
                         
-                    if link == url: continue
+                    logger.info(f"📄 Navigating to Page {page_num}: {url}")
                     
                     try:
-                        await self.process_product(page, link, category_name)
-                        count += 1
+                        await page.goto(url, wait_until="networkidle", timeout=60000)
                     except Exception as e:
-                        logger.error(f"Failed to process {link}: {e}")
+                        logger.error(f"Page load timeout/error: {e}")
+                        break
+
+                    await self._smart_delay()
+                    
+                    # Stealth: Break every 10 pages
+                    if page_num > 1 and page_num % 10 == 0:
+                        break_time = 300  # 5 minutes
+                        logger.warning(f"☕ Stealth Break! Sleeping for {break_time/60:.1f} minutes...")
+                        await asyncio.sleep(break_time)
+                    
+                    # Log page title for stealth monitoring
+                    page_title = await page.title()
+                    logger.info(f"   Title: {page_title}")
+                    
+                    # Extract product links using Regex
+                    # Pattern: /adc/[product-name]-[number].htm
+                    links = await page.evaluate("""
+                        Array.from(document.querySelectorAll('a'))
+                            .map(a => a.href)
+                            .filter(href => /\\/adc\\/[a-zA-Z0-9-]+-\\d+\\.htm$/.test(href))
+                    """)
+                    
+                    # Remove duplicates and filter out non-product links if any
+                    links = list(set(links))
+                    logger.info(f"   Found {len(links)} product links on page {page_num}.")
+                    
+                    if not links:
+                        logger.warning("   No products found. Ending crawl for this category.")
+                        break
                         
+                    for link in links:
+                        if not is_full_crawl and count >= limit:
+                            break
+                            
+                        if link == url: continue
+                        
+                        try:
+                            await self.process_product(page, link, category_name)
+                            count += 1
+                        except Exception as e:
+                            logger.error(f"Failed to process {link}: {e}")
+                    
+                    # Check for next page (simplified: if we found links, try next page)
+                    # In a real scenario, we should check for "Next" button existence.
+                    # Given the structure, we can just increment page_num.
+                    page_num += 1
+                    
             except Exception as e:
                 logger.error(f"Crawl failed for {category_name}: {e}")
             finally:
@@ -220,43 +263,72 @@ class CreativeBiolabsCrawler:
 
     async def process_product(self, page: Page, url: str, category: str):
         """Process a single product page"""
-        logger.info(f"📄 Processing {url}...")
+        logger.info(f"   Processing Product: {url}")
         await page.goto(url, wait_until="domcontentloaded")
         await self._smart_delay()
-        
-        # Extract Data (Selectors need to be robust)
-        # We will extract text content and parse it, as specific selectors might vary.
         
         content = await page.content()
         title = await page.title()
         body_text = await page.inner_text("body")
         
-        # Basic extraction using text analysis (since we don't know exact selectors yet)
-        # We look for patterns like "Cat. No.:", "CAS No.:"
-        
+        # Extract Data
         cat_no = None
         cas_no = None
         
-        # Simple parsing logic (can be improved with BeautifulSoup or more specific Playwright selectors)
+        # Robust Parsing Logic
         lines = body_text.split('\n')
         for line in lines:
+            line = line.strip()
             if "Cat. No." in line or "Catalog Number" in line:
-                cat_no = line.split(":")[-1].strip()
+                parts = line.split(":")
+                if len(parts) > 1:
+                    cat_no = parts[-1].strip()
             if "CAS No." in line or "CAS Number" in line:
-                cas_no = line.split(":")[-1].strip()
+                parts = line.split(":")
+                if len(parts) > 1:
+                    cas_no = parts[-1].strip()
                 
         if not cat_no:
             # Fallback: try to generate from URL or Title
-            cat_no = url.split("/")[-1].replace(".htm", "")
+            # URL format: .../product-name-123.htm -> 123 might be ID, not Cat No.
+            # Let's try to find it in title if present (e.g. "Product Name (CAT#: ...)")
+            if "(CAT#:" in title:
+                try:
+                    cat_no = title.split("(CAT#:")[1].split(")")[0].strip()
+                except:
+                    pass
             
-        logger.info(f"   Found: Cat={cat_no}, CAS={cas_no}")
+            if not cat_no:
+                 cat_no = url.split("/")[-1].replace(".htm", "")
+            
+        # Extract Price Data (Table parsing)
+        price_data = await page.evaluate("""
+            () => {
+                const rows = Array.from(document.querySelectorAll('table tr'));
+                const prices = [];
+                rows.forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if (cols.length >= 3) {
+                        const size = cols[0].innerText.trim();
+                        const price = cols[1].innerText.trim();
+                        const availability = cols[2].innerText.trim();
+                        if (price.includes('$') || price.includes('€')) {
+                            prices.push({ size, price, availability });
+                        }
+                    }
+                });
+                return prices;
+            }
+        """)
+        
+        logger.info(f"      Found: Cat={cat_no}, CAS={cas_no}, Prices={len(price_data)}")
         
         # AI Enrichment
         smiles = await self._fetch_pubchem_smiles(cas_no)
         ai_data = await self._enrich_with_gemini(body_text[:3000])
         
         # Embedding
-        embedding_text = f"{title} {ai_data.get('target', '')} {smiles or ''}"
+        embedding_text = f"{title} {ai_data.get('target', '')} {ai_data.get('summary', '')} {smiles or ''}"
         embedding = await self._get_embedding(embedding_text)
         
         # Save to DB
@@ -269,16 +341,19 @@ class CreativeBiolabsCrawler:
             "smiles_code": smiles,
             "target": ai_data.get("target"),
             "properties": ai_data.get("properties"),
+            "summary": ai_data.get("summary"),
+            "price_data": price_data,
             "embedding": embedding,
+            "source_name": "Creative Biolabs", # Explicit source name
             "crawled_at": datetime.utcnow().isoformat()
         }
         
         # Upsert
         try:
             supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
-            logger.info(f"   ✅ Saved: {data['product_name']} (Target: {data['target']})")
+            logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
         except Exception as e:
-            logger.error(f"   ❌ DB Save failed: {e}")
+            logger.error(f"      ❌ DB Save failed: {e}")
 
 # Singleton
 creative_crawler = CreativeBiolabsCrawler()
