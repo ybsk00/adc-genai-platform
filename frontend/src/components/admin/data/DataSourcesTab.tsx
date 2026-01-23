@@ -52,12 +52,12 @@ export function DataSourcesTab() {
         {
             id: 'pubmed',
             name: 'PubMed/BioRxiv',
-            description: 'Scientific literature → knowledge_base',
+            description: 'Scientific literature → knowledge_base (AI analyzed)',
             lastSync: 'Not synced',
             status: 'synced',
             recordCount: 0,
-            estimatedTime: '15 min',
-            endpoint: `${API_BASE_URL}/api/scheduler/sync/pubmed`
+            estimatedTime: 'Daily: ~15min, Full: ~3-4hrs',
+            endpoint: `${API_BASE_URL}/api/scheduler/sync/pubmed-knowledge`
         },
         {
             id: 'openfda',
@@ -334,7 +334,11 @@ export function DataSourcesTab() {
                                                         variant="outline"
                                                         size="sm"
                                                         className="border-slate-700 text-slate-300 hover:text-white"
-                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint, { mode: 'daily' })}
+                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
+                                                            source.id === 'pubmed'
+                                                                ? { mode: 'incremental', batch_size: '100' }
+                                                                : { mode: 'daily' }
+                                                        )}
                                                         disabled={isSyncing}
                                                     >
                                                         {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Daily"}
@@ -343,7 +347,11 @@ export function DataSourcesTab() {
                                                         variant="outline"
                                                         size="sm"
                                                         className="border-slate-700 text-slate-300 hover:text-white"
-                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint, { mode: 'full' })}
+                                                        onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
+                                                            source.id === 'pubmed'
+                                                                ? { mode: 'full', batch_size: '5000' }
+                                                                : { mode: 'full' }
+                                                        )}
                                                         disabled={isSyncing}
                                                     >
                                                         {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Full Load"}
