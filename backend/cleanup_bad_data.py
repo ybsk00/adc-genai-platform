@@ -25,7 +25,7 @@ def cleanup_bad_data():
         .select("id", count="exact")\
         .eq("source_type", "PubMed")\
         .eq("relevance_score", 0)\
-        .gte("created_at", "2026-01-23T10:00:00")\
+        .gte("created_at", "2026-01-23T01:00:00")\
         .execute()
     
     count = res.count

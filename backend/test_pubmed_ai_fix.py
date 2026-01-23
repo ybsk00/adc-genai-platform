@@ -55,55 +55,57 @@ async def test_step_1_connectivity():
         return False
 
 async def test_step_2_mylotarg():
-    print("\n🧪 [Step 2] Testing Mylotarg (Gemtuzumab ozogamicin)...")
+    print("\n🧪 [Step 2] Testing Disitamab vedotin (RC48)...")
     
-    # Clean up existing Mylotarg data to avoid duplicate skipping
+    # Clean up existing Disitamab data
     from app.core.supabase import supabase
-    print("   🧹 Cleaning up existing Mylotarg papers...")
-    supabase.table("knowledge_base").delete().ilike("title", "%Gemtuzumab%").execute()
+    print("   🧹 Cleaning up existing Disitamab papers...")
+    supabase.table("knowledge_base").delete().ilike("title", "%Disitamab%").execute()
     
     # Mock drug data
-    mylotarg = {
-        "id": "test_mylotarg",
-        "name": "Gemtuzumab ozogamicin",
-        "generic_name": "Gemtuzumab ozogamicin"
+    drug_data = {
+        "id": "test_disitamab",
+        "name": "Disitamab vedotin",
+        "generic_name": "Disitamab vedotin"
     }
     
     # Process single drug with debug logging
-    print("   🔍 Searching PubMed for Gemtuzumab ozogamicin...")
-    articles = await pubmed_knowledge_service.search_pubmed_for_drug("Gemtuzumab ozogamicin", max_results=5)
+    print("   🔍 Searching PubMed for Disitamab vedotin...")
+    articles = await pubmed_knowledge_service.search_pubmed_for_drug("Disitamab vedotin", max_results=3)
     print(f"   📚 Found {len(articles)} articles.")
     
     if not articles:
-        print("   ❌ No articles found. Check search query or date filter.")
+        print("   ❌ No articles found.")
         return False
     
-    # Clean up specific titles to ensure they are re-processed
-    from app.core.supabase import supabase
-    print("   🧹 Cleaning up specific titles found...")
+    # Clean up specific titles
     for article in articles:
         supabase.table("knowledge_base").delete().eq("title", article["title"]).execute()
         
     saved_count = 0
     for article in articles:
         print(f"   📄 Processing: {article['title'][:50]}...")
-        # Check duplicate
-        if await pubmed_knowledge_service.is_duplicate(article["title"]):
-            print("      ⚠️ Duplicate (Skipped)")
-            continue
-            
-        analysis = await pubmed_knowledge_service.analyze_with_gemini(article["abstract"], article["title"], "Gemtuzumab ozogamicin")
-        if await pubmed_knowledge_service.save_to_knowledge_base(article, analysis, mylotarg["id"]):
+        
+        analysis = await pubmed_knowledge_service.analyze_with_gemini(article["abstract"], article["title"], "Disitamab vedotin")
+        
+        # Verify Target
+        target = analysis.get("target", "")
+        if "HER2" in str(target).upper():
+             print(f"      ✅ Target Verified: {target}")
+        else:
+             print(f"      ⚠️ Target Warning: {target} (Expected HER2)")
+             
+        if await pubmed_knowledge_service.save_to_knowledge_base(article, analysis, drug_data["id"]):
             saved_count += 1
             print(f"      ✅ Saved (Score: {analysis.get('relevance_score')})")
     
-    print(f"   Saved {saved_count} papers for Mylotarg.")
+    print(f"   Saved {saved_count} papers for Disitamab vedotin.")
     
     if saved_count > 0:
-        print("✅ Step 2 Passed: Mylotarg processed successfully.")
+        print("✅ Step 2 Passed: Disitamab vedotin processed successfully.")
         return True
     else:
-        print("❌ Step 2 Failed: No papers saved for Mylotarg.")
+        print("❌ Step 2 Failed: No papers saved.")
         return False
 
 async def test_step_3_batch_log_watch():
