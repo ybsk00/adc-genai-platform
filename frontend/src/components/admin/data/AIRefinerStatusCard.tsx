@@ -238,7 +238,7 @@ export function AIRefinerStatusCard() {
                             <TabsList className="grid w-full grid-cols-3 mb-4 bg-slate-800/50">
                                 <TabsTrigger value="clinical">Clinical Trials</TabsTrigger>
                                 <TabsTrigger value="openfda">OpenFDA</TabsTrigger>
-                                <TabsTrigger value="pubmed">PubMed / BioRxiv</TabsTrigger>
+                                {/* <TabsTrigger value="pubmed">PubMed / BioRxiv</TabsTrigger> */}
                             </TabsList>
 
                             {/* Common Cost Progress */}
@@ -370,7 +370,7 @@ export function AIRefinerStatusCard() {
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="pubmed" className="space-y-4">
+                            {/* <TabsContent value="pubmed" className="space-y-4">
                                 <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-green-500/20">
                                     <p className="text-sm text-green-300 font-medium mb-1">Knowledge Base Refiner</p>
                                     <p className="text-xs text-slate-400">
@@ -442,7 +442,7 @@ export function AIRefinerStatusCard() {
                                         * Use this button for immediate processing of pending items.
                                     </p>
                                 </div>
-                            </TabsContent>
+                            </TabsContent> */}
                         </Tabs>
                     </CardContent>
                 </Card>

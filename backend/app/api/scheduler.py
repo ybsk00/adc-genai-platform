@@ -412,6 +412,13 @@ async def reset_all_workers():
         supabase.table("job_locks").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
         
         # 2. 실행 중인 작업 상태 변경
+        # 2. 실행 중인 작업 상태 변경 (먼저 취소 요청 플래그 설정)
+        supabase.table("sync_jobs").update({
+            "cancel_requested": True
+        }).eq("status", "running").execute()
+
+        # 3. 잠시 대기 후 강제 종료 처리 (옵션: 워커가 스스로 종료하도록 유도하거나, 여기서 강제로 status를 바꿈)
+        # 여기서는 즉시 status를 stopped로 바꾸지만, 워커 로직에서 cancel_requested를 확인하고 종료하도록 함
         supabase.table("sync_jobs").update({
             "status": "stopped",
             "errors": ["Force stopped by admin"],
