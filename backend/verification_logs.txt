@@ -1,0 +1,60 @@
+2026-01-23 12:31:15,901 - INFO - 🚀 Starting 3-Step Verification...
+2026-01-23 12:31:15,901 - INFO - 
+🧪 [Step 1] Testing Connectivity (Single API Call)...
+2026-01-23 12:31:20,248 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 12:31:20,250 - INFO - 💰 LLM Cost: $0.000073 (gemini-2.5-flash, 407+143 tokens)
+2026-01-23 12:31:20,250 - INFO -    Result: {'target': 'HER2', 'indication': 'breast cancer', 'summary': 'This Phase 3 trial evaluated Trastuzumab deruxtecan (T-DXd) in HER2-positive breast cancer. T-DXd demonstrated a significant improvement in progression-free survival compared to T-DM1. The safety profile was consistent with previous studies, supporting its potential as a treatment option.', 'relevance_score': 1.0, 'ai_reasoning': 'This paper is important for ADC research as it presents late-stage clinical trial data demonstrating the superior efficacy of an ADC, Trastuzumab deruxtecan, in HER2-positive breast cancer.'}
+2026-01-23 12:31:20,250 - INFO - ✅ Step 1 Passed: 404 Error Gone, Analysis Successful.
+2026-01-23 12:31:20,251 - INFO - 
+🧪 [Step 2] Testing Disitamab vedotin (RC48)...
+2026-01-23 12:31:20,251 - INFO -    🧹 Cleaning up existing Disitamab papers...
+2026-01-23 12:31:20,301 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=ilike.%25Disitamab%25 "HTTP/2 200 OK"
+2026-01-23 12:31:20,302 - INFO -    🔍 Searching PubMed for Disitamab vedotin...
+2026-01-23 12:31:22,633 - INFO -    📚 Found 3 articles.
+2026-01-23 12:31:22,667 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Disitamab+vedotin%3A+a+novel+antibody-drug+conjugates+for+cancer+therapy. "HTTP/2 200 OK"
+2026-01-23 12:31:22,695 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Disitamab+vedotin+plus+toripalimab+in+patients+with+locally+advanced+or+metastatic+urothelial+carcinoma+%28RC48-C014%29%3A+a+phase+Ib%2FII+dose-escalation+and+dose-expansion+study. "HTTP/2 200 OK"
+2026-01-23 12:31:22,723 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Disitamab+vedotin%2C+a+HER2-directed+antibody-drug+conjugate%2C+in+patients+with+HER2-overexpression+and+HER2-low+advanced+breast+cancer%3A+a+phase+I%2FIb+study. "HTTP/2 200 OK"
+2026-01-23 12:31:22,724 - INFO -    📄 Processing: Disitamab vedotin: a novel antibody-drug conjugate...
+2026-01-23 12:31:29,277 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 12:31:29,278 - INFO - 💰 LLM Cost: $0.000092 (gemini-2.5-flash, 589+160 tokens)
+2026-01-23 12:31:29,278 - INFO -       ✅ Target Verified: HER2
+2026-01-23 12:31:29,306 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 12:31:29,307 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 12:31:29,307 - INFO -    📄 Processing: Disitamab vedotin plus toripalimab in patients wit...
+2026-01-23 12:31:33,634 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 12:31:33,635 - INFO - 💰 LLM Cost: $0.000133 (gemini-2.5-flash, 889+220 tokens)
+2026-01-23 12:31:33,635 - INFO -       ✅ Target Verified: HER2
+2026-01-23 12:31:33,673 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 12:31:33,674 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 12:31:33,674 - INFO -    📄 Processing: Disitamab vedotin, a HER2-directed antibody-drug c...
+2026-01-23 12:31:39,013 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 12:31:39,014 - INFO - 💰 LLM Cost: $0.000138 (gemini-2.5-flash, 956+221 tokens)
+2026-01-23 12:31:39,014 - INFO -       ✅ Target Verified: HER2
+2026-01-23 12:31:39,049 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 12:31:39,050 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 12:31:39,051 - INFO -    Saved 3 papers for Disitamab vedotin.
+2026-01-23 12:31:39,051 - INFO - ✅ Step 2 Passed: Disitamab vedotin processed successfully.
+2026-01-23 12:31:39,051 - INFO - 
+🧪 [Step 3] Log Watch (Batch of 10)...
+2026-01-23 12:31:41,382 - INFO - 🚀 [PubMed Knowledge] Starting batch (size: 10, mode: incremental)
+2026-01-23 12:31:41,424 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/golden_set_library?select=id%2Cname%2Cproperties&enrichment_source=neq.open_fda_api&limit=10 "HTTP/2 200 OK"
+2026-01-23 12:31:41,426 - INFO - 📋 Found 10 target drugs from golden_set_library
+2026-01-23 12:31:43,758 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.A+HER2-targeted+Antibody-Drug+Conjugate%2C+RC48-ADC%2C+Exerted+Promising+Antitumor+Efficacy+and+Safety+with+Intravesical+Instillation+in+Preclinical+Models+of+Bladder+Cancer. "HTTP/2 200 OK"
+2026-01-23 12:31:43,789 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.HER2-targeted+therapies+in+gastric+cancer. "HTTP/2 200 OK"
+2026-01-23 12:31:43,826 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Overcoming+immunotherapy+resistance+in+bladder+cancer+with+a+novel+antibody-drug+conjugate+RC48. "HTTP/2 200 OK"
+2026-01-23 12:31:43,870 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Efficacy+and+biomarker+analysis+of+neoadjuvant+disitamab+vedotin+%28RC48-ADC%29+combined+immunotherapy+in+patients+with+muscle-invasive+bladder+cancer%3A+A+multi-center+real-world+study. "HTTP/2 200 OK"
+2026-01-23 12:31:50,342 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 12:31:50,343 - INFO - 💰 LLM Cost: $0.000097 (gemini-2.5-flash, 576+178 tokens)
+2026-01-23 12:31:50,377 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 12:31:50,378 - INFO - ✅ Saved: Efficacy and biomarker analysis of neoadjuvant dis... (Score: 1.00)
+2026-01-23 12:31:50,736 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Efficacy+and+Safety+of+Disitamab+Vedotin+in+Patients+With+Human+Epidermal+Growth+Factor+Receptor+2-Positive+Locally+Advanced+or+Metastatic+Urothelial+Carcinoma%3A+A+Combined+Analysis+of+Two+Phase+II+Clinical+Trials. "HTTP/2 200 OK"
+2026-01-23 12:31:53,105 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Brentuximab+Vedotin+with+Chemotherapy+in+Pediatric+High-Risk+Hodgkin%27s+Lymphoma. "HTTP/2 200 OK"
+2026-01-23 12:31:53,140 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Overall+Survival+with+Brentuximab+Vedotin+in+Stage+III+or+IV+Hodgkin%27s+Lymphoma. "HTTP/2 200 OK"
+2026-01-23 12:31:53,233 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Brentuximab+vedotin%2C+nivolumab%2C+doxorubicin%2C+and+dacarbazine+for+advanced-stage+classical+Hodgkin+lymphoma. "HTTP/2 200 OK"
+2026-01-23 12:31:53,263 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Cardiovascular+adverse+events+associated+with+antibody-drug+conjugates+%28ADCs%29%3A+a+pharmacovigilance+study+based+on+the+FAERS+database. "HTTP/2 200 OK"
+2026-01-23 12:31:53,295 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Aggressive+T-cell+lymphomas%3A+2024%3A+Updates+on+diagnosis%2C+risk+stratification%2C+and+management. "HTTP/2 200 OK"
+2026-01-23 12:31:59,832 - INFO - 🎉 [PubMed Knowledge] Complete! Saved: 1, Errors: 0
+2026-01-23 12:31:59,833 - INFO -    Batch Result: {'status': 'completed', 'total_drugs': 10, 'papers_saved': 1, 'skipped_duplicates': 9, 'errors': 0, 'failed_drugs': []}
+2026-01-23 12:31:59,833 - INFO - ✅ Step 3 Passed: Batch completed with 0 errors.
+2026-01-23 12:31:59,833 - INFO - 
+🎉 All Tests Completed.
