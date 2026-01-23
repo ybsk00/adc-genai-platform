@@ -328,7 +328,7 @@ export function DataSourcesTab() {
                                                 <Settings className="w-4 h-4" />
                                             </Button>
 
-                                            {source.id === 'bulk_import' || source.id === 'pubmed' || source.id === 'openfda' ? (
+                                            {source.id === 'bulk_import' || source.id === 'pubmed' || source.id === 'openfda' || source.id === 'creative' ? (
                                                 <>
                                                     <Button
                                                         variant="outline"
@@ -337,7 +337,9 @@ export function DataSourcesTab() {
                                                         onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
                                                             source.id === 'pubmed'
                                                                 ? { mode: 'incremental', batch_size: '100' }
-                                                                : { mode: 'daily' }
+                                                                : source.id === 'creative'
+                                                                    ? { category: 'all', limit: '10' }
+                                                                    : { mode: 'daily' }
                                                         )}
                                                         disabled={isSyncing}
                                                     >
@@ -350,7 +352,9 @@ export function DataSourcesTab() {
                                                         onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
                                                             source.id === 'pubmed'
                                                                 ? { mode: 'full', batch_size: '5000' }
-                                                                : { mode: 'full' }
+                                                                : source.id === 'creative'
+                                                                    ? { category: 'all', limit: '1000' }
+                                                                    : { mode: 'full' }
                                                         )}
                                                         disabled={isSyncing}
                                                     >

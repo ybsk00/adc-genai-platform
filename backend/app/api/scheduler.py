@@ -380,13 +380,18 @@ async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, catego
     supabase.table("sync_jobs").insert(data).execute()
     
     # 백그라운드 작업 시작
-    url = creative_crawler.CATEGORIES.get(category)
-    if not url:
-        raise HTTPException(status_code=400, detail=f"Invalid category. Available: {list(creative_crawler.CATEGORIES.keys())}")
-        
-    background_tasks.add_task(creative_crawler.crawl_category, category, url, limit)
+    if category == "all":
+        for cat, url in creative_crawler.CATEGORIES.items():
+            background_tasks.add_task(creative_crawler.crawl_category, cat, url, limit)
+        message = f"Creative Biolabs crawler started for ALL categories (limit={limit})."
+    else:
+        url = creative_crawler.CATEGORIES.get(category)
+        if not url:
+            raise HTTPException(status_code=400, detail=f"Invalid category. Available: {list(creative_crawler.CATEGORIES.keys())}")
+            
+        background_tasks.add_task(creative_crawler.crawl_category, category, url, limit)
     
-    return SyncJobResponse(job_id=job_id, status="queued", message=f"Creative Biolabs crawler started for {category}.")
+    return SyncJobResponse(job_id=job_id, status="queued", message=message)
 
 @router.get("/sync/{job_id}")
 async def get_sync_status(job_id: str):
