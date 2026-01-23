@@ -380,19 +380,52 @@ export function AIRefinerStatusCard() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Button
-                                        variant="outline"
-                                        className="border-green-500/30 text-green-300 hover:bg-green-500/10"
-                                        onClick={runKnowledgeRefiner}
-                                        disabled={knowledgeRunning}
-                                    >
-                                        {knowledgeRunning ? (
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                        ) : (
-                                            <Zap className="w-5 h-5 mr-2" />
-                                        )}
-                                        Run Now
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="border-green-500/30 text-green-300 hover:bg-green-500/10 w-full"
+                                                disabled={knowledgeRunning || dashboard.system_status === 'PAUSED'}
+                                            >
+                                                {knowledgeRunning ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4 mr-2" />
+                                                )}
+                                                Run Now
+                                                <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
+                                            <DropdownMenuItem onClick={runKnowledgeRefiner} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Batch (50 pending)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={async () => {
+                                                setKnowledgeRunning(true)
+                                                try {
+                                                    const res = await fetch(`${API_BASE_URL}/api/scheduler/sync/pubmed-knowledge?batch_size=100&mode=incremental`, { method: 'POST' })
+                                                    if (res.ok) {
+                                                        toast.success('📰 Daily PubMed collection started! (100 drugs)')
+                                                    }
+                                                } catch { toast.error('Failed to start') }
+                                                finally { setKnowledgeRunning(false) }
+                                            }} className="hover:bg-slate-800 cursor-pointer">
+                                                Daily Collection (100 drugs)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={async () => {
+                                                setKnowledgeRunning(true)
+                                                try {
+                                                    const res = await fetch(`${API_BASE_URL}/api/scheduler/sync/pubmed-knowledge?batch_size=5000&mode=full`, { method: 'POST' })
+                                                    if (res.ok) {
+                                                        toast.success('🚀 Full PubMed collection started! (~3-4 hours)')
+                                                    }
+                                                } catch { toast.error('Failed to start') }
+                                                finally { setKnowledgeRunning(false) }
+                                            }} className="hover:bg-slate-800 cursor-pointer">
+                                                Full Collection (All drugs, ~3-4hrs)
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     <Button
                                         variant="outline"
                                         className="border-green-500/30 text-green-300 hover:bg-green-500/10"
