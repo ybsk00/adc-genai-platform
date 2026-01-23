@@ -1,0 +1,71 @@
+2026-01-23 11:46:15,032 - INFO - 🚀 Starting 3-Step Verification...
+2026-01-23 11:46:15,033 - INFO - 
+🧪 [Step 1] Testing Connectivity (Single API Call)...
+2026-01-23 11:46:20,050 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:20,051 - INFO - 💰 LLM Cost: $0.000073 (gemini-1.5-flash, 407+140 tokens)
+2026-01-23 11:46:20,051 - INFO -    Result: {'target': 'HER2', 'indication': 'breast cancer', 'summary': 'This Phase 3 trial investigated Trastuzumab deruxtecan (T-DXd), an antibody-drug conjugate, for breast cancer. T-DXd demonstrated significant improvement in progression-free survival compared to T-DM1. The safety profile was consistent with previous studies, supporting its clinical utility.', 'relevance_score': 1.0, 'ai_reasoning': 'This paper is important for ADC research as it reports on a Phase 3 clinical trial demonstrating the efficacy and consistent safety of Trastuzumab deruxtecan in HER2-positive breast cancer.'}
+2026-01-23 11:46:20,052 - INFO - ✅ Step 1 Passed: 404 Error Gone, Analysis Successful.
+2026-01-23 11:46:20,052 - INFO - 
+🧪 [Step 2] Testing Mylotarg (Gemtuzumab ozogamicin)...
+2026-01-23 11:46:20,052 - INFO -    🧹 Cleaning up existing Mylotarg papers...
+2026-01-23 11:46:20,099 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=ilike.%25Gemtuzumab%25 "HTTP/2 200 OK"
+2026-01-23 11:46:20,100 - INFO -    🔍 Searching PubMed for Gemtuzumab ozogamicin...
+2026-01-23 11:46:23,083 - INFO -    📚 Found 5 articles.
+2026-01-23 11:46:23,083 - INFO -    🧹 Cleaning up specific titles found...
+2026-01-23 11:46:23,118 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Antibody+drug+conjugate%3A+the+%22biological+missile%22+for+targeted+cancer+therapy. "HTTP/2 200 OK"
+2026-01-23 11:46:23,154 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Acute+myeloid+leukemia+management+and+research+in+2025. "HTTP/2 200 OK"
+2026-01-23 11:46:23,188 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Current+status+and+research+directions+in+acute+myeloid+leukemia. "HTTP/2 200 OK"
+2026-01-23 11:46:23,239 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Cardiovascular+adverse+events+associated+with+antibody-drug+conjugates+%28ADCs%29%3A+a+pharmacovigilance+study+based+on+the+FAERS+database. "HTTP/2 200 OK"
+2026-01-23 11:46:23,269 - INFO - HTTP Request: DELETE https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?title=eq.Ocular+adverse+events+associated+with+antibody-drug+conjugates%3A+a+comprehensive+pharmacovigilance+analysis. "HTTP/2 200 OK"
+2026-01-23 11:46:23,270 - INFO -    📄 Processing: Antibody drug conjugate: the "biological missile" ...
+2026-01-23 11:46:23,301 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Antibody+drug+conjugate%3A+the+%22biological+missile%22+for+targeted+cancer+therapy. "HTTP/2 200 OK"
+2026-01-23 11:46:30,208 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:30,209 - INFO - 💰 LLM Cost: $0.000088 (gemini-1.5-flash, 596+145 tokens)
+2026-01-23 11:46:30,241 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 11:46:30,241 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 11:46:30,242 - INFO -    📄 Processing: Acute myeloid leukemia management and research in ...
+2026-01-23 11:46:30,271 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Acute+myeloid+leukemia+management+and+research+in+2025. "HTTP/2 200 OK"
+2026-01-23 11:46:36,559 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:36,559 - INFO - 💰 LLM Cost: $0.000106 (gemini-1.5-flash, 666+186 tokens)
+2026-01-23 11:46:36,598 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 11:46:36,598 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 11:46:36,599 - INFO -    📄 Processing: Current status and research directions in acute my...
+2026-01-23 11:46:36,626 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Current+status+and+research+directions+in+acute+myeloid+leukemia. "HTTP/2 200 OK"
+2026-01-23 11:46:41,263 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:41,264 - INFO - 💰 LLM Cost: $0.000108 (gemini-1.5-flash, 630+201 tokens)
+2026-01-23 11:46:41,305 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 11:46:41,306 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 11:46:41,306 - INFO -    📄 Processing: Cardiovascular adverse events associated with anti...
+2026-01-23 11:46:41,339 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Cardiovascular+adverse+events+associated+with+antibody-drug+conjugates+%28ADCs%29%3A+a+pharmacovigilance+study+based+on+the+FAERS+database. "HTTP/2 200 OK"
+2026-01-23 11:46:49,354 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:49,355 - INFO - 💰 LLM Cost: $0.000127 (gemini-1.5-flash, 1010+170 tokens)
+2026-01-23 11:46:49,385 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 11:46:49,386 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 11:46:49,386 - INFO -    📄 Processing: Ocular adverse events associated with antibody-dru...
+2026-01-23 11:46:49,415 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Ocular+adverse+events+associated+with+antibody-drug+conjugates%3A+a+comprehensive+pharmacovigilance+analysis. "HTTP/2 200 OK"
+2026-01-23 11:46:56,328 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/llm_usage_logs "HTTP/2 201 Created"
+2026-01-23 11:46:56,329 - INFO - 💰 LLM Cost: $0.000116 (gemini-1.5-flash, 619+232 tokens)
+2026-01-23 11:46:56,359 - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base "HTTP/2 201 Created"
+2026-01-23 11:46:56,360 - INFO -       ✅ Saved (Score: 1.0)
+2026-01-23 11:46:56,360 - INFO -    Saved 5 papers for Mylotarg.
+2026-01-23 11:46:56,360 - INFO - ✅ Step 2 Passed: Mylotarg processed successfully.
+2026-01-23 11:46:56,360 - INFO - 
+🧪 [Step 3] Log Watch (Batch of 10)...
+2026-01-23 11:47:02,478 - INFO - 🚀 [PubMed Knowledge] Starting batch (size: 10, mode: incremental)
+2026-01-23 11:47:02,573 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/golden_set_library?select=id%2Cname%2Cproperties&enrichment_source=neq.open_fda_api&limit=10 "HTTP/2 200 OK"
+2026-01-23 11:47:02,574 - INFO - 📋 Found 10 target drugs from golden_set_library
+2026-01-23 11:47:04,767 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.A+HER2-targeted+Antibody-Drug+Conjugate%2C+RC48-ADC%2C+Exerted+Promising+Antitumor+Efficacy+and+Safety+with+Intravesical+Instillation+in+Preclinical+Models+of+Bladder+Cancer. "HTTP/2 200 OK"
+2026-01-23 11:47:04,804 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.HER2-targeted+therapies+in+gastric+cancer. "HTTP/2 200 OK"
+2026-01-23 11:47:04,846 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Overcoming+immunotherapy+resistance+in+bladder+cancer+with+a+novel+antibody-drug+conjugate+RC48. "HTTP/2 200 OK"
+2026-01-23 11:47:04,888 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Efficacy+and+biomarker+analysis+of+neoadjuvant+disitamab+vedotin+%28RC48-ADC%29+combined+immunotherapy+in+patients+with+muscle-invasive+bladder+cancer%3A+A+multi-center+real-world+study. "HTTP/2 200 OK"
+2026-01-23 11:47:04,925 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Efficacy+and+Safety+of+Disitamab+Vedotin+in+Patients+With+Human+Epidermal+Growth+Factor+Receptor+2-Positive+Locally+Advanced+or+Metastatic+Urothelial+Carcinoma%3A+A+Combined+Analysis+of+Two+Phase+II+Clinical+Trials. "HTTP/2 200 OK"
+2026-01-23 11:47:07,500 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Brentuximab+Vedotin+with+Chemotherapy+in+Pediatric+High-Risk+Hodgkin%27s+Lymphoma. "HTTP/2 200 OK"
+2026-01-23 11:47:07,541 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Brentuximab+vedotin%2C+nivolumab%2C+doxorubicin%2C+and+dacarbazine+for+advanced-stage+classical+Hodgkin+lymphoma. "HTTP/2 200 OK"
+2026-01-23 11:47:07,579 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Overall+Survival+with+Brentuximab+Vedotin+in+Stage+III+or+IV+Hodgkin%27s+Lymphoma. "HTTP/2 200 OK"
+2026-01-23 11:47:07,621 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Cardiovascular+adverse+events+associated+with+antibody-drug+conjugates+%28ADCs%29%3A+a+pharmacovigilance+study+based+on+the+FAERS+database. "HTTP/2 200 OK"
+2026-01-23 11:47:07,656 - INFO - HTTP Request: GET https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/knowledge_base?select=id&title=eq.Aggressive+T-cell+lymphomas%3A+2024%3A+Updates+on+diagnosis%2C+risk+stratification%2C+and+management. "HTTP/2 200 OK"
+2026-01-23 11:47:14,419 - INFO - 🎉 [PubMed Knowledge] Complete! Saved: 0, Errors: 0
+2026-01-23 11:47:14,419 - INFO -    Batch Result: {'status': 'completed', 'total_drugs': 10, 'papers_saved': 0, 'skipped_duplicates': 10, 'errors': 0, 'failed_drugs': []}
+2026-01-23 11:47:14,419 - INFO - ✅ Step 3 Passed: Batch completed with 0 errors.
+2026-01-23 11:47:14,420 - INFO - 
+🎉 All Tests Completed.

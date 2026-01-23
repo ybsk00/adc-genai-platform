@@ -129,20 +129,22 @@ async def recover_zero_score_data(batch_size: int = 50):
             if analysis.get("relevance_score", 0) == 0 and not analysis.get("target"):
                 logger.warning(f"⚠️ Analysis still returned 0 for: {item['title'][:40]}")
             
-            # DB 업데이트
+            # DB 업데이트 (최소 필드만 - 존재하지 않는 컬럼 에러 방지)
             summary_text = f"Target: {analysis.get('target') or 'Unknown'}"
             if analysis.get("indication"):
                 summary_text += f" | Indication: {analysis['indication']}"
             if analysis.get("summary"):
                 summary_text += f"\n{analysis['summary']}"
+            if analysis.get("ai_reasoning"):
+                summary_text += f"\nReasoning: {analysis['ai_reasoning']}"
             
-            supabase.table("knowledge_base").update({
+            # 최소 필드만 업데이트 (summary, relevance_score만 - rag_status, updated_at 제거)
+            update_data = {
                 "summary": summary_text[:1000],
-                "relevance_score": analysis.get("relevance_score", 0.0),
-                "ai_reasoning": analysis.get("ai_reasoning", ""),
-                "rag_status": "recovered",
-                "updated_at": datetime.utcnow().isoformat()
-            }).eq("id", item["id"]).execute()
+                "relevance_score": float(analysis.get("relevance_score", 0.0))
+            }
+            
+            supabase.table("knowledge_base").update(update_data).eq("id", item["id"]).execute()
             
             recovered += 1
             logger.info(f"✅ Recovered: Score={analysis.get('relevance_score', 0):.2f}, Target={analysis.get('target')}")
@@ -152,7 +154,9 @@ async def recover_zero_score_data(batch_size: int = 50):
             
         except Exception as e:
             errors += 1
+            import traceback
             logger.error(f"❌ Recovery error for {item['id']}: {e}")
+            logger.error(f"   Traceback: {traceback.format_exc()}")
     
     logger.info(f"🎉 Recovery complete! Recovered: {recovered}, Errors: {errors}")
     
