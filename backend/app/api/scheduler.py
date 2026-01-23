@@ -464,6 +464,51 @@ async def run_ai_refiner(background_tasks: BackgroundTasks, max_records: int = 5
         message=f"AI Refiner started (max {max_records} records)."
     )
 
+@router.post("/sync/pubmed-knowledge", response_model=SyncJobResponse)
+async def sync_pubmed_knowledge(
+    background_tasks: BackgroundTasks, 
+    batch_size: int = 100,
+    mode: str = "incremental"
+):
+    """
+    PubMed 기반 ADC Knowledge Base 구축
+    golden_set_library에서 약물 추출 → PubMed 검색 → Gemini 분석 → knowledge_base 저장
+    
+    mode: 'incremental' (배치 크기만큼) 또는 'full' (전체)
+    """
+    from app.services.pubmed_knowledge_service import PubMedKnowledgeService
+    
+    # 중복 실행 방지
+    if not await job_lock.acquire("pubmed_knowledge"):
+        raise HTTPException(
+            status_code=409, 
+            detail="이미 실행 중인 PubMed Knowledge 작업이 있습니다."
+        )
+    
+    job_id = f"pubmed_knowledge_{uuid4().hex[:8]}"
+    data = {
+        "id": job_id, 
+        "status": "queued", 
+        "source": "pubmed_knowledge", 
+        "started_at": datetime.utcnow().isoformat()
+    }
+    supabase.table("sync_jobs").insert(data).execute()
+    
+    async def run_with_lock_release(job_id, batch_size, mode):
+        try:
+            service = PubMedKnowledgeService()
+            await service.run_batch(job_id, batch_size, mode)
+        finally:
+            await job_lock.release("pubmed_knowledge")
+    
+    background_tasks.add_task(run_with_lock_release, job_id, batch_size, mode)
+    
+    return SyncJobResponse(
+        job_id=job_id, 
+        status="queued", 
+        message=f"PubMed Knowledge sync started (batch: {batch_size}, mode: {mode})."
+    )
+
 @router.get("/refiner/pending")
 async def get_pending_count():
     """미정제 레코드 수 조회"""
