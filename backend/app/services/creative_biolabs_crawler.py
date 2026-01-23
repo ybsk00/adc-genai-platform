@@ -131,10 +131,11 @@ class CreativeBiolabsCrawler:
             logger.error(f"Embedding generation failed: {e}")
             return []
 
-    async def crawl_category(self, category_name: str, url: str, limit: int = 10):
+    async def crawl_category(self, category_name: str, url: str, limit: int = 10) -> int:
         """Crawl a specific category"""
         logger.info(f"🚀 Starting crawl for {category_name}...")
         
+        count = 0
         async with async_playwright() as p:
             context = await self._init_browser(p)
             page = await context.new_page()
@@ -160,7 +161,6 @@ class CreativeBiolabsCrawler:
                 links = list(set(links))
                 logger.info(f"Found {len(links)} potential product links.")
                 
-                count = 0
                 for link in links:
                     if count >= limit:
                         break
@@ -177,6 +177,46 @@ class CreativeBiolabsCrawler:
                 logger.error(f"Crawl failed for {category_name}: {e}")
             finally:
                 await context.close()
+        
+        return count
+
+    async def run(self, search_term: str, limit: int, job_id: str):
+        """Orchestrate the crawling process"""
+        from app.api.scheduler import update_job_status
+        
+        await update_job_status(job_id, status="running")
+        
+        total_processed = 0
+        errors = []
+        
+        try:
+            # Determine categories to crawl
+            categories_to_crawl = {}
+            if search_term:
+                # Simple case-insensitive partial match for category keys
+                for cat, url in self.CATEGORIES.items():
+                    if search_term.lower() in cat.lower():
+                        categories_to_crawl[cat] = url
+                
+                if not categories_to_crawl:
+                    await update_job_status(job_id, status="completed", message=f"No categories matched '{search_term}'")
+                    return
+            else:
+                categories_to_crawl = self.CATEGORIES
+
+            for cat, url in categories_to_crawl.items():
+                try:
+                    count = await self.crawl_category(cat, url, limit)
+                    total_processed += count
+                except Exception as e:
+                    logger.error(f"Error crawling category {cat}: {e}")
+                    errors.append(f"{cat}: {str(e)}")
+            
+            await update_job_status(job_id, status="completed", records_drafted=total_processed, errors=errors, completed_at=datetime.utcnow().isoformat())
+
+        except Exception as e:
+            logger.error(f"Crawler run failed: {e}")
+            await update_job_status(job_id, status="failed", errors=[str(e)])
 
     async def process_product(self, page: Page, url: str, category: str):
         """Process a single product page"""
