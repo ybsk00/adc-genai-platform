@@ -59,6 +59,11 @@ async def update_job_status(job_id: str, **kwargs):
         if "errors" in kwargs and isinstance(kwargs["errors"], list):
             kwargs["errors"] = kwargs["errors"] # Supabase client handles list to jsonb
         
+        # message 필드는 sync_jobs 테이블에 없으므로 제거 (또는 details로 이동)
+        if "message" in kwargs:
+            # logger.info(f"Job Status Message: {kwargs['message']}")
+            del kwargs["message"]
+
         supabase.table("sync_jobs").update(kwargs).eq("id", job_id).execute()
     except Exception as e:
         logger.error(f"Failed to update job status in DB: {e}")

@@ -259,7 +259,7 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
             # 비용 추적
             usage = response.usage_metadata
             await cost_tracker.track_usage(
-                "gemini-1.5-flash",
+                "gemini-2.5-flash",
                 usage.prompt_token_count,
                 usage.candidates_token_count
             )
