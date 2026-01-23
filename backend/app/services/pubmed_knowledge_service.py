@@ -243,7 +243,7 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
 
         try:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model = genai.GenerativeModel('gemini-1.5-flash')  # 지시서대로 1.5 Flash 사용
+            model = genai.GenerativeModel('gemini-2.5-flash')  # 2.5-flash (최신)
             
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(

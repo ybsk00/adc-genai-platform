@@ -111,7 +111,7 @@ IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ...
         try:
             # SDK 설정
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.5-flash')  # 2.5-flash (최신)
             
             logger.info(f"🚀 Requesting Gemini (Direct SDK) for PubMed abstract...")
             
