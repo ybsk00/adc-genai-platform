@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles,
-    AlertCircle, Clock, CheckCircle2, ChevronLeft, ChevronRight, Search, Brain
+    AlertCircle, Clock, CheckCircle2, ChevronLeft, ChevronRight, Search, Brain, RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSession } from '@/lib/supabase'
@@ -105,23 +105,8 @@ export function StagingAreaTab() {
     const totalCount = draftsResponse?.total || 0
     const totalPages = Math.ceil(totalCount / pageSize)
 
-    // ... (mutations remain same)
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-red-400 p-8">
-                <AlertCircle className="w-12 h-12 mb-4" />
-                <p className="text-lg font-semibold">데이터를 불러오지 못했습니다.</p>
-                <p className="text-sm text-slate-500 mt-2">{error.message}</p>
-                <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> 재시도
-                </Button>
-            </div>
-        )
-    }
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+    // AI Refine Single Mutation
+    const refineMutation = useMutation({
         mutationFn: async (id: string) => {
             const { session } = await getSession()
             if (!session) throw new Error('No session')
@@ -222,6 +207,19 @@ export function StagingAreaTab() {
         if (confirm(`${draft.drug_name}을(를) 승인하시겠습니까?`)) {
             approveMutation.mutate(draft.id)
         }
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-red-400 p-8 bg-slate-900 rounded-lg border border-slate-800">
+                <AlertCircle className="w-12 h-12 mb-4" />
+                <p className="text-lg font-semibold">데이터를 불러오지 못했습니다.</p>
+                <p className="text-sm text-slate-500 mt-2">{error.message}</p>
+                <Button variant="outline" className="mt-4 border-slate-700" onClick={() => queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> 재시도
+                </Button>
+            </div>
+        )
     }
 
     return (

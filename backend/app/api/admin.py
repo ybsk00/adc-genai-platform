@@ -317,8 +317,8 @@ async def get_golden_set_library(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/goldenset/staging")
-async def get_golden_set_staging(
+@router.get("/goldenset/drafts")
+async def get_golden_set_drafts(
     limit: int = 20,
     offset: int = 0,
     search: str = "",
