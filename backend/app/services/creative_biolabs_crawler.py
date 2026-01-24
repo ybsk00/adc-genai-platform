@@ -37,7 +37,12 @@ class CreativeBiolabsCrawler:
         
         # Configure Gemini
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel(settings.GEMINI_MODEL_ID or 'gemini-1.5-flash')
+        self.model_id = 'gemini-2.5-flash'
+        try:
+             self.model = genai.GenerativeModel(self.model_id)
+        except Exception:
+             logger.warning(f"⚠️ Model {self.model_id} not found, falling back to gemini-1.5-flash")
+             self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     async def _init_browser(self, p) -> BrowserContext:
         """Initialize browser with stealth and proxy settings"""
@@ -138,16 +143,18 @@ class CreativeBiolabsCrawler:
             logger.error(f"Gemini enrichment failed: {e}")
             return {"target": None, "properties": {}}
 
-    async def _get_embedding(self, text: str) -> List[float]:
+    async def _get_embedding(self, text: str) -> Optional[List[float]]:
         """Generate vector embedding for text using RAG Service (768 dimensions)"""
         try:
             embedding = await rag_service.generate_embedding(text)
-            if embedding and len(embedding) != 768:
+            if not embedding:
+                return None
+            if len(embedding) != 768:
                 logger.warning(f"⚠️ Generated embedding has {len(embedding)} dimensions, expected 768.")
             return embedding
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
-            return []
+            return None
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
         """Crawl a specific category with pagination"""

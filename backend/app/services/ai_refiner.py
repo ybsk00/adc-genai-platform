@@ -83,6 +83,8 @@ class AIRefiner:
     async def refine_single_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """단일 레코드 LLM 분석 (Google SDK 직접 호출)"""
         try:
+            logger.info(f"⚡ [AI Refiner] Starting analysis for record {record.get('id')} ({record.get('source_name', 'Unknown')})")
+
             # 비용 한도 체크
             if await cost_tracker.is_over_limit():
                 logger.warning("⚠️ Daily LLM cost limit reached. Skipping analysis.")

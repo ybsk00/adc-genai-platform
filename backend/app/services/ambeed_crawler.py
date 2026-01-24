@@ -172,16 +172,18 @@ class AmbeedCrawler:
             logger.error(f"Gemini enrichment failed: {e}")
             return {"target": None, "properties": {}}
 
-    async def _get_embedding(self, text: str) -> List[float]:
+    async def _get_embedding(self, text: str) -> Optional[List[float]]:
         """Generate vector embedding for text using RAG Service (768 dimensions)"""
         try:
             embedding = await rag_service.generate_embedding(text)
-            if embedding and len(embedding) != 768:
+            if not embedding:
+                return None
+            if len(embedding) != 768:
                 logger.warning(f"⚠️ Generated embedding has {len(embedding)} dimensions, expected 768.")
             return embedding
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
-            return []
+            return None
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
         """Crawl a specific category with pagination and batch processing"""
@@ -410,6 +412,7 @@ class AmbeedCrawler:
             
             # Trigger Refinement
             if res.data:
+                logger.info(f"      🚀 Triggering Real-time AI Refinement for ID: {res.data[0].get('id')}")
                 asyncio.create_task(self._trigger_refinement(res.data[0]))
                 
         except Exception as e:
