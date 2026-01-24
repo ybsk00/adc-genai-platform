@@ -131,7 +131,7 @@ async def run_ai_refiner(
         
         # Commercial Reagents Batch Logic
         if source == "commercial":
-            from batch_refine_commercial import batch_refine_commercial_reagents
+            from app.services.commercial_refiner_service import batch_refine_commercial_reagents
             
             # Count pending
             query = supabase.table("commercial_reagents").select("count", count="exact").eq("ai_refined", False)

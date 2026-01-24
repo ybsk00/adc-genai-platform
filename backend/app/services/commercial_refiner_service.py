@@ -1,27 +1,12 @@
 import asyncio
 import logging
-import json
 from typing import List, Dict, Any
-from datetime import datetime
-import os
-import sys
-from dotenv import load_dotenv
-
-# Load .env BEFORE imports
-env_path = os.path.join(os.getcwd(), "backend", ".env")
-load_dotenv(env_path)
-
-# Add backend to sys.path if running as script
-if __name__ == "__main__":
-    sys.path.append(os.path.join(os.getcwd(), "backend"))
 
 from app.core.supabase import supabase
 from app.services.ambeed_crawler import ambeed_crawler
 from app.services.rag_service import rag_service
 
 logger = logging.getLogger(__name__)
-if not logger.handlers:
-    logging.basicConfig(level=logging.INFO)
 
 async def batch_refine_commercial_reagents(limit: int = 50, mode: str = "partial"):
     """
@@ -38,7 +23,6 @@ async def batch_refine_commercial_reagents(limit: int = 50, mode: str = "partial
     try:
         # 1. Fetch unrefined records
         # Note: 'ai_refined' column might not exist or be false.
-        # We assume ai_refined boolean column exists as per user request context.
         query = supabase.table("commercial_reagents")\
             .select("*")\
             .eq("ai_refined", False)
@@ -69,8 +53,6 @@ async def batch_refine_commercial_reagents(limit: int = 50, mode: str = "partial
                 item["properties"] = current_props
 
                 # Call AI Enrichment
-                # We reuse ambeed_crawler's method but we need to be careful about what it expects.
-                # It expects (description, current_data).
                 ai_data = await ambeed_crawler._enrich_with_gemini(description, item)
                 
                 if not ai_data:
@@ -109,9 +91,6 @@ async def batch_refine_commercial_reagents(limit: int = 50, mode: str = "partial
             except Exception as e:
                 logger.error(f"   ❌ Error processing {item.get('id')}: {e}")
                 error_count += 1
-                # Mark as processed but failed to avoid infinite loop?
-                # Or just leave it for retry. User said "responsibility to confirm", so maybe retry is better.
-                # But to avoid getting stuck, let's just log.
         
         logger.info(f"🎉 [Commercial Batch] Completed. Processed: {processed_count}, Errors: {error_count}")
         return {"count": processed_count, "errors": error_count}
@@ -119,11 +98,3 @@ async def batch_refine_commercial_reagents(limit: int = 50, mode: str = "partial
     except Exception as e:
         logger.error(f"❌ Batch Refine Failed: {e}")
         return {"error": str(e)}
-
-if __name__ == "__main__":
-    # Load .env if running manually
-    from dotenv import load_dotenv
-    env_path = os.path.join(os.getcwd(), "backend", ".env")
-    load_dotenv(env_path)
-    
-    asyncio.run(batch_refine_commercial_reagents(limit=2000, mode="full"))
