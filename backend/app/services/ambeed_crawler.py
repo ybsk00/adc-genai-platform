@@ -407,7 +407,7 @@ class AmbeedCrawler:
             raw_data["embedding"] = await self._get_embedding(embedding_text)
 
             # Save to DB
-            res = supabase.table("commercial_reagents").upsert(raw_data, on_conflict="ambeed_cat_no").select().execute()
+            res = supabase.table("commercial_reagents").upsert(raw_data, on_conflict="ambeed_cat_no").execute()
             logger.info(f"      ✅ Saved: {raw_data['product_name']}")
             
             # Trigger Refinement
