@@ -20,10 +20,10 @@ interface AdminSidebarProps {
 
 const menuItems = [
     { icon: LayoutDashboard, label: 'Overview', href: '/admin' },
-    { icon: Database, label: 'Data Operations', href: '/admin/data-operations' },
-    { icon: FlaskConical, label: 'Design Runs', href: '/admin/design-runs' },
+    { icon: Database, label: 'Total Inventory', href: '/admin/inventory' },
+    { icon: FlaskConical, label: 'Staging Area', href: '/admin/staging' },
+    { icon: Sparkles, label: 'Golden Set Library', href: '/admin/goldenset' },
     { icon: Users, label: 'User Operations', href: '/admin/user-operations' },
-    { icon: Sparkles, label: 'AI Tuning', href: '/admin/ai-tuning' },
     { icon: Settings, label: 'Settings', href: '/admin/settings' },
 ]
 
