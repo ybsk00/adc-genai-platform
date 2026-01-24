@@ -139,7 +139,7 @@ class CreativeBiolabsCrawler:
             return {"target": None, "properties": {}}
 
     async def _get_embedding(self, text: str) -> List[float]:
-        """Generate vector embedding for text using RAG Service (1536 dimensions)"""
+        """Generate vector embedding for text using RAG Service (768 dimensions)"""
         try:
             return await rag_service.generate_embedding(text)
         except Exception as e:
