@@ -1,0 +1,10 @@
+--- Debugging AI Refiner ---
+Checking if ai_refined column exists...
+Column ai_refined exists.
+Fetching pending record...
+Testing with Record ID: 315d8252-1e8a-454a-ba97-e4ca7deaa152
+Product Name: Val-Cit-PAB - Creative Biolabs
+Running refine_single_record...
+
+[Result]
+{'drug_name': 'Val-Cit-PAB', 'target': None, 'outcome_type': 'Success', 'failure_reason': None, 'ai_confidence': 0.95, 'relevance_score': 0.9, 'boxed_warning': None, 'indication': None, 'generic_name': None}

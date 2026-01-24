@@ -1,0 +1,17 @@
+--- Debugging DB Status ---
+
+[Sync Jobs (Last 5)]
+ID: crawl_ambeed_f7cc286c, Source: ambeed, Status: running, Started: 2026-01-24T06:44:43.02684+00:00, Errors: []
+ID: crawl_creative_765f4416, Source: creative_biolabs, Status: running, Started: 2026-01-24T06:44:41.756443+00:00, Errors: []
+ID: crawl_ambeed_f6b402d5, Source: ambeed, Status: running, Started: 2026-01-24T06:21:36.097177+00:00, Errors: []
+ID: crawl_creative_1301d715, Source: creative_biolabs, Status: completed, Started: 2026-01-24T06:21:34.532844+00:00, Errors: []
+ID: crawl_ambeed_c37f73fa, Source: ambeed, Status: running, Started: 2026-01-24T05:53:21.123313+00:00, Errors: []
+
+[Commercial Reagents]
+Total Count: 22
+ID: 60e250a0-b3f6-4da5-a9c4-faffc4329639, Name: DRF-1042, AI Refined: None, Target: Topoisomerase I
+ID: 3a4fc8e9-3a49-4bca-9820-4180795ac640, Name: DM4, AI Refined: None, Target: Tubulin
+ID: 81d3f8d7-179d-483f-a031-4ad255ce0bdd, Name: Exatecan (DX-8951), AI Refined: None, Target: Topoisomerase I
+
+[LLM Usage Today]
+Total Cost Today (USD): 5e-06

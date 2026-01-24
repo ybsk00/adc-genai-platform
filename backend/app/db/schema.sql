@@ -330,3 +330,42 @@ BEGIN
   LIMIT match_count;
 END;
 $$;
+
+-- ============================================================
+-- 상용 시약 테이블 (Ambeed, Creative Biolabs 등)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS commercial_reagents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- 제품 정보
+    product_name TEXT NOT NULL,
+    ambeed_cat_no TEXT UNIQUE, -- 고유 식별자 (Catalog No)
+    cas_number TEXT,
+    
+    -- 분류 및 소스
+    category TEXT,
+    source_name TEXT, -- 'Ambeed', 'Creative Biolabs'
+    product_url TEXT,
+    
+    -- 화학 정보
+    smiles_code TEXT,
+    target TEXT,
+    properties JSONB, -- MW, Formula, Purity, etc.
+    
+    -- 가격 및 재고
+    price_data JSONB,
+    
+    -- AI 분석 및 검색
+    summary TEXT,
+    embedding VECTOR(768), -- Gemini Embedding
+    
+    -- [Human-in-the-Loop] & AI Refiner 상태
+    ai_refined BOOLEAN DEFAULT FALSE,
+    
+    -- 타임스탬프
+    crawled_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_commercial_reagents_cat_no ON commercial_reagents(ambeed_cat_no);
+CREATE INDEX IF NOT EXISTS idx_commercial_reagents_ai_refined ON commercial_reagents(ai_refined);

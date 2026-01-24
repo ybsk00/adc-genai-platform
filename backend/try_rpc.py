@@ -12,7 +12,7 @@ from app.core.supabase import supabase
 
 def try_rpc():
     print("🧪 Testing exec_sql RPC...")
-    sql = "ALTER TABLE commercial_reagents ADD COLUMN IF NOT EXISTS target text; ALTER TABLE commercial_reagents ADD COLUMN IF NOT EXISTS properties jsonb; ALTER TABLE commercial_reagents ADD COLUMN IF NOT EXISTS source_name text;"
+    sql = "ALTER TABLE commercial_reagents ADD COLUMN IF NOT EXISTS ai_refined BOOLEAN DEFAULT FALSE;"
     
     try:
         # Try 'exec_sql' or 'execute_sql'
