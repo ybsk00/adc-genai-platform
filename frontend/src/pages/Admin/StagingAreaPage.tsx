@@ -1,4 +1,4 @@
-import { DataSourcesTab } from '@/components/admin/data/DataSourcesTab'
+import { StagingAreaTab } from '@/components/admin/data/StagingAreaTab'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FlaskConical } from 'lucide-react'
 
@@ -20,7 +20,7 @@ export function StagingAreaPage() {
                     <CardTitle>Draft Review & Promotion</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <DataSourcesTab />
+                    <StagingAreaTab />
                 </CardContent>
             </Card>
         </div>

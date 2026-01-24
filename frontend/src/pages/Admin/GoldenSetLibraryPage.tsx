@@ -36,6 +36,7 @@ import { Label } from "@/components/ui/label"
 interface GoldenSetItem {
     id: string
     drug_name: string
+    name?: string // Add name as optional
     target: string | null
     outcome_type: string | null
     failure_reason: string | null
