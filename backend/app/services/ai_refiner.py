@@ -43,6 +43,7 @@ class AIRefiner:
     ]
     
     def __init__(self):
+        logger.info("🔥 [AI Refiner] Service Initialized (Version: 2026-01-24-1750)")
         self.batch_size = 10  # 한 번에 처리할 레코드 수
         self.processed_count = 0
         self.error_count = 0

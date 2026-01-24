@@ -1,16 +1,30 @@
-import sys
+import asyncio
 import os
+from app.core.supabase import supabase
 
-# Add current directory to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+async def check_and_fix_status():
+    print("--- System Status Check ---")
+    # 1. AI Refiner Status 확인
+    res = supabase.table("system_config").select("*").eq("key", "AI_REFINER_STATUS").execute()
+    if res.data:
+        status = res.data[0]['value']
+        print(f"Current AI_REFINER_STATUS: {status}")
+        if status == "PAUSED":
+            print("Action: Changing status to ACTIVE...")
+            supabase.table("system_config").update({"value": "ACTIVE"}).eq("key", "AI_REFINER_STATUS").execute()
+            print("Status updated to ACTIVE.")
+    else:
+        print("AI_REFINER_STATUS not found. Creating as ACTIVE...")
+        supabase.table("system_config").insert({"key": "AI_REFINER_STATUS", "value": "ACTIVE"}).execute()
 
-print("Checking imports...")
-try:
-    from app import main
-    print("SUCCESS: 'app.main' imported successfully.")
-except ImportError as e:
-    print(f"FAILURE: Import failed. {e}")
-    sys.exit(1)
-except Exception as e:
-    print(f"FAILURE: Startup crashed. {e}")
-    sys.exit(1)
+    # 2. Daily Cost 확인
+    from app.services.cost_tracker import cost_tracker
+    usage = await cost_tracker.get_usage_summary()
+    print(f"Daily Usage: ${usage['daily_usage_usd']:.4f} / ${usage['daily_limit_usd']:.2f}")
+    
+    # 3. Pending Records 확인
+    res = supabase.table("commercial_reagents").select("count", count="exact").eq("ai_refined", False).execute()
+    print(f"Pending Commercial Reagents: {res.count}")
+
+if __name__ == "__main__":
+    asyncio.run(check_and_fix_status())
