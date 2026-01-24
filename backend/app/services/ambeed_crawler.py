@@ -13,6 +13,8 @@ import google.generativeai as genai
 
 from app.core.config import settings
 from app.core.supabase import supabase
+from app.services.ai_refiner import ai_refiner
+from app.services.rag_service import rag_service
 
 logger = logging.getLogger(__name__)
 
@@ -140,14 +142,9 @@ class AmbeedCrawler:
             return {"target": None, "properties": {}}
 
     async def _get_embedding(self, text: str) -> List[float]:
-        """Generate vector embedding for text"""
+        """Generate vector embedding for text using RAG Service (1536 dimensions)"""
         try:
-            result = await genai.embed_content_async(
-                model="models/text-embedding-004",
-                content=text,
-                task_type="retrieval_document"
-            )
-            return result['embedding']
+            return await rag_service.generate_embedding(text)
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return []
@@ -320,6 +317,27 @@ class AmbeedCrawler:
         
         if not smiles:
              smiles = await extract_by_label("SMILES")
+        
+        # [고도화] InChI 필드에서도 SMILES 추출 시도 (비용 절감)
+        if not smiles:
+            inchi = await extract_by_label("InChI")
+            if inchi:
+                logger.info(f"      Found InChI: {inchi[:30]}... (Will attempt to use this)")
+                # InChI가 있으면 나중에 Chemical Resolver가 처리할 수 있도록 저장
+        
+        # [고도화] 페이지 하단 텍스트 영역에서 SMILES 패턴 직접 검색
+        if not smiles:
+            smiles_from_text = await page.evaluate("""
+                () => {
+                    const bodyText = document.body.innerText;
+                    // SMILES 패턴 매칭 (단순화된 정규식)
+                    const match = bodyText.match(/SMILES Code\\s*:\\s*([A-Za-z0-9@#\\(\\)\\[\\]\\/\\\\=+-]+)/);
+                    return match ? match[1].trim() : null;
+                }
+            """)
+            if smiles_from_text:
+                smiles = smiles_from_text
+                logger.info(f"      ✅ Found SMILES via Text Pattern: {smiles[:30]}...")
 
         if not cat_no:
             # Fallback from URL
@@ -384,23 +402,48 @@ class AmbeedCrawler:
         
         # Upsert
         try:
-            # We use ambeed_cat_no as the unique key, assuming it's unique across Ambeed products
-            # If we want to share the table with Creative Biolabs, we should ensure no collision.
-            # But the user said "Table sharing... vendor column to distinguish".
-            # Upserting on 'ambeed_cat_no' might be risky if Creative Biolabs uses the same column for its ID.
-            # Let's check the schema again. 
-            # Step 14: 06_Database_Schema.md doesn't explicitly show 'ambeed_cat_no' as PK, but CreativeBiolabsCrawler uses it as conflict key.
-            # "supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()"
-            # If both use 'ambeed_cat_no' as the conflict key, and IDs overlap, they will overwrite.
-            # However, usually Catalog Numbers are vendor specific.
-            # To be safe, we should probably include 'source_name' in the conflict key if possible, or assume they are distinct.
-            # Given the user instruction "Table sharing... vendor column to distinguish", I will proceed with 'ambeed_cat_no' as the key for now, 
-            # assuming the column name 'ambeed_cat_no' implies it was originally designed for Ambeed or just reused.
-            
-            supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
+            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
             logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
+            
+            # [실시간 연동] 수집 즉시 AI Refiner 호출 (비동기)
+            if res.data:
+                record_id = res.data[0].get('id')
+                if record_id:
+                    logger.info(f"      🚀 Triggering Real-time AI Refinement for ID: {record_id}")
+                    # 정제 작업 때문에 수집 속도가 느려지지 않게 비동기로 처리
+                    asyncio.create_task(self._trigger_refinement(res.data[0]))
+                    
         except Exception as e:
             logger.error(f"      ❌ DB Save failed: {e}")
+
+    async def _trigger_refinement(self, record: Dict):
+        """AI 정제 엔진 비동기 호출"""
+        try:
+            # commercial_reagents 테이블의 데이터를 golden_set_library 형식으로 변환하여 전달하거나
+            # ai_refiner가 commercial_reagents도 지원하도록 확장 필요.
+            # 현재 ai_refiner.py는 golden_set_library를 기준으로 작성되어 있음.
+            # 사장님 지시는 "데이터가 DB에 인서트되는 즉시 ai_refined 상태가 False에서 True로 변하며 분류가 완료되어야 함"
+            # commercial_reagents 테이블에도 ai_refined 컬럼이 있는지 확인 필요.
+            # 만약 없다면 golden_set_library로 데이터를 넘겨주는 로직이 필요할 수 있음.
+            
+            # 일단 ai_refiner의 refine_single_record를 호출 시도
+            # (ai_refiner.py 83행: refine_single_record(record))
+            analysis = await ai_refiner.refine_single_record(record)
+            
+            if analysis and "error" not in analysis:
+                # 결과 업데이트 (commercial_reagents 테이블 기준)
+                update_data = {
+                    "target": analysis.get("target"),
+                    "ai_refined": True,
+                    "properties": {**record.get("properties", {}), "ai_analysis": analysis}
+                }
+                supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
+                logger.info(f"      ✨ Real-time Refinement Success for {record.get('product_name')}")
+            else:
+                logger.warning(f"      ⚠️ Real-time Refinement failed or skipped for {record.get('product_name')}")
+                
+        except Exception as e:
+            logger.error(f"      ❌ Real-time Refinement Trigger Error: {e}")
 
 # Singleton
 ambeed_crawler = AmbeedCrawler()

@@ -90,7 +90,8 @@ class AIRefiner:
             
             # SDK 설정
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash') # 2.5 Flash 도입
+            model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+            model = genai.GenerativeModel(model_id)
             
             # 원본 데이터에서 분석에 필요한 정보 추출
             properties = record.get("properties", {})
@@ -143,6 +144,12 @@ class AIRefiner:
                     logger.warning(f"⚠️ No text found for {title}! Properties keys: {list(properties.keys())}")
                     if fda_label:
                         logger.warning(f"   fda_label keys: {list(fda_label.keys())}")
+            elif record.get("source_name") in ["Ambeed", "Creative Biolabs"]:
+                # 상용 시약 데이터
+                description = record.get("summary", "") or record.get("product_name", "")
+                moa = ""
+                boxed_warning = ""
+                generic_name = record.get("cas_number", "")
             else:
                 # Clinical Trials: brief_summary 사용
                 description = properties.get("brief_summary", "")
@@ -192,6 +199,29 @@ Boxed Warning: {boxed_warning[:200] if boxed_warning else "N/A"}
 """
                 # 🔍 디버그: 최종 프롬프트 길이 로그
                 logger.info(f"📤 Gemini Prompt Length: {len(full_prompt)} chars")
+            elif record.get("source_name") in ["Ambeed", "Creative Biolabs"]:
+                # 상용 시약 전용 프롬프트
+                system_prompt = """You are a Bio-Chemical Specialist analyzing ADC Reagents.
+Analyze the product data and classify it.
+
+Output ONLY valid JSON:
+{
+    "drug_name": "product name",
+    "target": "molecular target (e.g., HER2, TROP2) if applicable, else null",
+    "category": "Target|Payload|Linker|Drug-Linker|Conjugate|Other",
+    "outcome_type": "Success",
+    "relevance_score": 0.0-1.0,
+    "confidence": 0.0-1.0
+}
+"""
+                full_prompt = f"""{system_prompt}
+
+Product Data:
+Name: {record.get('product_name')}
+Category: {record.get('category')}
+CAS: {record.get('cas_number')}
+Summary: {description}
+"""
             else:
                 # 기존 Clinical Trials 프롬프트
                 system_prompt = """You are a Clinical Trial Analyst specializing in ADC (Antibody-Drug Conjugate) research.
@@ -269,6 +299,22 @@ Description: {description[:1000] if description else 'N/A'}"""
         
         except Exception as e:
             logger.error(f"LLM Analysis Error for record {record.get('id')}: {e}")
+            # 에러 로그를 sync_jobs에 남기기 (비동기로 시도)
+            try:
+                error_data = {
+                    "status": "failed",
+                    "errors": [f"LLM Error for {record.get('id')}: {str(e)}"],
+                    "completed_at": datetime.utcnow().isoformat()
+                }
+                # job_id가 없으면 새로 생성하거나 로그용 job_id 사용
+                supabase.table("sync_jobs").insert({
+                    "status": "failed",
+                    "errors": [f"LLM Error: {str(e)}"],
+                    "records_found": 1,
+                    "records_drafted": 0
+                }).execute()
+            except:
+                pass
             return {"error": str(e)}
 
     async def enrich_with_pubchem(self, drug_name: Optional[str], generic_name: Optional[str] = None) -> Dict[str, Any]:

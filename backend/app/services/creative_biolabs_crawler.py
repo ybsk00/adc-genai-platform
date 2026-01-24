@@ -13,6 +13,8 @@ import google.generativeai as genai
 
 from app.core.config import settings
 from app.core.supabase import supabase
+from app.services.ai_refiner import ai_refiner
+from app.services.rag_service import rag_service
 
 logger = logging.getLogger(__name__)
 
@@ -137,14 +139,9 @@ class CreativeBiolabsCrawler:
             return {"target": None, "properties": {}}
 
     async def _get_embedding(self, text: str) -> List[float]:
-        """Generate vector embedding for text"""
+        """Generate vector embedding for text using RAG Service (1536 dimensions)"""
         try:
-            result = await genai.embed_content_async(
-                model="models/text-embedding-004",
-                content=text,
-                task_type="retrieval_document"
-            )
-            return result['embedding']
+            return await rag_service.generate_embedding(text)
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return []
@@ -368,10 +365,36 @@ class CreativeBiolabsCrawler:
         
         # Upsert
         try:
-            supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
+            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
             logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
+            
+            # [실시간 연동] 수집 즉시 AI Refiner 호출 (비동기)
+            if res.data:
+                record_id = res.data[0].get('id')
+                if record_id:
+                    logger.info(f"      🚀 Triggering Real-time AI Refinement for ID: {record_id}")
+                    asyncio.create_task(self._trigger_refinement(res.data[0]))
+                    
         except Exception as e:
             logger.error(f"      ❌ DB Save failed: {e}")
+
+    async def _trigger_refinement(self, record: Dict):
+        """AI 정제 엔진 비동기 호출"""
+        try:
+            analysis = await ai_refiner.refine_single_record(record)
+            
+            if analysis and "error" not in analysis:
+                update_data = {
+                    "target": analysis.get("target"),
+                    "ai_refined": True,
+                    "properties": {**record.get("properties", {}), "ai_analysis": analysis}
+                }
+                supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
+                logger.info(f"      ✨ Real-time Refinement Success for {record.get('product_name')}")
+            else:
+                logger.warning(f"      ⚠️ Real-time Refinement failed or skipped for {record.get('product_name')}")
+        except Exception as e:
+            logger.error(f"      ❌ Real-time Refinement Trigger Error: {e}")
 
 # Singleton
 creative_crawler = CreativeBiolabsCrawler()
