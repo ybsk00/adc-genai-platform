@@ -375,7 +375,7 @@ class CreativeBiolabsCrawler:
         
         # Upsert
         try:
-            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").select().execute()
+            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
             logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
             
             # [실시간 연동] 수집 즉시 AI Refiner 호출 (비동기)
