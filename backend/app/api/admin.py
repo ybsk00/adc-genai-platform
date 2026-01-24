@@ -129,6 +129,29 @@ async def run_ai_refiner(
     try:
         from app.services.ai_refiner import ai_refiner
         
+        # Commercial Reagents Batch Logic
+        if source == "commercial":
+            from backend.batch_refine_commercial import batch_refine_commercial_reagents
+            
+            # Count pending
+            query = supabase.table("commercial_reagents").select("count", count="exact").eq("ai_refined", False)
+            pending_res = query.execute()
+            pending_count = pending_res.count or 0
+            
+            target_limit = limit
+            if mode == "full":
+                target_limit = min(pending_count, 10000)
+            
+            # Run in background
+            background_tasks.add_task(batch_refine_commercial_reagents, limit=target_limit, mode=mode)
+            
+            return {
+                "status": "started", 
+                "message": f"Commercial Reagents Refiner started ({target_limit} items)",
+                "count": target_limit,
+                "mode": mode
+            }
+
         if mode == "daily_import":
             # Source에 따라 Import 로직 분기
             if source == "open_fda_api":
@@ -759,6 +782,10 @@ async def get_refiner_dashboard():
         openfda_pending_res = supabase.table("golden_set_library").select("count", count="exact").eq("ai_refined", False).eq("enrichment_source", "open_fda_api").execute()
         openfda_pending = openfda_pending_res.count or 0
         
+        # 3.2 Commercial Pending
+        comm_pending_res = supabase.table("commercial_reagents").select("count", count="exact").eq("ai_refined", False).execute()
+        comm_pending = comm_pending_res.count or 0
+        
         # 4. 오늘 처리된 개수 (ai_refined = true AND today)
         today = date.today().isoformat()
         enriched_res = supabase.table("golden_set_library")\
@@ -774,6 +801,7 @@ async def get_refiner_dashboard():
             "queue": {
                 "pending": pending_count,
                 "openfda_pending": openfda_pending,
+                "commercial_pending": comm_pending,
                 "enriched_today": enriched_today
             }
         }

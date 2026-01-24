@@ -39,6 +39,7 @@ interface DashboardData {
     queue: {
         pending: number
         openfda_pending: number
+        commercial_pending: number
         enriched_today: number
     }
 }
@@ -63,6 +64,7 @@ export function AIRefinerStatusCard() {
     const [running, setRunning] = useState(false) // Clinical Refiner 상태
     const [knowledgeRunning, setKnowledgeRunning] = useState(false) // Knowledge Refiner 상태
     const [openfdaRunning, setOpenfdaRunning] = useState(false) // OpenFDA Refiner 상태
+    const [commercialRunning, setCommercialRunning] = useState(false) // Commercial Refiner 상태
     const [dashboard, setDashboard] = useState<DashboardData | null>(null)
     const [spotCheckOpen, setSpotCheckOpen] = useState(false)
     const [recentLogs, setRecentLogs] = useState<RecentLog[]>([])
@@ -100,6 +102,7 @@ export function AIRefinerStatusCard() {
 
     const runRefinerNow = async (mode: 'partial' | 'full' | 'daily_import' = 'partial', source: string = '') => {
         if (source === 'open_fda_api') setOpenfdaRunning(true)
+        else if (source === 'commercial') setCommercialRunning(true)
         else setRunning(true)
 
         try {
@@ -128,6 +131,7 @@ export function AIRefinerStatusCard() {
             toast.error('Failed to trigger refiner')
         } finally {
             if (source === 'open_fda_api') setOpenfdaRunning(false)
+            else if (source === 'commercial') setCommercialRunning(false)
             else setRunning(false)
         }
     }
@@ -238,7 +242,7 @@ export function AIRefinerStatusCard() {
                             <TabsList className="grid w-full grid-cols-3 mb-4 bg-slate-800/50">
                                 <TabsTrigger value="clinical">Clinical Trials</TabsTrigger>
                                 <TabsTrigger value="openfda">OpenFDA</TabsTrigger>
-                                {/* <TabsTrigger value="pubmed">PubMed / BioRxiv</TabsTrigger> */}
+                                <TabsTrigger value="commercial">Commercial</TabsTrigger>
                             </TabsList>
 
                             {/* Common Cost Progress */}
@@ -363,6 +367,65 @@ export function AIRefinerStatusCard() {
                                         variant="outline"
                                         className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
                                         onClick={() => openSpotCheck('openfda')}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        Spot Check
+                                    </Button>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="commercial" className="space-y-4">
+                                <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-pink-500/20">
+                                    <p className="text-sm text-pink-300 font-medium mb-1">Commercial Reagents Refiner</p>
+                                    <p className="text-xs text-slate-400">
+                                        Analyzes crawled reagents (Ambeed, Creative Biolabs).<br />
+                                        Extracts Target, Category & Generates Embeddings (768d).
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-pink-400">
+                                            {dashboard.queue.commercial_pending.toLocaleString()}
+                                        </p>
+                                        <p className="text-xs text-slate-400">Commercial Pending</p>
+                                    </div>
+                                    <div className="bg-slate-800/50 rounded-lg p-3">
+                                        <p className="text-2xl font-bold text-green-400">{dashboard.queue.enriched_today.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400">Enriched Today</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="border-pink-500/30 text-pink-300 hover:bg-pink-500/10 w-full"
+                                                disabled={commercialRunning || dashboard.system_status === 'PAUSED'}
+                                            >
+                                                {commercialRunning ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4 mr-2" />
+                                                )}
+                                                Run Now
+                                                <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
+                                            <DropdownMenuItem onClick={() => runRefinerNow('partial', 'commercial')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Batch (50)
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => runRefinerNow('full', 'commercial')} className="hover:bg-slate-800 cursor-pointer">
+                                                Run Full (All Pending)
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-pink-500/30 text-pink-300 hover:bg-pink-500/10"
+                                        onClick={() => openSpotCheck('clinical')}
                                     >
                                         <Eye className="w-4 h-4 mr-2" />
                                         Spot Check
