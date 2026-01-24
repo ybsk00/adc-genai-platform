@@ -3,7 +3,7 @@ import random
 import logging
 import json
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 from playwright.async_api import async_playwright, Page, BrowserContext
@@ -23,24 +23,28 @@ class AmbeedCrawler:
     
     BASE_URL = "https://www.ambeed.com"
     
-    # Categories to crawl (Search URLs)
+    # Categories to crawl (Direct URLs)
     CATEGORIES = {
         "ADC Toxins": "https://www.ambeed.com/adc-toxins.html",
-        "ADC Linkers": "https://www.ambeed.com/search?keyword=ADC+Linker",
-        "ADC Cytotoxin": "https://www.ambeed.com/search?keyword=ADC+Cytotoxin",
-        "Payload": "https://www.ambeed.com/adc-toxins.html", # Alias for Payload
-        "Linker": "https://www.ambeed.com/search?keyword=ADC+Linker", # Alias for Linker
-        "Conjugate": "https://www.ambeed.com/search?keyword=Antibody-Drug+Conjugate" # Alias for Conjugate
+        "Conjugate": "https://www.ambeed.com/antibody-drug-conjugate-adc-related.html",
+        "Payload-Linker": "https://www.ambeed.com/payload-linker-conjugate.html",
     }
     
     def __init__(self):
         self.ua = UserAgent()
         self.request_count = 0
         self.break_threshold = 100  # Break every 100 requests
+        self.batch_size = 5  # Parallel processing batch size
         
         # Configure Gemini
+        # Updated to gemini-2.5-flash as per instruction
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel(settings.GEMINI_MODEL_ID or 'gemini-1.5-flash')
+        self.model_id = 'gemini-2.5-flash'
+        try:
+             self.model = genai.GenerativeModel(self.model_id)
+        except Exception:
+             logger.warning(f"⚠️ Model {self.model_id} not found, falling back to gemini-1.5-flash")
+             self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     async def _init_browser(self, p) -> BrowserContext:
         """Initialize browser with stealth and proxy settings"""
@@ -108,34 +112,61 @@ class AmbeedCrawler:
             logger.warning(f"PubChem lookup failed for {cas_number}: {e}")
         return None
 
-    async def _enrich_with_gemini(self, description: str) -> Dict:
-        """Extract Target and Attributes using Gemini"""
+    async def _enrich_with_gemini(self, description: str, current_data: Dict) -> Dict:
+        """Extract Target and Attributes using Gemini 2.5 Flash"""
+        
+        # 4. Conditional Skip Logic: Cost Savings
+        # If we have all core physical properties and description is short, skip AI
+        has_core_info = all([
+            current_data.get('cas_number'),
+            current_data.get('properties', {}).get('mw'),
+            current_data.get('properties', {}).get('formula'),
+            current_data.get('smiles_code')
+        ])
+        
+        # If text is too short to contain hidden info and we have core info, skip
+        if has_core_info and len(description) < 200:
+            logger.info("⏩ Skipping AI Enrichment (Core info present & text short)")
+            return {"target": None, "properties": {}, "summary": "Auto-generated from structured data."}
+
+        # 3. Enhanced Target Normalization Prompt
         prompt = f"""
         Analyze the following Ambeed reagent description and extract structured data.
         
-        Description: {description[:2000]}
+        Description: {description[:3000]}
         
-        Extract:
-        1. Target: The specific antigen target (e.g., HER2, TROP2, CD19). If not specified, return null.
-           - Normalize "HER2-directed" to "HER2".
-        2. Properties: Extract Purity, Molecular Weight (MW), Formula if present.
-        3. Summary: A concise 3-sentence summary of the product, focusing on its application and key characteristics, suitable for researchers.
+        Task:
+        1. **Target Normalization**: Identify the specific antigen target (e.g., HER2, TROP2, CD19). 
+           - **CRITICAL**: Normalize synonyms to standard gene symbols.
+           - Examples: "ERBB2" -> "HER2", "CD340" -> "HER2", "TNFSF11" -> "RANKL".
+           - If not specified, return null.
+        2. **Properties**: Extract Purity, Molecular Weight (MW), Formula if present in text but missed in parsing.
+        3. **Summary**: A concise 3-sentence summary suitable for ADC researchers.
         
-        Return JSON format:
+        Output JSON:
         {{
             "target": "HER2",
             "properties": {{
                 "purity": ">98%",
                 "mw": "1234.56",
-                "formula": "C50H60N10O12"
+                "formula": "C50H..."
             }},
-            "summary": "This product is a..."
+            "summary": "..."
         }}
         """
         
         try:
-            response = await self.model.generate_content_async(prompt)
-            text = response.text.replace("```json", "").replace("```", "").strip()
+            # 1. Update to JSON mode for robustness
+            generation_config = genai.GenerationConfig(
+                response_mime_type="application/json"
+            )
+            
+            response = await self.model.generate_content_async(
+                prompt,
+                generation_config=generation_config
+            )
+            
+            text = response.text.strip()
             return json.loads(text)
         except Exception as e:
             logger.error(f"Gemini enrichment failed: {e}")
@@ -153,7 +184,7 @@ class AmbeedCrawler:
             return []
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
-        """Crawl a specific category with pagination"""
+        """Crawl a specific category with pagination and batch processing"""
         logger.info(f"🚀 Starting crawl for {category_name}...")
         
         count = 0
@@ -161,6 +192,7 @@ class AmbeedCrawler:
         max_pages = 116  # Hard limit
         
         is_full_crawl = limit > 1000
+        batch_buffer = [] # Buffer for batch processing
         
         async with async_playwright() as p:
             context = await self._init_browser(p)
@@ -173,12 +205,8 @@ class AmbeedCrawler:
                     if page_num > max_pages:
                         break
 
-                    # Ambeed pagination: &page=2
-                    if page_num == 1:
-                        url = base_url
-                    else:
-                        url = f"{base_url}&page={page_num}"
-                        
+                    # Ambeed pagination
+                    url = base_url if page_num == 1 else f"{base_url}&page={page_num}"
                     logger.info(f"📄 Navigating to Page {page_num}: {url}")
                     
                     try:
@@ -212,14 +240,29 @@ class AmbeedCrawler:
                         for link in links:
                             if not is_full_crawl and count >= limit:
                                 break
-                                
                             if link == url: continue
                             
                             try:
-                                await self.process_product(page, link, category_name)
-                                count += 1
+                                # 1. Extract HTML Data Only (Fast)
+                                raw_data = await self._extract_html_data(page, link, category_name)
+                                if raw_data:
+                                    batch_buffer.append(raw_data)
+                                    count += 1
+                                
+                                # 2. Process Batch if full
+                                if len(batch_buffer) >= self.batch_size:
+                                    logger.info(f"⚡ Processing Batch of {len(batch_buffer)} items...")
+                                    await self._process_batch_enrichment(batch_buffer)
+                                    batch_buffer = [] # Clear buffer
+                                    
                             except Exception as e:
-                                logger.error(f"Failed to process {link}: {e}")
+                                logger.error(f"Failed to extract {link}: {e}")
+                        
+                        # Process remaining items in buffer at end of page
+                        if batch_buffer:
+                            await self._process_batch_enrichment(batch_buffer)
+                            batch_buffer = []
+
                     except Exception as e:
                         logger.error(f"Error extracting links on page {page_num}: {e}")
                         break
@@ -229,9 +272,148 @@ class AmbeedCrawler:
             except Exception as e:
                 logger.error(f"Crawl failed for {category_name}: {e}")
             finally:
+                # Flush any remaining items
+                if batch_buffer:
+                    await self._process_batch_enrichment(batch_buffer)
                 await context.close()
         
         return count
+
+    async def _extract_html_data(self, page: Page, url: str, category: str) -> Optional[Dict]:
+        """Navigate to product page and extract raw HTML data"""
+        logger.info(f"   extracting HTML: {url}")
+        await page.goto(url, wait_until="domcontentloaded")
+        await self._smart_delay()
+        
+        title = await page.title()
+        body_text = await page.inner_text("body")
+        
+        # Helper to extract by label
+        async def extract_by_label(label):
+            return await page.evaluate(f"""
+                (label) => {{
+                    const elements = Array.from(document.querySelectorAll('td, th, div, span, p, b, strong, li'));
+                    for (const el of elements) {{
+                        if (el.children.length > 2 || el.innerText.length > 300) continue;
+                        const text = el.innerText.trim();
+                        if (text.includes(label)) {{
+                            const safeLabel = label.replace(/[.*+?^${{}}()|[\\]\\\\]/g, '\\\\$&');
+                            const regex = new RegExp(safeLabel + '\\\\s*[:\\\\uff1a]\\\\s*([^\\\\n\\\\r]+)', 'i');
+                            const match = text.match(regex);
+                            if (match) return match[1].trim();
+                            if (text.replace(':', '').trim() === label || text.length < label.length + 5) {{
+                                if (el.nextElementSibling) return el.nextElementSibling.innerText.trim();
+                                if (el.parentElement && el.parentElement.nextElementSibling) {{
+                                    if (el.parentElement.innerText.length < 100) {{
+                                         return el.parentElement.nextElementSibling.innerText.trim();
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
+                    return null;
+                }}
+            """, label)
+
+        cat_no = await extract_by_label("Catalog No")
+        cas_no = await extract_by_label("CAS No")
+        formula = await extract_by_label("Molecular Formula")
+        if not formula: formula = await extract_by_label("Formula")
+        mw = await extract_by_label("Molecular Weight")
+        if not mw: mw = await extract_by_label("M.W")
+        smiles = await extract_by_label("SMILES Code")
+        if not smiles: smiles = await extract_by_label("SMILES")
+        
+        if not smiles:
+            smiles_from_text = await page.evaluate("""
+                () => {
+                    const bodyText = document.body.innerText;
+                    const match = bodyText.match(/SMILES Code\\s*:\\s*([^\\n]+)/);
+                    if (match) return match[1].trim();
+                    return null;
+                }
+            """)
+            if smiles_from_text: smiles = smiles_from_text
+
+        if not cat_no:
+            parts = url.split('/')
+            if parts: cat_no = parts[-1].replace('.html', '').replace('.htm', '')
+
+        price_data = await page.evaluate("""
+            () => {
+                const rows = Array.from(document.querySelectorAll('table tr'));
+                const prices = [];
+                rows.forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if (cols.length >= 3) {
+                        const size = cols[0].innerText.trim();
+                        const price = cols[1].innerText.trim();
+                        if (price.includes('$') || price.includes('€')) {
+                            prices.push({ size, price, availability: cols[2].innerText.trim() });
+                        }
+                    }
+                });
+                return prices;
+            }
+        """)
+        
+        return {
+            "ambeed_cat_no": cat_no,
+            "cas_number": cas_no,
+            "product_name": title.split("|")[0].strip(),
+            "product_url": url,
+            "category": category,
+            "smiles_code": smiles,
+            "properties": {
+                "formula": formula,
+                "mw": mw
+            },
+            "price_data": price_data,
+            "body_text": body_text, # Passed for AI analysis
+            "source_name": "Ambeed",
+            "crawled_at": datetime.utcnow().isoformat()
+        }
+
+    async def _process_batch_enrichment(self, batch_data: List[Dict]):
+        """Process a batch of items with AI in parallel"""
+        tasks = [self._enrich_and_save_single(item) for item in batch_data]
+        await asyncio.gather(*tasks)
+
+    async def _enrich_and_save_single(self, raw_data: Dict):
+        """Enrich a single item and save to DB"""
+        try:
+            body_text = raw_data.pop("body_text", "")
+            
+            # PubChem Fallback
+            if not raw_data['smiles_code'] and raw_data['cas_number']:
+                raw_data['smiles_code'] = await self._fetch_pubchem_smiles(raw_data['cas_number'])
+
+            # AI Enrichment (with conditional skip)
+            ai_data = await self._enrich_with_gemini(body_text, raw_data)
+            
+            # Merge AI data
+            raw_data["target"] = ai_data.get("target")
+            raw_data["summary"] = ai_data.get("summary")
+            
+            ai_props = ai_data.get("properties", {})
+            if ai_props.get("mw"): raw_data["properties"]["mw"] = ai_props["mw"]
+            if ai_props.get("formula"): raw_data["properties"]["formula"] = ai_props["formula"]
+            if ai_props.get("purity"): raw_data["properties"]["purity"] = ai_props["purity"]
+
+            # Generate Embedding
+            embedding_text = f"{raw_data['product_name']} {raw_data.get('target', '')} {raw_data.get('summary', '')} {raw_data.get('smiles_code', '')}"
+            raw_data["embedding"] = await self._get_embedding(embedding_text)
+
+            # Save to DB
+            res = supabase.table("commercial_reagents").upsert(raw_data, on_conflict="ambeed_cat_no").select().execute()
+            logger.info(f"      ✅ Saved: {raw_data['product_name']}")
+            
+            # Trigger Refinement
+            if res.data:
+                asyncio.create_task(self._trigger_refinement(res.data[0]))
+                
+        except Exception as e:
+            logger.error(f"      ❌ Processing failed for {raw_data.get('product_name')}: {e}")
 
     async def run(self, search_term: str, limit: int, job_id: str):
         """Orchestrate the crawling process"""
@@ -274,151 +456,6 @@ class AmbeedCrawler:
         except Exception as e:
             logger.error(f"Crawler run failed: {e}")
             await update_job_status(job_id, status="failed", errors=[str(e)])
-
-    async def process_product(self, page: Page, url: str, category: str):
-        """Process a single product page"""
-        logger.info(f"   Processing Product: {url}")
-        await page.goto(url, wait_until="domcontentloaded")
-        await self._smart_delay()
-        
-        content = await page.content()
-        title = await page.title()
-        body_text = await page.inner_text("body")
-        
-        # Direct Extraction (Ambeed specific)
-        cat_no = None
-        cas_no = None
-        smiles = None
-        mw = None
-        formula = None
-        
-        # Try to extract from table or text
-        # Ambeed usually has a table with "Catalog No.", "CAS No.", "Molecular Formula", "Molecular Weight"
-        
-        # Helper to extract by label
-        async def extract_by_label(label):
-            return await page.evaluate(f"""
-                (label) => {{
-                    const elements = Array.from(document.querySelectorAll('td, th, div, span, p'));
-                    for (const el of elements) {{
-                        if (el.innerText.includes(label)) {{
-                            // Try next sibling or parent's next sibling
-                            const text = el.innerText;
-                            if (text.includes(':')) return text.split(':')[1].trim();
-                            if (el.nextElementSibling) return el.nextElementSibling.innerText.trim();
-                        }}
-                    }}
-                    return null;
-                }}
-            """, label)
-
-        cat_no = await extract_by_label("Catalog No")
-        cas_no = await extract_by_label("CAS No")
-        formula = await extract_by_label("Molecular Formula")
-        mw = await extract_by_label("Molecular Weight")
-        smiles = await extract_by_label("SMILES Code") # User mentioned "SMILES Code :"
-        
-        if not smiles:
-             smiles = await extract_by_label("SMILES")
-        
-        # [고도화] InChI 필드에서도 SMILES 추출 시도 (비용 절감)
-        if not smiles:
-            inchi = await extract_by_label("InChI")
-            if inchi:
-                logger.info(f"      Found InChI: {inchi[:30]}... (Will attempt to use this)")
-                # InChI가 있으면 나중에 Chemical Resolver가 처리할 수 있도록 저장
-        
-        # [고도화] 페이지 하단 텍스트 영역에서 SMILES 패턴 직접 검색
-        if not smiles:
-            smiles_from_text = await page.evaluate("""
-                () => {
-                    const bodyText = document.body.innerText;
-                    // SMILES 패턴 매칭 (단순화된 정규식)
-                    const match = bodyText.match(/SMILES Code\\s*:\\s*([A-Za-z0-9@#\\(\\)\\[\\]\\/\\\\=+-]+)/);
-                    return match ? match[1].trim() : null;
-                }
-            """)
-            if smiles_from_text:
-                smiles = smiles_from_text
-                logger.info(f"      ✅ Found SMILES via Text Pattern: {smiles[:30]}...")
-
-        if not cat_no:
-            # Fallback from URL
-            parts = url.split('/')
-            if parts:
-                last_part = parts[-1]
-                cat_no = last_part.replace('.html', '').replace('.htm', '')
-
-        # Price Data
-        price_data = await page.evaluate("""
-            () => {
-                const rows = Array.from(document.querySelectorAll('table tr'));
-                const prices = [];
-                rows.forEach(row => {
-                    const cols = row.querySelectorAll('td');
-                    if (cols.length >= 3) {
-                        const size = cols[0].innerText.trim();
-                        const price = cols[1].innerText.trim();
-                        const availability = cols[2].innerText.trim();
-                        if (price.includes('$') || price.includes('€')) {
-                            prices.push({ size, price, availability });
-                        }
-                    }
-                });
-                return prices;
-            }
-        """)
-        
-        logger.info(f"      Found: Cat={cat_no}, CAS={cas_no}, SMILES={smiles}")
-        
-        # AI Enrichment
-        if not smiles and cas_no:
-            smiles = await self._fetch_pubchem_smiles(cas_no)
-            
-        ai_data = await self._enrich_with_gemini(body_text[:3000])
-        
-        # Merge properties
-        properties = ai_data.get("properties", {})
-        if mw: properties['mw'] = mw
-        if formula: properties['formula'] = formula
-        
-        # Embedding
-        embedding_text = f"{title} {ai_data.get('target', '')} {ai_data.get('summary', '')} {smiles or ''}"
-        embedding = await self._get_embedding(embedding_text)
-        
-        # Save to DB
-        data = {
-            "ambeed_cat_no": cat_no,
-            "cas_number": cas_no,
-            "product_name": title.split("|")[0].strip(),
-            "product_url": url,
-            "category": category,
-            "smiles_code": smiles,
-            "target": ai_data.get("target"),
-            "properties": properties,
-            "summary": ai_data.get("summary"),
-            "price_data": price_data,
-            "embedding": embedding,
-            "source_name": "Ambeed", # Explicit source name
-            "crawled_at": datetime.utcnow().isoformat()
-        }
-        
-        # Upsert
-        try:
-            # .select() must be chained to return data
-            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").select().execute()
-            logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
-            
-            # [실시간 연동] 수집 즉시 AI Refiner 호출 (비동기)
-            if res.data:
-                record_id = res.data[0].get('id')
-                if record_id:
-                    logger.info(f"      🚀 Triggering Real-time AI Refinement for ID: {record_id}")
-                    # 정제 작업 때문에 수집 속도가 느려지지 않게 비동기로 처리
-                    asyncio.create_task(self._trigger_refinement(res.data[0]))
-                    
-        except Exception as e:
-            logger.error(f"      ❌ DB Save failed: {e}")
 
     async def _trigger_refinement(self, record: Dict):
         """AI 정제 엔진 비동기 호출"""

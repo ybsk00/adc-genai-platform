@@ -1,0 +1,9 @@
+2026-01-24 16:06:11,268 - httpx - INFO - HTTP Request: POST https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/sync_jobs "HTTP/2 201 Created"
+2026-01-24 16:06:17,013 - httpx - INFO - HTTP Request: PATCH https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/sync_jobs?id=eq.debug_job_123 "HTTP/2 200 OK"
+2026-01-24 16:06:17,015 - app.services.ambeed_crawler - INFO - 🚀 Starting crawl for ADC Cytotoxin...
+2026-01-24 16:06:17,561 - app.services.ambeed_crawler - INFO - 🌐 Using Proxy: gate.decodo.com:10001
+2026-01-24 16:06:17,761 - app.services.ambeed_crawler - INFO - 📄 Navigating to Page 1: https://www.ambeed.com/search?keyword=ADC+Cytotoxin
+2026-01-24 16:06:31,089 - app.services.ambeed_crawler - INFO - 💤 Sleeping for 7.19s...
+2026-01-24 16:06:38,295 - app.services.ambeed_crawler - INFO -    Found 0 product links on page 1.
+2026-01-24 16:06:38,295 - app.services.ambeed_crawler - WARNING -    No products found. Ending crawl for this category.
+2026-01-24 16:06:38,457 - httpx - INFO - HTTP Request: PATCH https://jrqtkenqmzpoieyusyqh.supabase.co/rest/v1/sync_jobs?id=eq.debug_job_123 "HTTP/2 200 OK"

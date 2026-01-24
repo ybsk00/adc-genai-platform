@@ -1,0 +1,69 @@
+--- Debugging DB Status V2 ---
+
+[Checking Job: crawl_ambeed_6179af2b]
+Status: running
+Started: 2026-01-24T07:03:58.557894+00:00
+Records Drafted: 0
+Errors: []
+
+[Recent Commercial Reagents (Last 10)]
+ID: 60e250a0-b3f6-4da5-a9c4-faffc4329639
+  Name: DRF-1042
+  Crawled At: 2026-01-24T03:32:54.836846+00:00
+  AI Refined: False
+  Target: Topoisomerase I
+--------------------
+ID: 3a4fc8e9-3a49-4bca-9820-4180795ac640
+  Name: DM4
+  Crawled At: 2026-01-24T03:31:51.194155+00:00
+  AI Refined: False
+  Target: Tubulin
+--------------------
+ID: 81d3f8d7-179d-483f-a031-4ad255ce0bdd
+  Name: Exatecan (DX-8951)
+  Crawled At: 2026-01-24T03:31:13.73318+00:00
+  AI Refined: False
+  Target: Topoisomerase I
+--------------------
+ID: dfb00c7a-6587-4bfd-ad06-d70be975ac64
+  Name: Auristatin F
+  Crawled At: 2026-01-24T03:30:49.774325+00:00
+  AI Refined: False
+  Target: None
+--------------------
+ID: be4d9ccd-8896-4bc4-9967-5e4ce2f4a2e7
+  Name: SG3199
+  Crawled At: 2026-01-24T03:30:04.458303+00:00
+  AI Refined: False
+  Target: DNA
+--------------------
+ID: b6a496fb-7036-4696-bd30-6a869e941913
+  Name: 182182-31-6
+  Crawled At: 2026-01-24T03:28:53.124911+00:00
+  AI Refined: False
+  Target: None
+--------------------
+ID: c8868eba-13ea-4631-899b-0d55c296493d
+  Name: Calicheamicin
+  Crawled At: 2026-01-24T03:27:47.620954+00:00
+  AI Refined: False
+  Target: None
+--------------------
+ID: bf11365e-a51c-4963-8daf-fdd335df789e
+  Name: 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+  Crawled At: 2026-01-24T03:26:56.701856+00:00
+  AI Refined: False
+  Target: None
+--------------------
+ID: eed65bde-b05f-4d97-896a-621f96854130
+  Name: Eribulin (B1939)
+  Crawled At: 2026-01-24T03:26:32.94528+00:00
+  AI Refined: False
+  Target: Microtubule/Tubulin
+--------------------
+ID: aae19e92-ca4a-4753-8e5a-92d4fd82d197
+  Name: Maytansinol
+  Crawled At: 2026-01-24T03:26:10.558395+00:00
+  AI Refined: False
+  Target: None
+--------------------
