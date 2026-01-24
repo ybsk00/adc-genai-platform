@@ -52,7 +52,7 @@ class Reindexer:
     async def reindex_commercial_reagents(self):
         logger.info("🚀 [Commercial Reagents] 재인덱싱 시작...")
         try:
-            response = supabase.table("commercial_reagents").select("id, product_name, target, properties").execute()
+            response = supabase.table("commercial_reagents").select("id, product_name, target, properties, summary").execute()
             items = response.data
             logger.info(f"Found {len(items)} commercial reagents.")
 
@@ -61,6 +61,8 @@ class Reindexer:
                 for item in batch:
                     # 임베딩용 텍스트 결합
                     content = f"Product: {item['product_name']}\nTarget: {item.get('target', 'N/A')}\n"
+                    if item.get("summary"):
+                        content += f"Summary: {item['summary']}\n"
                     props = item.get("properties", {}) or {}
                     for k, v in props.items():
                         if v: content += f"{k}: {v}\n"
@@ -80,14 +82,16 @@ class Reindexer:
         logger.info("🚀 [Knowledge Base] 재인덱싱 시작...")
         try:
             # knowledge_base 테이블은 content(초록)를 기반으로 임베딩
-            response = supabase.table("knowledge_base").select("id, title, content").execute()
+            response = supabase.table("knowledge_base").select("id, title, content, abstract").execute()
             items = response.data
             logger.info(f"Found {len(items)} knowledge base items.")
 
             for i in range(0, len(items), self.batch_size):
                 batch = items[i:i + self.batch_size]
                 for item in batch:
-                    content = f"Title: {item['title']}\nContent: {item['content']}"
+                    # Use abstract if available, otherwise content
+                    text_content = item.get('abstract') or item.get('content') or ""
+                    content = f"Title: {item['title']}\nContent: {text_content}"
                     embedding = await rag_service.generate_embedding(content)
                     if embedding:
                         # knowledge_base 테이블에 embedding 컬럼이 있는지 확인 필요 (없으면 추가 로직 필요할 수 있음)

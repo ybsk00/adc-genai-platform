@@ -51,8 +51,8 @@ class AIRefiner:
     def is_adc_relevant(self, record: Dict[str, Any]) -> bool:
         """ADC 관련 데이터인지 Pre-filter 체크"""
         properties = record.get("properties", {})
-        title = (record.get("name", "") or "").lower()
-        description = (properties.get("brief_summary", "") or "").lower()
+        title = (record.get("name", "") or record.get("product_name", "") or "").lower()
+        description = (properties.get("brief_summary", "") or record.get("summary", "") or "").lower()
         indication = (properties.get("indication", "") or "").lower()
         moa = (properties.get("mechanism_of_action", "") or "").lower()
         

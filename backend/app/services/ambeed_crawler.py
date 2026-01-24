@@ -144,7 +144,10 @@ class AmbeedCrawler:
     async def _get_embedding(self, text: str) -> List[float]:
         """Generate vector embedding for text using RAG Service (768 dimensions)"""
         try:
-            return await rag_service.generate_embedding(text)
+            embedding = await rag_service.generate_embedding(text)
+            if embedding and len(embedding) != 768:
+                logger.warning(f"⚠️ Generated embedding has {len(embedding)} dimensions, expected 768.")
+            return embedding
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return []
@@ -402,7 +405,8 @@ class AmbeedCrawler:
         
         # Upsert
         try:
-            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").execute()
+            # .select() must be chained to return data
+            res = supabase.table("commercial_reagents").upsert(data, on_conflict="ambeed_cat_no").select().execute()
             logger.info(f"      ✅ Saved: {data['product_name']} (Target: {data['target']})")
             
             # [실시간 연동] 수집 즉시 AI Refiner 호출 (비동기)
