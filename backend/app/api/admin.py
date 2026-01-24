@@ -362,20 +362,24 @@ async def get_golden_set_staging(
             
         drafts = []
         for item in response.data:
-            drafts.append({
-                "id": item.get("id"),
-                "drug_name": item.get("name") or "Unknown",
-                "target": item.get("properties", {}).get("target") or "Unknown",
-                "payload": item.get("properties", {}).get("payload"),
-                "linker": item.get("properties", {}).get("linker"),
-                "smiles_code": item.get("smiles_code"),  # SMILES 추가
-                "enrichment_source": item.get("enrichment_source") or "unknown",
-                "created_at": item.get("created_at"),
-                "outcome_type": item.get("outcome_type"),
-                "failure_reason": item.get("failure_reason"),
-                "is_ai_extracted": item.get("ai_refined") or False,
-                "properties": item.get("properties", {})  # 전체 properties도 포함
-            })
+            try:
+                drafts.append({
+                    "id": item.get("id"),
+                    "drug_name": item.get("name") or "Unknown",
+                    "target": item.get("properties", {}).get("target") or "Unknown",
+                    "payload": item.get("properties", {}).get("payload"),
+                    "linker": item.get("properties", {}).get("linker"),
+                    "smiles_code": item.get("smiles_code"),  # SMILES 추가
+                    "enrichment_source": item.get("enrichment_source") or "unknown",
+                    "created_at": item.get("created_at"),
+                    "outcome_type": item.get("outcome_type"),
+                    "failure_reason": item.get("failure_reason"),
+                    "is_ai_extracted": item.get("ai_refined") or False,
+                    "properties": item.get("properties", {}) or {}  # 전체 properties도 포함, None일 경우 빈 dict
+                })
+            except Exception as item_error:
+                print(f"Skipping bad item {item.get('id', 'unknown')}: {item_error}")
+                continue
             
         return {
             "data": drafts,
@@ -385,7 +389,8 @@ async def get_golden_set_staging(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Critical Error in get_golden_set_drafts: {e}")
+        raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
 
 
 @router.get("/goldenset/{golden_set_id}")

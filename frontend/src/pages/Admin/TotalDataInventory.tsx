@@ -9,7 +9,6 @@ import {
     BookOpen,
     Filter,
 } from 'lucide-react'
-import { AIRefinerStatusCard } from '@/components/admin/data/AIRefinerStatusCard'
 import { CommercialTable } from '@/components/admin/data/CommercialTable'
 import { KnowledgeTable } from '@/components/admin/data/KnowledgeTable'
 import { DataSourcesTab } from '@/components/admin/data/DataSourcesTab'
@@ -20,7 +19,7 @@ export default function TotalDataInventory() {
     
     return (
         <div className="space-y-6 p-6 min-h-screen bg-slate-950 text-slate-100">
-            {/* 1. Header & AI Dashboard Widget */}
+            {/* 1. Header */}
             <div className="flex flex-col md:flex-row gap-6 items-start justify-between">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
@@ -30,11 +29,6 @@ export default function TotalDataInventory() {
                     <p className="text-slate-400 mt-2">
                         Manage Data Sources, Commercial Reagents, and Knowledge Base.
                     </p>
-                </div>
-                
-                {/* AI Refiner Widget (Mini Version or Full) */}
-                <div className="w-full md:w-1/2 lg:w-1/3">
-                    <AIRefinerStatusCard />
                 </div>
             </div>
 

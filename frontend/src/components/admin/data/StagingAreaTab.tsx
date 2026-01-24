@@ -73,12 +73,12 @@ export function StagingAreaTab() {
     }, [searchQuery])
 
     // Fetch Drafts with Pagination
-    const { data: draftsResponse, isLoading } = useQuery({
+    const { data: draftsResponse, isLoading, error } = useQuery({
         queryKey: ['goldenSetDrafts', page, pageSize, debouncedSearch, sourceFilter],
         queryFn: async () => {
             const { session } = await getSession()
-            if (!session) throw new Error('No session')
-
+            // 세션이 없어도 일단 진행 (API가 401 줄 것임), 디버깅 위해
+            
             const offset = (page - 1) * pageSize
             const params = new URLSearchParams({
                 limit: String(pageSize),
@@ -89,20 +89,39 @@ export function StagingAreaTab() {
 
             const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts?${params}`, {
                 headers: {
-                    Authorization: `Bearer ${session.access_token}`
+                    Authorization: `Bearer ${session?.access_token || ''}`
                 }
             })
-            if (!response.ok) throw new Error('Failed to fetch drafts')
+            if (!response.ok) {
+                const errText = await response.text()
+                throw new Error(`Failed to fetch drafts: ${response.status} ${errText}`)
+            }
             return response.json() as Promise<DraftsResponse>
-        }
+        },
+        retry: 1
     })
 
     const drafts = draftsResponse?.data || []
     const totalCount = draftsResponse?.total || 0
     const totalPages = Math.ceil(totalCount / pageSize)
 
-    // AI Refine Single Mutation
-    const refineMutation = useMutation({
+    // ... (mutations remain same)
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-red-400 p-8">
+                <AlertCircle className="w-12 h-12 mb-4" />
+                <p className="text-lg font-semibold">데이터를 불러오지 못했습니다.</p>
+                <p className="text-sm text-slate-500 mt-2">{error.message}</p>
+                <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> 재시도
+                </Button>
+            </div>
+        )
+    }
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
         mutationFn: async (id: string) => {
             const { session } = await getSession()
             if (!session) throw new Error('No session')

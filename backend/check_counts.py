@@ -41,8 +41,18 @@ def check_counts():
     except Exception as e:
         print(f"Error checking NULLs: {e}")
         
-    res_gs_total = supabase.table("golden_set_library").select("count", count="exact").execute()
-    print(f"Total rows: {res_gs_total.count}")
+    print("\n--- Golden Set Library Status ---")
+    try:
+        # Group by status logic is hard in raw supabase client without rpc, so just count distinct queries
+        draft_count = supabase.table("golden_set_library").select("count", count="exact").eq("status", "draft").execute().count
+        approved_count = supabase.table("golden_set_library").select("count", count="exact").eq("status", "approved").execute().count
+        rejected_count = supabase.table("golden_set_library").select("count", count="exact").eq("status", "rejected").execute().count
+        
+        print(f"Draft: {draft_count}")
+        print(f"Approved: {approved_count}")
+        print(f"Rejected: {rejected_count}")
+    except Exception as e:
+        print(f"Error checking status: {e}")
 
 if __name__ == "__main__":
     check_counts()
