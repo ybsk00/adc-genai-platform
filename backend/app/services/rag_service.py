@@ -1,34 +1,36 @@
-import os
 from typing import List, Dict, Any
 from pydantic import BaseModel
-from openai import AsyncOpenAI
+import google.generativeai as genai
+from app.core.config import settings
 from app.core.supabase import supabase
 
 class RAGService:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.client = None
-
-    def _get_client(self):
-        if not self.client:
-            if not self.api_key:
-                print("Warning: OPENAI_API_KEY is missing. RAG Service will not function.")
-                return None
-            self.client = AsyncOpenAI(api_key=self.api_key)
-        return self.client
+        self.api_key = settings.GOOGLE_API_KEY
+        self.model_id = "models/text-embedding-004"
+        if self.api_key:
+            genai.configure(api_key=self.api_key)
+        else:
+            print("Warning: GOOGLE_API_KEY is missing. RAG Service will not function.")
 
     async def generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text using OpenAI"""
-        client = self._get_client()
-        if not client:
-            print("Error: OpenAI client not available")
+        """Generate embedding for text using Gemini (768 dimensions)"""
+        if not self.api_key:
+            print("Error: Gemini API key not available")
             return []
             
-        response = await client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        return response.data[0].embedding
+        try:
+            # text-embedding-004 supports 'output_dimensionality'
+            result = genai.embed_content(
+                model=self.model_id,
+                content=text,
+                task_type="retrieval_document",
+                output_dimensionality=768
+            )
+            return result['embedding']
+        except Exception as e:
+            print(f"Error generating Gemini embedding: {str(e)}")
+            return []
 
 
     async def index_golden_set_item(self, item_id: str, description: str, properties: Dict[str, Any]):

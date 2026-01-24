@@ -1,15 +1,3 @@
-사용자님의 ADC 플랫폼이 "똑똑한 컨설턴트"가 되려면, **Golden Set(논문, 특허, 임상 데이터)**을 AI가 이해하기 가장 좋은 형태로 잘게 썰어서(Chunking) 먹여줘야 합니다.
-
-07_RAG_Pipeline_Chunking.md 문서는 바이오/화학 데이터의 특성을 고려한 특수 파싱 및 청킹 전략을 정의합니다. 일반적인 텍스트 청킹과는 차원이 다른, 전문가 수준의 데이터 처리 설계입니다.
-
-07. RAG Pipeline: Parsing & Semantic Chunking
-Document ID: DATA-01 Role: ETL (Extract, Transform, Load) for Unstructured Data Tech Stack: Python, LlamaParse (PDF Parser), LangChain, OpenAI Embeddings (text-embedding-3-small)
-
-1. Pipeline Overview (데이터 흐름)
-단순히 텍스트만 추출하는 것이 아니라, **표(Table)**와 **화학 구조(Chemicals)**를 별도로 처리하는 것이 핵심입니다.
-
-코드 스니펫
-
 graph TD
     Input[Source Documents: PDF/HTML] --> Router{Document Type?}
     
@@ -72,19 +60,6 @@ Document Type: Patent, Clinical Trial, Paper
 Year: 2024
 
 Target: LIV-1
-
-💡 검색 예시: "LIV-1 타겟(Target)인 2023년 이후(Year) 특허(Type)만 찾아줘." (이게 가능해집니다.)
-
-4. Embedding Model (임베딩 모델)
-Model: OpenAI text-embedding-3-small
-
-Dimension: 1536
-
-Why: 가성비가 가장 좋고, 한국어와 영어가 섞여 있어도 성능이 준수합니다.
-
-Optimization: Matryoshka Representation Learning 기법을 지원하므로, 나중에 차원을 줄여서 속도를 높일 수도 있습니다.
-
-5. Development Specs (구현 상세)
 개발자가 작성해야 할 파이썬 코드(data_pipeline/parser/chunker.py)의 로직입니다.
 
 Python
