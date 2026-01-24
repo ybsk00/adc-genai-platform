@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # Proxy
+    PROXY_ENABLED: bool = False
+    PROXY_HOST: str = ""
+    PROXY_PORTS: str = ""
+    PROXY_USERNAME: str = ""
+    PROXY_PASSWORD: str = ""
+    PROXY_LOCATION: str = "us"
+    PROXY_ROTATING: bool = True
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

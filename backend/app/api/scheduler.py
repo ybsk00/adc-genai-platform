@@ -360,7 +360,7 @@ async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: O
     job_id = f"crawl_creative_{uuid4().hex[:8]}"
     data = {"id": job_id, "status": "queued", "source": "creative_biolabs", "started_at": datetime.utcnow().isoformat()}
     supabase.table("sync_jobs").insert(data).execute()
-    background_tasks.add_task(creative_crawler.run, search_term, 3, job_id)
+    background_tasks.add_task(creative_crawler.run, search_term, 10, job_id) # Default limit for simple run
     return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started.")
 
 @router.post("/crawler/creative-biolabs/run", response_model=SyncJobResponse)
@@ -390,6 +390,35 @@ async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, catego
             raise HTTPException(status_code=400, detail=f"Invalid category. Available: {list(creative_crawler.CATEGORIES.keys())}")
             
         background_tasks.add_task(creative_crawler.crawl_category, category, url, limit)
+    
+    return SyncJobResponse(job_id=job_id, status="queued", message=message)
+
+@router.post("/crawler/ambeed/run", response_model=SyncJobResponse)
+async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = "all", limit: int = 10):
+    """Ambeed Stealth Crawler 실행"""
+    from app.services.ambeed_crawler import ambeed_crawler
+    
+    job_id = f"crawl_ambeed_{uuid4().hex[:8]}"
+    
+    data = {
+        "id": job_id, 
+        "status": "running", 
+        "source": "ambeed", 
+        "started_at": datetime.utcnow().isoformat()
+    }
+    supabase.table("sync_jobs").insert(data).execute()
+    
+    if category == "all":
+        # Run for all categories
+        # Note: This might spawn multiple background tasks. 
+        # For simplicity, we'll just pass 'all' to the run method if it supported it, 
+        # but the run method in AmbeedCrawler (like Creative) iterates if search_term is provided.
+        # Let's use the run method which orchestrates it.
+        background_tasks.add_task(ambeed_crawler.run, "all", limit, job_id)
+        message = f"Ambeed crawler started for ALL categories (limit={limit})."
+    else:
+        background_tasks.add_task(ambeed_crawler.run, category, limit, job_id)
+        message = f"Ambeed crawler started for {category} (limit={limit})."
     
     return SyncJobResponse(job_id=job_id, status="queued", message=message)
 

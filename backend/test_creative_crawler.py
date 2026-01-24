@@ -1,45 +1,40 @@
 import asyncio
 import logging
+import sys
+import os
+from dotenv import load_dotenv
+
+# Load .env explicitly
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+
+# Add backend directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+
 from app.services.creative_biolabs_crawler import creative_crawler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def test_crawler():
-    print("🚀 Testing Creative Biolabs Stealth Crawler...")
+    logger.info("🧪 Starting Creative Biolabs Crawler Test...")
     
-    # 1. Test PubChem API
-    print("\n🧪 [Step 1] Testing PubChem API (Mylotarg CAS: 220572-57-0)...")
-    smiles = await creative_crawler._fetch_pubchem_smiles("220572-57-0")
-    print(f"   Result: {smiles}")
-    if smiles:
-        print("   ✅ PubChem API Passed")
-    else:
-        print("   ❌ PubChem API Failed")
-        
-    # 2. Test Gemini Enrichment
-    print("\n🧪 [Step 2] Testing Gemini Enrichment...")
-    desc = "Mylotarg is a CD33-directed antibody-drug conjugate (ADC)."
-    data = await creative_crawler._enrich_with_gemini(desc)
-    print(f"   Result: {data}")
-    if data.get("target") == "CD33":
-        print("   ✅ Gemini Enrichment Passed")
-    else:
-        print("   ❌ Gemini Enrichment Failed")
+    # Test specific category: ADC Linker
+    category = "ADC Linker"
+    url = creative_crawler.CATEGORIES.get(category)
+    
+    if not url:
+        logger.error(f"Category {category} not found!")
+        return
 
-    # 3. Test Browser Launch (Stealth)
-    print("\n🧪 [Step 3] Testing Playwright Stealth...")
+    logger.info(f"Target URL: {url}")
+    
+    # Run crawler with limit 5 (small batch for testing)
     try:
-        from playwright.async_api import async_playwright
-        async with async_playwright() as p:
-            context = await creative_crawler._init_browser(p)
-            page = await context.new_page()
-            await page.goto("https://bot.sannysoft.com/")
-            await page.screenshot(path="stealth_check.png")
-            print("   ✅ Browser Launched & Screenshot Saved (stealth_check.png)")
-            await context.close()
+        count = await creative_crawler.crawl_category(category, url, limit=5)
+        logger.info(f"✅ Test Complete. Processed {count} items.")
     except Exception as e:
-        print(f"   ❌ Browser Test Failed: {e}")
+        logger.error(f"❌ Test Failed: {e}")
 
 if __name__ == "__main__":
     asyncio.run(test_crawler())

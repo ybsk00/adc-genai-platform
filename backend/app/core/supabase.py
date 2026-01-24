@@ -13,6 +13,8 @@ class MockSupabaseClient:
         return self
     def update(self, *args, **kwargs):
         return self
+    def upsert(self, *args, **kwargs):
+        return self
     def eq(self, *args, **kwargs):
         return self
     def order(self, *args, **kwargs):

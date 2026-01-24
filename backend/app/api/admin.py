@@ -641,15 +641,44 @@ class CrawlerRunRequest(BaseModel):
 async def run_ambeed_crawler(req: CrawlerRunRequest, background_tasks: BackgroundTasks):
     """
     Ambeed Stealth Crawler 실행 (Background)
+    Uses the advanced AmbeedCrawler with AI enrichment.
     """
     try:
-        scraper = AmbeedStealthScraper()
-        background_tasks.add_task(scraper.run, req.category, req.max_pages)
+        from app.services.ambeed_crawler import ambeed_crawler
+        
+        # Map frontend category to crawler search term if needed, or pass directly
+        # Frontend sends: "Payload", "Linker", "Conjugate"
+        # Crawler expects keys in CATEGORIES or "all"
+        
+        # Mapping logic (can be moved to crawler, but doing here for clarity)
+        category_map = {
+            "Payload": "ADC Toxins", # or ADC Cytotoxin
+            "Linker": "ADC Linkers",
+            "Conjugate": "ADC Cytotoxin" # Placeholder if no specific conjugate category
+        }
+        
+        search_term = category_map.get(req.category, req.category)
+        
+        # Convert max_pages to limit (approx 20 items per page)
+        limit = req.max_pages * 20
+        
+        job_id = f"crawl_ambeed_{uuid4().hex[:8]}"
+        
+        data = {
+            "id": job_id, 
+            "status": "queued", 
+            "source": "ambeed", 
+            "started_at": datetime.utcnow().isoformat()
+        }
+        supabase.table("sync_jobs").insert(data).execute()
+        
+        background_tasks.add_task(ambeed_crawler.run, search_term, limit, job_id)
         
         return {
             "status": "started",
-            "message": f"Ambeed crawler started for category: {req.category}",
-            "mode": "stealth"
+            "message": f"Ambeed crawler started for {req.category} (limit={limit})",
+            "job_id": job_id,
+            "mode": "stealth_ai"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,0 +1,3 @@
+🧪 Testing DB Insert...
+✅ Insert V1 (no source_name) Success!
+❌ Insert V2 Failed: {'message': "Could not find the 'source_name' column of 'commercial_reagents' in the schema cache", 'code': 'PGRST204', 'hint': None, 'details': None}

@@ -12,7 +12,7 @@ import { DataSourcesTab } from '@/components/admin/data/DataSourcesTab'
 import { StagingAreaTab } from '@/components/admin/data/StagingAreaTab'
 import { GoldenSetLibraryTab } from '@/components/admin/data/GoldenSetLibraryTab'
 import { KnowledgeBaseTab } from '@/components/admin/data/KnowledgeBaseTab'
-import { CommercialCrawlerTab } from '@/components/admin/data/CommercialCrawlerTab'
+// import { CommercialCrawlerTab } from '@/components/admin/data/CommercialCrawlerTab'
 
 export function DataOperations() {
     return (
@@ -44,10 +44,7 @@ export function DataOperations() {
                         <FileText className="w-4 h-4 mr-2" />
                         Knowledge Base
                     </TabsTrigger>
-                    <TabsTrigger value="crawler" className="data-[state=active]:bg-slate-800 text-slate-400 data-[state=active]:text-white">
-                        <Bot className="w-4 h-4 mr-2" />
-                        Commercial DB
-                    </TabsTrigger>
+                    {/* Commercial DB 탭 제거됨 */}
                 </TabsList>
 
                 <TabsContent value="sources">
@@ -66,9 +63,7 @@ export function DataOperations() {
                     <KnowledgeBaseTab />
                 </TabsContent>
 
-                <TabsContent value="crawler">
-                    <CommercialCrawlerTab />
-                </TabsContent>
+                {/* Commercial DB 콘텐츠 제거됨 */}
             </Tabs>
         </div>
     )

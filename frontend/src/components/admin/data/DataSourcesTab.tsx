@@ -80,6 +80,16 @@ export function DataSourcesTab() {
             endpoint: `${API_BASE_URL}/api/scheduler/crawler/creative/run`
         },
         {
+            id: 'ambeed',
+            name: 'Ambeed (ADC Toxins)',
+            description: 'Commercial reagents → commercial_reagents',
+            lastSync: 'Not synced',
+            status: 'synced',
+            recordCount: 0,
+            estimatedTime: '10 min',
+            endpoint: `${API_BASE_URL}/api/scheduler/crawler/ambeed/run`
+        },
+        {
             id: 'ai_refiner',
             name: 'AI Refiner',
             description: 'Process pending records with LLM analysis',
@@ -328,7 +338,7 @@ export function DataSourcesTab() {
                                                 <Settings className="w-4 h-4" />
                                             </Button>
 
-                                            {source.id === 'bulk_import' || source.id === 'pubmed' || source.id === 'openfda' || source.id === 'creative' ? (
+                                            {source.id === 'bulk_import' || source.id === 'pubmed' || source.id === 'openfda' || source.id === 'creative' || source.id === 'ambeed' ? (
                                                 <>
                                                     <Button
                                                         variant="outline"
@@ -337,7 +347,7 @@ export function DataSourcesTab() {
                                                         onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
                                                             source.id === 'pubmed'
                                                                 ? { mode: 'incremental', batch_size: '100' }
-                                                                : source.id === 'creative'
+                                                                : source.id === 'creative' || source.id === 'ambeed'
                                                                     ? { category: 'all', limit: '10' }
                                                                     : { mode: 'daily' }
                                                         )}
@@ -352,7 +362,7 @@ export function DataSourcesTab() {
                                                         onClick={() => isSyncing ? handleStop(source.id, source.jobId) : handleSync(source.id, source.endpoint,
                                                             source.id === 'pubmed'
                                                                 ? { mode: 'full', batch_size: '5000' }
-                                                                : source.id === 'creative'
+                                                                : source.id === 'creative' || source.id === 'ambeed'
                                                                     ? { category: 'all', limit: '1000' }
                                                                     : { mode: 'full' }
                                                         )}

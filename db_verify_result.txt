@@ -1,0 +1,73 @@
+🔍 Verifying DB Results...
+✅ Found 5 records:
+--------------------------------------------------
+{'cas_number': None,
+ 'crawled_at': '2026-01-23T09:15:27.152335+00:00',
+ 'price_data': [],
+ 'product_name': 'ADC Linker Products - Creative Biolabs',
+ 'product_url': 'https://www.creative-biolabs.com/adc/classify-adc-linkers-7.htm',
+ 'properties': {'formula': None, 'mw': None, 'purity': '>95%'},
+ 'smiles_code': None,
+ 'summary': 'Creative Biolabs offers a comprehensive range of chemically '
+            'versatile DrugLnk™ ADC Linkers, essential for antibody-drug '
+            'conjugate (ADC) development projects. These linkers, boasting '
+            'over 95% purity, serve as fundamental building blocks to '
+            'conjugate toxins to antibodies and dictate the crucial drug '
+            'release mechanism, thereby enhancing ADC stability. The diverse '
+            'selection includes cleavable types such as pH-sensitive, '
+            'disulfide, peptide, and β-glucuronide linkers, as well as '
+            'non-cleavable options, with specialized services for custom '
+            'linker design and synthesis available.',
+ 'target': None}
+--------------------------------------------------
+{'cas_number': None,
+ 'crawled_at': '2026-01-23T09:15:17.806262+00:00',
+ 'price_data': [],
+ 'product_name': 'Val-Cit-PAB - Creative Biolabs',
+ 'product_url': 'https://www.creative-biolabs.com/adc/val-cit-pab-855.htm',
+ 'properties': {'formula': None, 'mw': '379.45', 'purity': '95%'},
+ 'smiles_code': None,
+ 'summary': 'Val-Cit-PAB (CAT#: ADC-L-007) is an ADCs linker, categorized '
+            'under the DrugLnk™ Linker-Payloads series. It functions as a '
+            'precursor for the synthesis of MC-Val-Cit-PAB, essential for '
+            'Antibody-Drug Conjugate development. This product is strictly for '
+            'research use only and is not intended for clinical applications.',
+ 'target': None}
+--------------------------------------------------
+{'cas_number': None,
+ 'crawled_at': '2026-01-23T09:15:05.701207+00:00',
+ 'price_data': [],
+ 'product_name': 'Products - Creative Biolabs',
+ 'product_url': 'https://www.creative-biolabs.com/adc/classify-products-5.htm',
+ 'properties': {},
+ 'smiles_code': None,
+ 'summary': 'Creative Biolabs offers a diverse inventory of ADC products '
+            'designed to serve as essential building blocks for antibody-drug '
+            'conjugate development and accelerate research progress. These '
+            'products encompass customized ADCs, pre-coupled drug-linker '
+            'complexes, and individual cytotoxic payload drugs and linkers, '
+            'covering all prerequisites for efficacious ADC creation. '
+            'Researchers can utilize these offerings for applications like '
+            'concept proof, target validation, and as positive or negative '
+            'controls in the development of new ADCs.',
+ 'target': None}
+--------------------------------------------------
+{'cas_number': None,
+ 'crawled_at': '2026-01-23T08:16:40.528823+00:00',
+ 'price_data': None,
+ 'product_name': 'Test Product 1',
+ 'product_url': None,
+ 'properties': None,
+ 'smiles_code': None,
+ 'summary': None,
+ 'target': None}
+--------------------------------------------------
+{'cas_number': None,
+ 'crawled_at': '2026-01-01T00:00:00+00:00',
+ 'price_data': None,
+ 'product_name': 'Direct Insert Test',
+ 'product_url': None,
+ 'properties': None,
+ 'smiles_code': None,
+ 'summary': None,
+ 'target': None}
