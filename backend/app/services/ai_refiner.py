@@ -15,6 +15,7 @@ from app.services.cost_tracker import cost_tracker
 from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class AIRefiner:
     # ADC 관련 키워드 (Pre-filtering용)

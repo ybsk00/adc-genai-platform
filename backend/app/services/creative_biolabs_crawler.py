@@ -64,13 +64,16 @@ class CreativeBiolabsCrawler:
                         .filter(href => href.includes('.htm') && !href.includes('index.htm') && !href.includes('classify-'))
                 """)
                 links = list(set(links))[:limit]
+                logger.debug(f"🔎 Found {len(links)} links in {category_name}")
+                if not links:
+                    logger.warning(f"⚠️ No links found for {category_name} at {base_url}")
                 for link in links:
                     res = await self._process_single_product(context, link, category_name)
                     if res:
                         await self._enrich_and_save_single(res)
                         count += 1
             except Exception as e:
-                logger.error(f"Error in crawl_category: {e}")
+                logger.error(f"Error in crawl_category {category_name}: {e}", exc_info=True)
             finally:
                 await context.close()
         return count
@@ -110,7 +113,9 @@ class CreativeBiolabsCrawler:
                     "source_name": "Creative Biolabs",
                     "crawled_at": datetime.utcnow().isoformat()
                 }
-            except: return None
+            except Exception as e:
+                logger.error(f"Failed to process {url}: {e}")
+                return None
             finally: await page.close()
 
     async def _enrich_with_gemini(self, raw_data: Dict) -> Dict:

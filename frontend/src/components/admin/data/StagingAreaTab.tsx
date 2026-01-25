@@ -72,7 +72,9 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
             })
             
             SmilesDrawer.parse(smiles, (tree: any) => {
-                drawer.draw(tree, canvasRef.current, 'light', false)
+                if (canvasRef.current) {
+                    drawer.draw(tree, canvasRef.current, 'light', false)
+                }
             }, (err: any) => {
                 console.warn('SMILES Parse Error:', err)
             })

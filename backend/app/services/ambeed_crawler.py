@@ -216,6 +216,9 @@ class AmbeedCrawler:
                             .filter(href => (href.includes('/products/') || href.includes('/record/')) && !href.includes('google') && !href.includes('javascript'))
                     """)
                     links = list(set(links))
+                    logger.debug(f"🔎 Found {len(links)} links on page {page_num} ({category_name})")
+                    if not links:
+                        logger.warning(f"⚠️ No links found on page {page_num} ({category_name}). HTML content length: {len(await page.content())}")
                     
                     if not links:
                         logger.info(f"   ⚠️ No links found on page {page_num} ({category_name}).")
@@ -249,7 +252,7 @@ class AmbeedCrawler:
                     page_num += 1
                     
             except Exception as e:
-                logger.error(f"🔥 Critical error in category {category_name}: {e}")
+                logger.error(f"🔥 Critical error in category {category_name}: {e}", exc_info=True)
             finally:
                 await context.close()
         
