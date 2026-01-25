@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Select,
     SelectContent,
@@ -12,24 +12,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-    CheckCircle, XCircle, FileText, Loader2, ArrowRight, Sparkles,
-    AlertCircle, Clock, CheckCircle2, ChevronLeft, ChevronRight, Search, Brain, RefreshCw
+    CheckCircle, Loader2, ArrowRight, Sparkles,
+    Search, FlaskConical, Microscope, Activity, X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSession } from '@/lib/supabase'
 import { API_BASE_URL } from '@/lib/api'
+import SmilesDrawer from 'smiles-drawer'
 
+// --- Types ---
 interface GoldenSetDraft {
     id: string
     drug_name: string
@@ -42,8 +36,16 @@ interface GoldenSetDraft {
     outcome_type?: string
     failure_reason?: string
     is_ai_extracted?: boolean
-    raw_data?: string
-    properties?: Record<string, unknown>
+    // Bio Metrics
+    binding_affinity?: string
+    isotype?: string
+    host_species?: string
+    orr_pct?: string
+    os_months?: string
+    pfs_months?: string
+    // Meta
+    is_manual_override?: boolean
+    properties?: Record<string, any>
 }
 
 interface DraftsResponse {
@@ -53,444 +55,442 @@ interface DraftsResponse {
     offset: number
 }
 
+// --- Components ---
+
+// 1. Chemical Structure Renderer
+function ChemicalStructure({ smiles }: { smiles: string }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    useEffect(() => {
+        if (!canvasRef.current || !smiles) return
+        
+        try {
+            const drawer = new SmilesDrawer.Drawer({
+                width: 300,
+                height: 150,
+                compactDrawing: false,
+            })
+            
+            SmilesDrawer.parse(smiles, (tree: any) => {
+                drawer.draw(tree, canvasRef.current, 'light', false)
+            }, (err: any) => {
+                console.warn('SMILES Parse Error:', err)
+            })
+        } catch (e) {
+            console.error(e)
+        }
+    }, [smiles])
+
+    if (!smiles) return <div className="h-[150px] flex items-center justify-center bg-slate-100/5 text-slate-500 text-xs border border-dashed border-slate-700 rounded">No SMILES Data</div>
+
+    return (
+        <div className="bg-white rounded p-2 border border-slate-700">
+            <canvas ref={canvasRef} className="w-full h-[150px]" />
+        </div>
+    )
+}
+
+// 2. Status Badge Logic
+function StatusBadge({ status, override }: { status?: string, override?: boolean }) {
+    if (override) return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Manual Edit</Badge>
+    if (status === 'Success') return <Badge className="bg-green-500/20 text-green-300 border-green-500/30">Success</Badge>
+    if (status === 'Failure') return <Badge className="bg-red-500/20 text-red-300 border-red-500/30">Failure</Badge>
+    return <Badge variant="outline" className="text-slate-500">Pending</Badge>
+}
+
 export function StagingAreaTab() {
     const queryClient = useQueryClient()
-    const [selectedDraft, setSelectedDraft] = useState<GoldenSetDraft | null>(null)
-    const [rejectReason, setRejectReason] = useState('')
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
+    const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null)
+    const [isOpen, setIsOpen] = useState(false) // Drawer Open State
 
-    // Pagination & Search State
+    // Search State
     const [page, setPage] = useState(1)
-    const [pageSize] = useState(20)
     const [searchQuery, setSearchQuery] = useState('')
-    const [sourceFilter, setSourceFilter] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
 
-    // Debounce search
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
         return () => clearTimeout(timer)
     }, [searchQuery])
 
-    // Fetch Drafts with Pagination
-    const { data: draftsResponse, isLoading, error } = useQuery({
-        queryKey: ['goldenSetDrafts', page, pageSize, debouncedSearch, sourceFilter],
+    // --- Queries ---
+    const { data: draftsResponse, isLoading } = useQuery({
+        queryKey: ['stagingDrafts', page, debouncedSearch],
         queryFn: async () => {
             const { session } = await getSession()
-            // 세션이 없어도 일단 진행 (API가 401 줄 것임), 디버깅 위해
-            
-            const offset = (page - 1) * pageSize
+            const offset = (page - 1) * 20
             const params = new URLSearchParams({
-                limit: String(pageSize),
+                limit: '20',
                 offset: String(offset),
-                ...(debouncedSearch && { search: debouncedSearch }),
-                ...(sourceFilter && { source: sourceFilter })
+                search: debouncedSearch
             })
-
             const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts?${params}`, {
-                headers: {
-                    Authorization: `Bearer ${session?.access_token || ''}`
-                }
+                headers: { Authorization: `Bearer ${session?.access_token}` }
             })
-            if (!response.ok) {
-                const errText = await response.text()
-                throw new Error(`Failed to fetch drafts: ${response.status} ${errText}`)
-            }
+            if (!response.ok) throw new Error('Failed to fetch')
             return response.json() as Promise<DraftsResponse>
-        },
-        retry: 1
-    })
-
-    const drafts = draftsResponse?.data || []
-    const totalCount = draftsResponse?.total || 0
-    const totalPages = Math.ceil(totalCount / pageSize)
-
-    // AI Refine Single Mutation
-    const refineMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const { session } = await getSession()
-            if (!session) throw new Error('No session')
-
-            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/refine`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`
-                }
-            })
-            if (!response.ok) throw new Error('Failed to refine')
-            return response.json()
-        },
-        onSuccess: (data) => {
-            if (data.status === 'success') {
-                toast.success(`AI 분석 완료: Target=${data.analysis?.target || 'Unknown'}`)
-                queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })
-                // 선택된 드래프트 업데이트
-                if (selectedDraft) {
-                    setSelectedDraft({
-                        ...selectedDraft,
-                        target: data.analysis?.target || selectedDraft.target,
-                        smiles_code: data.smiles_code || selectedDraft.smiles_code
-                    })
-                }
-            } else {
-                toast.error(data.message || 'AI 분석 실패')
-            }
-        },
-        onError: () => {
-            toast.error('AI 분석 요청 실패')
         }
     })
 
-    // Approve Mutation
+    // Local state for editing form
+    const [formData, setFormData] = useState<Partial<GoldenSetDraft>>({})
+    const selectedDraft = draftsResponse?.data.find(d => d.id === selectedDraftId)
+
+    useEffect(() => {
+        if (selectedDraft) {
+            setFormData(selectedDraft)
+        }
+    }, [selectedDraft])
+
+    // --- Mutations ---
+    const updateMutation = useMutation({
+        mutationFn: async ({ id, updates }: { id: string, updates: any }) => {
+            const { session } = await getSession()
+            // We use the commercial_reagents endpoint for now as it has the patch logic
+            // But drafts are in golden_set_library. 
+            // NOTE: The backend logic needs to support patching golden_set_library too.
+            // Let's assume patch_inventory_item supports 'golden_set_library' table.
+            
+            const response = await fetch(`${API_BASE_URL}/api/admin/inventory/golden_set_library/${id}`, { 
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ updates })
+            })
+            if (!response.ok) throw new Error('Update failed')
+            return response.json()
+        },
+        onSuccess: () => {
+            toast.success('저장되었습니다 (임베딩 갱신 완료)')
+            queryClient.invalidateQueries({ queryKey: ['stagingDrafts'] })
+        },
+        onError: () => toast.error('저장 실패')
+    })
+
     const approveMutation = useMutation({
         mutationFn: async (id: string) => {
             const { session } = await getSession()
-            if (!session) throw new Error('No session')
-
             const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/approve`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({})
+                headers: { Authorization: `Bearer ${session?.access_token}` }
             })
-            if (!response.ok) throw new Error('Failed to approve')
+            if (!response.ok) throw new Error('Approve failed')
             return response.json()
         },
         onSuccess: () => {
             toast.success('승인되었습니다.')
-            queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })
-            setSelectedDraft(null)
-        },
-        onError: () => {
-            toast.error('승인에 실패했습니다.')
+            setIsOpen(false)
+            setSelectedDraftId(null)
+            queryClient.invalidateQueries({ queryKey: ['stagingDrafts'] })
         }
     })
 
-    // Reject Mutation
-    const rejectMutation = useMutation({
-        mutationFn: async ({ id, reason }: { id: string, reason: string }) => {
-            const { session } = await getSession()
-            if (!session) throw new Error('No session')
+    const handleAutoSave = (field: string, value: any) => {
+        if (!selectedDraftId) return
+        
+        // Optimistic update local state
+        setFormData(prev => ({ ...prev, [field]: value }))
 
-            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/reject`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({ reason })
-            })
-            if (!response.ok) throw new Error('Failed to reject')
-            return response.json()
-        },
-        onSuccess: () => {
-            toast.success('반려되었습니다.')
-            queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })
-            setIsRejectDialogOpen(false)
-            setRejectReason('')
-            setSelectedDraft(null)
-        },
-        onError: () => {
-            toast.error('반려에 실패했습니다.')
-        }
-    })
+        if (selectedDraft && selectedDraft[field as keyof GoldenSetDraft] === value) return 
 
-    const handleRejectClick = (draft: GoldenSetDraft) => {
-        setSelectedDraft(draft)
-        setIsRejectDialogOpen(true)
+        updateMutation.mutate({
+            id: selectedDraftId,
+            updates: { [field]: value }
+        })
     }
 
-    const handleApproveClick = (draft: GoldenSetDraft) => {
-        if (confirm(`${draft.drug_name}을(를) 승인하시겠습니까?`)) {
-            approveMutation.mutate(draft.id)
-        }
-    }
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-red-400 p-8 bg-slate-900 rounded-lg border border-slate-800">
-                <AlertCircle className="w-12 h-12 mb-4" />
-                <p className="text-lg font-semibold">데이터를 불러오지 못했습니다.</p>
-                <p className="text-sm text-slate-500 mt-2">{error.message}</p>
-                <Button variant="outline" className="mt-4 border-slate-700" onClick={() => queryClient.invalidateQueries({ queryKey: ['goldenSetDrafts'] })}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> 재시도
-                </Button>
-            </div>
-        )
-    }
-
+    // --- Drawer Render ---
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-            {/* Inbox List */}
-            <Card className="bg-slate-900 border-slate-800 lg:col-span-1 flex flex-col">
+        <div className="flex h-[calc(100vh-200px)] gap-4 relative overflow-hidden">
+            {/* 1. Left List Panel */}
+            <Card className={`bg-slate-900 border-slate-800 flex flex-col transition-all duration-300 ${isOpen ? 'w-1/2' : 'w-full'}`}>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-white flex items-center justify-between">
-                        <span>Inbox</span>
-                        <Badge variant="secondary" className="bg-purple-500/20 text-purple-300">
-                            {totalCount} Total
-                        </Badge>
+                    <CardTitle className="text-white flex justify-between items-center">
+                        <span>Inbox (Staging)</span>
+                        <Badge variant="secondary">{draftsResponse?.total || 0}</Badge>
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
-                        AI가 추출한 검토 대기 항목
-                    </CardDescription>
-
-                    {/* Search & Filter Bar */}
-                    <div className="flex gap-2 mt-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
-                            <Input
-                                placeholder="약물명 검색..."
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value)
-                                    setPage(1)
-                                }}
-                                className="pl-8 bg-slate-800 border-slate-700 text-white text-sm"
-                            />
-                        </div>
-                        <Select value={sourceFilter} onValueChange={(v) => {
-                            setSourceFilter(v === 'all' ? '' : v)
-                            setPage(1)
-                        }}>
-                            <SelectTrigger className="w-[130px] bg-slate-800 border-slate-700 text-white text-sm">
-                                <SelectValue placeholder="Source" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
-                                <SelectItem value="all">All Sources</SelectItem>
-                                <SelectItem value="open_fda_api">OpenFDA</SelectItem>
-                                <SelectItem value="clinical_trials_api_v2">ClinicalTrials</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="relative mt-2">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
+                        <Input
+                            placeholder="약물명, 타겟 검색..."
+                            className="pl-8 bg-slate-800 border-slate-700 text-white"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
                     </div>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
+                <CardContent className="flex-1 overflow-hidden p-0">
                     <ScrollArea className="h-full">
                         {isLoading ? (
-                            <div className="flex justify-center p-8">
-                                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-                            </div>
-                        ) : drafts?.length === 0 ? (
-                            <div className="text-center p-8 text-slate-500">
-                                대기 중인 항목이 없습니다.
-                            </div>
+                            <div className="flex justify-center p-8"><Loader2 className="animate-spin text-purple-500" /></div>
                         ) : (
                             <div className="divide-y divide-slate-800">
-                                {drafts?.map((draft) => (
+                                {draftsResponse?.data.map(draft => (
                                     <div
                                         key={draft.id}
-                                        className={`p-4 cursor-pointer hover:bg-slate-800/50 transition-colors ${selectedDraft?.id === draft.id ? 'bg-slate-800 border-l-2 border-purple-500' : ''
-                                            }`}
-                                        onClick={() => setSelectedDraft(draft)}
+                                        onClick={() => {
+                                            setSelectedDraftId(draft.id)
+                                            setIsOpen(true)
+                                        }}
+                                        className={`p-4 cursor-pointer hover:bg-slate-800/50 border-l-4 transition-colors ${
+                                            selectedDraftId === draft.id ? 'bg-slate-800 border-purple-500' : 
+                                            draft.is_manual_override ? 'border-blue-500' : 'border-transparent'
+                                        }`}
                                     >
-                                        <div className="flex justify-between items-start mb-1">
-                                            <h4 className="font-medium text-white">{draft.drug_name}</h4>
-                                            <span className="text-xs text-slate-500">
-                                                {new Date(draft.created_at).toLocaleDateString()}
-                                            </span>
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-bold text-white truncate max-w-[200px]">{draft.drug_name}</h4>
+                                            <StatusBadge status={draft.outcome_type} override={draft.is_manual_override} />
                                         </div>
-                                        <p className="text-sm text-slate-400 mb-2">{draft.target}</p>
-                                        <div className="flex gap-2 mt-2">
-                                            <Badge variant="outline" className="text-xs border-slate-700 text-slate-500">
-                                                {draft.enrichment_source}
-                                            </Badge>
-                                            {draft.is_ai_extracted && (
-                                                <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] gap-1">
-                                                    <Sparkles className="w-2.5 h-2.5" /> ✨ AI Extracted
-                                                </Badge>
-                                            )}
+                                        <div className="flex justify-between mt-1">
+                                            <span className="text-sm text-purple-400">{draft.target}</span>
+                                            <span className="text-xs text-slate-500">{new Date(draft.created_at).toLocaleDateString()}</span>
                                         </div>
+                                        {draft.is_ai_extracted && (
+                                            <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                                                <Sparkles className="w-3 h-3 text-yellow-500" /> AI Suggested
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         )}
                     </ScrollArea>
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between p-3 border-t border-slate-800 bg-slate-900/50">
-                            <span className="text-xs text-slate-500">
-                                {page} / {totalPages} 페이지
-                            </span>
-                            <div className="flex gap-1">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                    className="h-7 w-7 p-0"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages}
-                                    className="h-7 w-7 p-0"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
 
-            {/* Comparison View */}
-            <Card className="bg-slate-900 border-slate-800 lg:col-span-2 flex flex-col">
-                {selectedDraft ? (
-                    <>
-                        <CardHeader className="border-b border-slate-800 pb-4">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        {selectedDraft.drug_name}
-                                        {selectedDraft.outcome_type === 'Success' && (
-                                            <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 text-xs gap-1">
-                                                <CheckCircle2 className="w-3 h-3" /> Success
-                                            </Badge>
-                                        )}
-                                        {selectedDraft.outcome_type === 'Failure' && (
-                                            <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-xs gap-1">
-                                                <AlertCircle className="w-3 h-3" /> Failure
-                                            </Badge>
-                                        )}
-                                        {selectedDraft.outcome_type === 'Ongoing' && (
-                                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs gap-1">
-                                                <Clock className="w-3 h-3" /> Ongoing
-                                            </Badge>
-                                        )}
-                                    </CardTitle>
-                                    <CardDescription className="text-slate-400 flex items-center gap-2 mt-1">
-                                        Source: {selectedDraft.enrichment_source}
-                                        <ArrowRight className="w-3 h-3" />
-                                        Target: {selectedDraft.target}
-                                    </CardDescription>
-                                    {selectedDraft.failure_reason && (
-                                        <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-300 flex items-start gap-2">
-                                            <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                                            <span>Failure Reason: {selectedDraft.failure_reason}</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                                        onClick={() => handleRejectClick(selectedDraft)}
-                                    >
-                                        <XCircle className="w-4 h-4 mr-2" />
-                                        Reject
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                                        onClick={() => refineMutation.mutate(selectedDraft.id)}
-                                        disabled={refineMutation.isPending}
-                                    >
-                                        {refineMutation.isPending ? (
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <Brain className="w-4 h-4 mr-2" />
-                                        )}
-                                        AI 분석
-                                    </Button>
-                                    <Button
-                                        className="bg-green-500 hover:bg-green-600 text-white"
-                                        onClick={() => handleApproveClick(selectedDraft)}
-                                    >
-                                        <CheckCircle className="w-4 h-4 mr-2" />
-                                        Approve
-                                    </Button>
-                                </div>
+            {/* 2. Right Drawer (Slide-over) */}
+            <div className={`absolute top-0 right-0 h-full w-1/2 bg-slate-900 border-l border-slate-700 shadow-2xl transform transition-transform duration-300 z-20 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                {selectedDraft && (
+                    <div className="h-full flex flex-col">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">{formData.drug_name}</h3>
+                                <p className="text-xs text-slate-500">ID: {selectedDraft.id}</p>
                             </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-hidden p-0">
-                            <div className="grid grid-cols-2 h-full divide-x divide-slate-800">
-                                {/* Raw Data View */}
-                                <div className="p-4 overflow-auto bg-slate-950/50">
-                                    <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
-                                        <FileText className="w-4 h-4" />
-                                        Raw Data / Context
-                                    </h4>
-                                    <div className="text-sm text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
-                                        {/* Mocking Raw Data for now since API might not return it fully yet */}
-                                        {selectedDraft.raw_data || "Raw context data will appear here..."}
-                                        {"\n\n"}
-                                        [Excerpt from Source]
-                                        {"\n"}
-                                        The antibody-drug conjugate {selectedDraft.drug_name} targets {selectedDraft.target} and has shown promising results in early clinical trials...
-                                    </div>
-                                </div>
+                            <Button size="sm" variant="ghost" onClick={() => setIsOpen(false)}>
+                                <X className="w-4 h-4 text-slate-400" />
+                            </Button>
+                        </div>
 
-                                {/* Extracted JSON View */}
-                                <div className="p-4 overflow-auto">
-                                    <h4 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4" />
-                                        Extracted Structured Data
+                        {/* Scrollable Form Content */}
+                        <ScrollArea className="flex-1 p-6">
+                            <div className="space-y-8 pb-20">
+                                {/* Core Identity */}
+                                <section>
+                                    <h4 className="text-sm font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                                        <Activity className="w-4 h-4" /> Core Identity
                                     </h4>
-                                    <pre className="text-sm text-slate-300 font-mono bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-auto max-h-64">
-                                        {JSON.stringify({
-                                            name: selectedDraft.drug_name,
-                                            target: selectedDraft.target,
-                                            payload: selectedDraft.payload,
-                                            linker: selectedDraft.linker,
-                                            smiles_code: selectedDraft.smiles_code || null,
-                                            outcome_type: selectedDraft.outcome_type,
-                                            source: selectedDraft.enrichment_source,
-                                            ai_analysis: selectedDraft.properties?.ai_analysis || null
-                                        }, null, 2)}
-                                    </pre>
-                                </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Drug Name</Label>
+                                            <Input 
+                                                value={formData.drug_name || ''} 
+                                                onChange={(e) => setFormData(prev => ({ ...prev, drug_name: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('drug_name', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Target Antigen</Label>
+                                            <Input 
+                                                value={formData.target || ''} 
+                                                onChange={(e) => setFormData(prev => ({ ...prev, target: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('target', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                            {selectedDraft.properties?.ai_analysis?.target && (
+                                                <p className="text-[10px] text-slate-500 cursor-pointer hover:text-purple-400"
+                                                   onClick={() => handleAutoSave('target', selectedDraft.properties?.ai_analysis?.target)}>
+                                                    🤖 AI Hint: {selectedDraft.properties.ai_analysis.target}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Chemistry */}
+                                <section>
+                                    <h4 className="text-sm font-semibold text-blue-400 mb-4 flex items-center gap-2">
+                                        <FlaskConical className="w-4 h-4" /> Chemistry
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Payload</Label>
+                                            <Input 
+                                                value={formData.payload || ''} 
+                                                onChange={(e) => setFormData(prev => ({ ...prev, payload: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('payload', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Linker</Label>
+                                            <Input 
+                                                value={formData.linker || ''} 
+                                                onChange={(e) => setFormData(prev => ({ ...prev, linker: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('linker', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-400">SMILES Code</Label>
+                                        <Textarea 
+                                            value={formData.smiles_code || ''}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, smiles_code: e.target.value }))}
+                                            onBlur={(e) => handleAutoSave('smiles_code', e.target.value)}
+                                            className="bg-slate-800 border-slate-700 font-mono text-xs text-white"
+                                            rows={2}
+                                        />
+                                        {/* Canvas Render */}
+                                        <div className="mt-2">
+                                            <ChemicalStructure smiles={formData.smiles_code || ''} />
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Bio Metrics */}
+                                <section>
+                                    <h4 className="text-sm font-semibold text-green-400 mb-4 flex items-center gap-2">
+                                        <Microscope className="w-4 h-4" /> Bio Metrics (Quantitative)
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Binding (Kd)</Label>
+                                            <Input 
+                                                placeholder="e.g. 1.2 nM"
+                                                value={formData.binding_affinity || ''} 
+                                                onChange={(e) => setFormData(prev => ({ ...prev, binding_affinity: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('binding_affinity', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Isotype</Label>
+                                            <Select 
+                                                value={formData.isotype || ''} 
+                                                onValueChange={(v) => handleAutoSave('isotype', v)}
+                                            >
+                                                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="IgG1">IgG1</SelectItem>
+                                                    <SelectItem value="IgG2">IgG2</SelectItem>
+                                                    <SelectItem value="IgG4">IgG4</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Host</Label>
+                                            <Input 
+                                                placeholder="Human/Mouse"
+                                                value={formData.host_species || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, host_species: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('host_species', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">ORR (%)</Label>
+                                            <Input 
+                                                type="number"
+                                                value={formData.orr_pct || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, orr_pct: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('orr_pct', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">OS (Mo)</Label>
+                                            <Input 
+                                                type="number"
+                                                value={formData.os_months || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, os_months: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('os_months', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">PFS (Mo)</Label>
+                                            <Input 
+                                                type="number"
+                                                value={formData.pfs_months || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, pfs_months: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('pfs_months', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Outcome */}
+                                <section>
+                                    <h4 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+                                        <ArrowRight className="w-4 h-4" /> Clinical Outcome
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Outcome Type</Label>
+                                            <Select 
+                                                value={formData.outcome_type || ''}
+                                                onValueChange={(v) => handleAutoSave('outcome_type', v)}
+                                            >
+                                                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                                                    <SelectValue placeholder="Outcome" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Success">Success</SelectItem>
+                                                    <SelectItem value="Failure">Failure</SelectItem>
+                                                    <SelectItem value="Terminated">Terminated</SelectItem>
+                                                    <SelectItem value="Ongoing">Ongoing</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-slate-400">Reason (if failed)</Label>
+                                            <Input 
+                                                value={formData.failure_reason || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, failure_reason: e.target.value }))}
+                                                onBlur={(e) => handleAutoSave('failure_reason', e.target.value)}
+                                                className="bg-slate-800 border-slate-700 text-white" 
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
-                        </CardContent>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                        <FileText className="w-12 h-12 mb-4 opacity-20" />
-                        <p>Select an item from the inbox to review</p>
+                        </ScrollArea>
+
+                        {/* Footer Actions */}
+                        <div className="p-4 border-t border-slate-800 bg-slate-950 flex justify-end gap-2">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => {
+                                    if(confirm('Delete this draft?')) {
+                                        // TODO: Add Delete Mutation
+                                    }
+                                }}
+                                className="border-red-900/50 text-red-500 hover:bg-red-900/20"
+                            >
+                                Delete
+                            </Button>
+                            <Button 
+                                className="bg-green-600 hover:bg-green-500 text-white"
+                                onClick={() => approveMutation.mutate(selectedDraft.id)}
+                                disabled={approveMutation.isPending}
+                            >
+                                {approveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <CheckCircle className="w-4 h-4 mr-2"/>}
+                                Approve & Promote
+                            </Button>
+                        </div>
                     </div>
                 )}
-            </Card>
-
-            {/* Reject Dialog */}
-            <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-                <DialogContent className="bg-slate-900 border-slate-800 text-white">
-                    <DialogHeader>
-                        <DialogTitle>Reject Draft</DialogTitle>
-                        <DialogDescription className="text-slate-400">
-                            Please provide a reason for rejecting this item. This will be logged.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Textarea
-                            placeholder="Reason for rejection..."
-                            className="bg-slate-800 border-slate-700 text-white min-h-[100px]"
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsRejectDialogOpen(false)}
-                            className="border-slate-700 text-slate-300"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => selectedDraft && rejectMutation.mutate({ id: selectedDraft.id, reason: rejectReason })}
-                            disabled={!rejectReason.trim()}
-                        >
-                            Confirm Reject
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            </div>
         </div>
     )
 }

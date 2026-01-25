@@ -1031,31 +1031,49 @@ class PatchRequest(BaseModel):
 async def patch_inventory_item(table: str, id: str, req: PatchRequest, background_tasks: BackgroundTasks):
     """
     공통 인라인 수정 (수동 편집)
-    수정 시 자동으로 Embedding 재생성 트리거 (RAG Sync)
+    수정 시 자동으로 Embedding 재생성 및 수동 수정 플래그 설정
     """
     valid_tables = ["commercial_reagents", "knowledge_base", "golden_set_library"]
     if table not in valid_tables:
         raise HTTPException(status_code=400, detail="Invalid table")
         
     try:
-        # 1. Update DB
-        # Add metadata flag? 'user_modified': True (Schema dependent, skipping for now)
         updates = req.updates
-        # Filter out dangerous fields if necessary
         
+        # 1. 수동 수정 플래그 설정 (commercial_reagents 전용)
+        if table == "commercial_reagents":
+            updates["is_manual_override"] = True
+            updates["ai_refined"] = True  # 사람이 고쳤으므로 정제된 것으로 간주
+
+        # 2. 임베딩 실시간 재생성 (RAG 동기화)
+        # 수정된 내용 + 기존 내용을 합쳐서 새로운 벡터 생성
+        try:
+            # 기존 레코드 조회 (텍스트 조합용)
+            existing = supabase.table(table).select("*").eq("id", id).execute()
+            if existing.data:
+                item = existing.data[0]
+                # 새로운 텍스트 조합 (수정된 값 우선, 없으면 기존 값)
+                name = updates.get("product_name") or updates.get("name") or updates.get("title") or item.get("product_name") or item.get("name") or item.get("title") or ""
+                target = updates.get("target") or item.get("target") or ""
+                summary = updates.get("summary") or item.get("summary") or ""
+                
+                # 정량 지표 추가 (검색 품질 향상)
+                kd = updates.get("binding_affinity") or item.get("binding_affinity") or ""
+                
+                combined_text = f"{name} {target} {summary} {kd}".strip()
+                
+                if combined_text:
+                    new_embedding = await rag_service.generate_embedding(combined_text)
+                    if new_embedding:
+                        updates["embedding"] = new_embedding
+        except Exception as embed_error:
+            print(f"Embedding regeneration failed: {embed_error}")
+            # 임베딩 실패해도 데이터 저장은 진행
+
+        # 3. DB 업데이트
         res = supabase.table(table).update(updates).eq("id", id).execute()
         
-        # 2. Trigger RAG Sync (Re-embedding)
-        # We need to know which text fields to re-embed based on table
-        if table == "commercial_reagents":
-             # We can reuse batch logic or just create a simple task
-             pass # Logic handles in batch script mostly, but for real-time:
-             # Call RAG service to re-embed this single item
-             # For now, just logging or relying on batch re-index
-             # Ideally: background_tasks.add_task(reindex_item, table, id)
-             pass
-        
-        return {"status": "success", "message": "Item updated"}
+        return {"status": "success", "message": "Item updated and re-indexed", "data": res.data[0] if res.data else None}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
