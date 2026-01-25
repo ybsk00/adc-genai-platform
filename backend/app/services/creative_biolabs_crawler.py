@@ -70,22 +70,47 @@ class CreativeBiolabsCrawler:
             logger.error(f"🔥 Browser Launch Failed: {e}")
             raise e
 
-    async def crawl_category(self, category_name: str, base_url: str, limit: int = 1000) -> int:
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 1000, job_id: str = None) -> int:
         logger.info(f"🚀 [CRAWL START] Category: {category_name} | URL: {base_url}")
+        from app.api.scheduler import update_job_status, get_job_from_db, is_cancelled
+        
         count = 0
+        batch_data = []
+        start_page_offset = 0
+        
+        # 1. Offset 관리
+        if job_id:
+            job_data = await get_job_from_db(job_id)
+            if job_data and job_data.get("last_processed_page"):
+                start_page_offset = job_data["last_processed_page"]
+                logger.info(f"⏭️ Skipping {start_page_offset} pages based on last_processed_page")
+
         async with async_playwright() as p:
             try:
                 context = await self._init_browser(p)
                 page = await context.new_page()
                 current_url = base_url.strip().replace("biollabs", "biolabs").replace("--", "-").replace("..", ".")
-                processed_pages = set()
+                processed_pages_count = 0
+                
                 while current_url and count < limit:
-                    if current_url in processed_pages: break
-                    processed_pages.add(current_url)
-                    logger.info(f"📄 Scraping Page: {current_url}")
+                    if job_id and await is_cancelled(job_id):
+                        logger.info("🛑 Job cancelled.")
+                        break
+
+                    # Skip pages based on offset
+                    if processed_pages_count < start_page_offset:
+                        logger.info(f"⏩ Skipping page (offset): {current_url}")
+                        await page.goto(current_url, wait_until="domcontentloaded", timeout=45000)
+                        next_page = await self._get_next_page_url(page)
+                        current_url = next_page if next_page and next_page != current_url else None
+                        processed_pages_count += 1
+                        continue
+
+                    logger.info(f"📄 Scraping Page: {current_url} (Page Index: {processed_pages_count})")
                     try:
                         await page.goto(current_url, wait_until="domcontentloaded", timeout=45000)
                         await asyncio.sleep(4)
+                        
                         links = await page.evaluate(r"""
                             () => Array.from(document.querySelectorAll('a'))
                                 .map(a => a.href)
@@ -98,31 +123,100 @@ class CreativeBiolabsCrawler:
                         )
                         product_links = list(set(links))
                         logger.info(f"🔎 Found {len(product_links)} product links.")
+                        
                         for link in product_links:
                             if count >= limit: break
+                            
+                            # 2. ID 기반 필터링
+                            cat_no = f"CB-{link.split('/')[-1].replace('.htm', '')}"
+                            existing = supabase.table("commercial_reagents").select("id").eq("ambeed_cat_no", cat_no).execute()
+                            if existing.data:
+                                logger.info(f"⏩ Skipping existing product: {cat_no}")
+                                continue
+
                             res = await self._process_single_product(context, link, category_name)
                             if res:
-                                await self._enrich_and_save_single(res)
-                                count += 1
+                                final_item = await self._enrich_and_prepare_item(res)
+                                if final_item:
+                                    batch_data.append(final_item)
+                                    count += 1
+                                    
+                                    # 3. 20개 단위 배치 저장
+                                    if len(batch_data) >= 20:
+                                        await self._save_batch(batch_data)
+                                        batch_data = []
+                                        if job_id:
+                                            await update_job_status(job_id, records_drafted=count, last_processed_page=processed_pages_count)
+                                            logger.info(f"💾 20 CB items saved. Count: {count}")
+
                             await asyncio.sleep(0.5)
-                        next_page = await page.evaluate(r"""
-                            () => {
-                                const nextBtn = Array.from(document.querySelectorAll('a')).find(a => 
-                                    ['Next', '>', 'Next Page'].includes(a.innerText.trim())
-                                );
-                                return nextBtn ? nextBtn.href : null;
-                            }
-                        """
-                        )
+                        
+                        processed_pages_count += 1
+                        if job_id:
+                            await update_job_status(job_id, last_processed_page=processed_pages_count)
+
+                        next_page = await self._get_next_page_url(page)
                         current_url = next_page if next_page and next_page != current_url else None
+                        
                     except Exception as page_e:
                         logger.error(f"Page processing error: {page_e}")
                         break
+                
+                # 남은 데이터 저장
+                if batch_data:
+                    await self._save_batch(batch_data)
+                    if job_id:
+                        await update_job_status(job_id, records_drafted=count)
             except Exception as e:
                 logger.error(f"Category crawl error: {e}", exc_info=True)
             finally:
                 await context.close()
         return count
+
+    async def _get_next_page_url(self, page):
+        return await page.evaluate(r"""
+            () => {
+                const nextBtn = Array.from(document.querySelectorAll('a')).find(a => 
+                    ['Next', '>', 'Next Page'].includes(a.innerText.trim())
+                );
+                return nextBtn ? nextBtn.href : null;
+            }
+        """
+        )
+
+    async def _enrich_and_prepare_item(self, raw_data):
+        try:
+            ai_data = await self._enrich_with_gemini(raw_data)
+            orig_specs = raw_data.get("specs", {})
+            ai_props = ai_data.get("properties", {})
+            merged_props = {**orig_specs}
+            if isinstance(ai_props, dict): merged_props.update(ai_props)
+            
+            final_data = {
+                "ambeed_cat_no": raw_data["ambeed_cat_no"],
+                "product_name": raw_data["product_name"],
+                "product_url": raw_data["product_url"],
+                "category": raw_data["category"],
+                "source_name": "Creative Biolabs",
+                "target": ai_data.get("target"),
+                "summary": ai_data.get("summary"),
+                "properties": merged_props,
+                "crawled_at": raw_data["crawled_at"]
+            }
+            
+            embed_text = f"{final_data['product_name']} {final_data.get('target') or ''}"
+            final_data["embedding"] = await rag_service.generate_embedding(embed_text)
+            return final_data
+        except Exception as e:
+            logger.error(f"Prepare item failed: {e}")
+            return None
+
+    async def _save_batch(self, items: List[Dict]):
+        try:
+            if not items: return
+            supabase.table("commercial_reagents").upsert(items, on_conflict="ambeed_cat_no").execute()
+        except Exception as e:
+            logger.error(f"Batch save failed: {e}")
 
     async def _process_single_product(self, context, url, category):
         async with self.global_semaphore:
@@ -171,31 +265,6 @@ class CreativeBiolabsCrawler:
             return json.loads(response.text)
         except: return {}
 
-    async def _enrich_and_save_single(self, raw_data):
-        try:
-            ai_data = await self._enrich_with_gemini(raw_data)
-            orig_specs = raw_data.get("specs", {})
-            ai_props = ai_data.get("properties", {})
-            merged_props = {**orig_specs}
-            if isinstance(ai_props, dict): merged_props.update(ai_props)
-            final_data = {
-                "ambeed_cat_no": raw_data["ambeed_cat_no"],
-                "product_name": raw_data["product_name"],
-                "product_url": raw_data["product_url"],
-                "category": raw_data["category"],
-                "source_name": "Creative Biolabs",
-                "target": ai_data.get("target"),
-                "summary": ai_data.get("summary"),
-                "properties": merged_props,
-                "crawled_at": raw_data["crawled_at"]
-            }
-            embed_text = f"{final_data['product_name']} {final_data.get('target') or ''}"
-            final_data["embedding"] = await rag_service.generate_embedding(embed_text)
-            supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
-            logger.info(f"✅ [CB SAVE] {final_data['product_name']}")
-        except Exception as e:
-            logger.error(f"Save failed: {e}")
-
     async def run(self, search_term: str, limit: int, job_id: str):
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
@@ -205,7 +274,7 @@ class CreativeBiolabsCrawler:
                 if search_term.lower() in cat.lower(): targets[cat] = url
         else: targets = self.CATEGORIES
         total = 0
-        for cat, url in targets.items(): total += await self.crawl_category(cat, url, limit)
+        for cat, url in targets.items(): total += await self.crawl_category(cat, url, limit, job_id)
         await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
 
 creative_crawler = CreativeBiolabsCrawler()

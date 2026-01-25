@@ -378,7 +378,8 @@ Description: {description[:1000] if description else 'N/A'}"""
         """Gemini Fallback: 화학자 페르소나로 SMILES 생성"""
         try:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+            model = genai.GenerativeModel(model_id)
             
             prompt = f"""You are an expert computational chemist. 
 Generate the Canonical SMILES for the drug "{drug_name}".

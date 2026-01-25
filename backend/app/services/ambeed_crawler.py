@@ -99,38 +99,168 @@ class AmbeedCrawler:
             logger.warning(f"⚠️ PubChem fallback failed for {cas}: {e}")
         return None
 
-    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None) -> int:
         logger.info(f"🚀 [AMBEED SMILES CRAWL] {category_name}")
+        from app.api.scheduler import update_job_status, get_job_from_db, is_cancelled
+        
         count = 0
-        page_num = 1
+        start_page = 1
+        
+        # 1. Offset 관리: DB에서 마지막 진행 페이지 조회
+        if job_id:
+            job_data = await get_job_from_db(job_id)
+            if job_data and job_data.get("last_processed_page"):
+                start_page = job_data["last_processed_page"] + 1
+                logger.info(f"⏭️ Resuming from page {start_page}")
+
+        page_num = start_page
+        batch_data = []
+        
         async with async_playwright() as p:
             try:
                 context = await self._init_browser(p)
                 page = await context.new_page()
+                
                 while count < limit:
+                    if job_id and await is_cancelled(job_id):
+                        logger.info(f"🛑 Job {job_id} cancelled.")
+                        break
+
                     separator = "&" if "?" in base_url else "?"
                     url = base_url if page_num == 1 else f"{base_url}{separator}page={page_num}"
-                    logger.info(f"📂 Navigating to Page {page_num}...")
+                    logger.info(f"📂 Navigating to Page {page_num}... (Current Count: {count}/{limit})")
+                    
                     try:
                         await page.goto(url, wait_until="domcontentloaded", timeout=45000)
                         await asyncio.sleep(2)
-                        links = await page.evaluate("""
-                            () => Array.from(document.querySelectorAll('a[href*="/products/"], a[href*="/record/"]'))
-                                .map(a => a.href)
-                                .filter(href => !href.includes('javascript') && !href.includes('google'))
+                        
+                        # 제품 링크 및 고유 번호 동시 추출 시도 (필터링 효율화)
+                        products = await page.evaluate("""
+                            () => {
+                                return Array.from(document.querySelectorAll('.product-item, .item')).map(el => {
+                                    const linkEl = el.querySelector('a[href*="/products/"], a[href*="/record/"]');
+                                    const catNoEl = el.innerText.match(/Cat No:?\s*([A-Z0-9-]+)/i);
+                                    return {
+                                        href: linkEl ? linkEl.href : null,
+                                        cat_no: catNoEl ? catNoEl[1] : null
+                                    };
+                                }).filter(p => p.href);
+                            }
                         """)
-                        product_links = list(set(links))
-                        if not product_links: break
-                        for link in product_links:
+                        
+                        if not products:
+                            # Fallback for simple links if structured parsing fails
+                            links = await page.evaluate("""
+                                () => Array.from(document.querySelectorAll('a[href*="/products/"], a[href*="/record/"]'))
+                                    .map(a => a.href)
+                                    .filter(href => !href.includes('javascript') && !href.includes('google'))
+                            """)
+                            products = [{"href": link, "cat_no": None} for link in set(links)]
+
+                        if not products:
+                            logger.info(f"🏁 No more products found on page {page_num}. Ending.")
+                            break
+                        
+                        for prod in products:
                             if count >= limit: break
+                            
+                            link = prod["href"]
+                            cat_no = prod["cat_no"] or link.split('/')[-1].replace('.html', '')
+                            
+                            # 2. ID 기반 필터링: 이미 DB에 존재하면 Skip
+                            existing = supabase.table("commercial_reagents").select("id").eq("ambeed_cat_no", cat_no).execute()
+                            if existing.data:
+                                logger.info(f"⏩ Skipping existing product: {cat_no}")
+                                continue
+
                             res = await self._process_single_product(context, link, category_name)
                             if res:
-                                await self._enrich_and_save_single(res)
-                                count += 1
+                                final_item = await self._enrich_and_prepare_item(res)
+                                if final_item:
+                                    batch_data.append(final_item)
+                                    count += 1
+                                    
+                                    # 3. 20개 단위 배치 저장 (Batch Upsert)
+                                    if len(batch_data) >= 20:
+                                        await self._save_batch(batch_data)
+                                        batch_data = [] # Clear memory
+                                        if job_id:
+                                            await update_job_status(job_id, records_drafted=count, last_processed_page=page_num)
+                                            logger.info(f"💾 20 items batch saved. Current count: {count}")
+
+                        # 페이지 종료 후 상태 업데이트
+                        if job_id:
+                            await update_job_status(job_id, last_processed_page=page_num)
+                        
                         page_num += 1
-                    except: break
-            finally: await context.close()
+                    except Exception as e:
+                        logger.error(f"❌ Error on page {page_num}: {e}")
+                        break
+                
+                # 남은 데이터 저장
+                if batch_data:
+                    await self._save_batch(batch_data)
+                    if job_id:
+                        await update_job_status(job_id, records_drafted=count)
+            finally: 
+                await context.close()
         return count
+
+    async def _enrich_and_prepare_item(self, raw_data):
+        """저장 전 데이터 보강 및 검증 (Upsert용 데이터 생성)"""
+        try:
+            # 1. SMILES 검증 및 보완
+            smiles = raw_data.get("smiles_code")
+            is_valid = self.validate_smiles(smiles)
+            
+            if not is_valid:
+                logger.warning(f"⚠️ Invalid SMILES for {raw_data['ambeed_cat_no']}. Trying PubChem...")
+                fallback_smiles = await self.fetch_pubchem_smiles_by_cas(raw_data.get("cas_number"))
+                if fallback_smiles:
+                    smiles = fallback_smiles
+                    is_valid = True
+            
+            # SMILES 필수 체크 로그
+            if not is_valid:
+                logger.error(f"❌ SMILES MISSING for {raw_data['ambeed_cat_no']} after fallback.")
+            
+            # 2. AI 정제 (Gemini)
+            ai_data = await self._enrich_with_gemini(raw_data)
+            
+            final_data = {
+                "ambeed_cat_no": raw_data["ambeed_cat_no"],
+                "product_name": raw_data["product_name"],
+                "product_url": raw_data["product_url"],
+                "category": raw_data["category"],
+                "source_name": "Ambeed",
+                "smiles_code": smiles if is_valid else None,
+                "cas_number": raw_data.get("cas_number"),
+                "target": ai_data.get("target"),
+                "summary": ai_data.get("summary"),
+                "properties": ai_data.get("properties", {}),
+                "crawled_at": raw_data["crawled_at"]
+            }
+            
+            # 임베딩 생성
+            embed_text = f"{final_data['product_name']} {final_data.get('smiles_code') or ''} {final_data.get('target') or ''}"
+            final_data["embedding"] = await rag_service.generate_embedding(embed_text)
+            
+            return final_data
+        except Exception as e:
+            logger.error(f"Failed to prepare item {raw_data.get('ambeed_cat_no')}: {e}")
+            return None
+
+    async def _save_batch(self, items: List[Dict]):
+        """배치 UPSERT 실행"""
+        try:
+            if not items: return
+            supabase.table("commercial_reagents").upsert(items, on_conflict="ambeed_cat_no").execute()
+        except Exception as e:
+            logger.error(f"Batch save failed: {e}")
+
+    async def _enrich_and_save_single(self, raw_data):
+        # This is now handled by _enrich_and_prepare_item and _save_batch
+        pass
 
     async def _process_single_product(self, context, url, category):
         async with self.global_semaphore:
@@ -188,49 +318,6 @@ class AmbeedCrawler:
                 return None
             finally: await page.close()
 
-    async def _enrich_and_save_single(self, raw_data):
-        try:
-            # 1. SMILES 검증 및 보완
-            smiles = raw_data.get("smiles_code")
-            is_valid = self.validate_smiles(smiles)
-            
-            if not is_valid:
-                logger.warning(f"⚠️ Invalid or Missing SMILES for {raw_data['product_name']}. Trying PubChem...")
-                fallback_smiles = await self.fetch_pubchem_smiles_by_cas(raw_data.get("cas_number"))
-                if fallback_smiles:
-                    smiles = fallback_smiles
-                    is_valid = True
-                else:
-                    logger.error(f"❌ Failed to obtain valid SMILES for {raw_data['product_name']}")
-            
-            # 2. AI 정제 (IC50 등)
-            ai_data = await self._enrich_with_gemini(raw_data)
-            
-            final_data = {
-                "ambeed_cat_no": raw_data["ambeed_cat_no"],
-                "product_name": raw_data["product_name"],
-                "product_url": raw_data["product_url"],
-                "category": raw_data["category"],
-                "source_name": "Ambeed",
-                "smiles_code": smiles if is_valid else None,
-                "cas_number": raw_data.get("cas_number"),
-                "target": ai_data.get("target"),
-                "summary": ai_data.get("summary"),
-                "properties": ai_data.get("properties", {}),
-                "crawled_at": raw_data["crawled_at"]
-            }
-            
-            # 3. 임베딩 및 저장
-            embed_text = f"{final_data['product_name']} {final_data.get('smiles_code') or ''}"
-            final_data["embedding"] = await rag_service.generate_embedding(embed_text)
-            supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
-            
-            status = "✅ [SMILES OK]" if is_valid else "⚠️ [SMILES MISSING]"
-            logger.info(f"{status} {final_data['product_name']}")
-            
-        except Exception as e:
-            logger.error(f"Save failed: {e}")
-
     async def _enrich_with_gemini(self, raw_data: Dict) -> Dict:
         prompt = f"Extract target, ic50/solubility, and summary from: {raw_data['body_text'][:1500]}\nJSON Output: {{ 'target': '...', 'properties': {{ 'ic50': '...', 'solubility': '...' }}, 'summary': '...' }}"
         try:
@@ -245,7 +332,7 @@ class AmbeedCrawler:
         targets = {cat: url for cat, url in self.CATEGORIES.items() if not search_term or search_term == 'all' or search_term.lower() in cat.lower()}
         total = 0
         for cat, url in targets.items():
-            total += await self.crawl_category(cat, url, limit)
+            total += await self.crawl_category(cat, url, limit, job_id)
         await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
 
 ambeed_crawler = AmbeedCrawler()

@@ -66,6 +66,7 @@ class SyncJobStatus(BaseModel):
     source: str
     records_found: int
     records_drafted: int
+    last_processed_page: Optional[int] = 0
     started_at: str
     completed_at: Optional[str] = None
     errors: List[str] = []
@@ -79,12 +80,22 @@ async def update_job_status(job_id: str, **kwargs):
         if "errors" in kwargs and isinstance(kwargs["errors"], list):
             kwargs["errors"] = kwargs["errors"] # Supabase client handles list to jsonb
         
-        # message 필드는 sync_jobs 테이블에 없으므로 제거 (또는 details로 이동)
+        # message 필드는 sync_jobs 테이블에 없으므로 제거
         if "message" in kwargs:
-            # logger.info(f"Job Status Message: {kwargs['message']}")
             del kwargs["message"]
 
-        supabase.table("sync_jobs").update(kwargs).eq("id", job_id).execute()
+        # DB 업데이트 실행
+        try:
+            supabase.table("sync_jobs").update(kwargs).eq("id", job_id).execute()
+        except Exception as e:
+            # last_processed_page 컬럼이 없는 경우를 대비한 자동 폴백
+            if "last_processed_page" in str(e) or "42703" in str(e):
+                logger.warning("⚠️ 'last_processed_page' column missing. Retrying without it.")
+                if "last_processed_page" in kwargs:
+                    del kwargs["last_processed_page"]
+                supabase.table("sync_jobs").update(kwargs).eq("id", job_id).execute()
+            else:
+                raise e
     except Exception as e:
         logger.error(f"Failed to update job status in DB: {e}")
 
