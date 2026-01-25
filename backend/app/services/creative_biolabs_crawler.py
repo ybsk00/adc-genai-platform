@@ -163,14 +163,50 @@ class CreativeBiolabsCrawler:
             embed_text = f"{final_data['product_name']} {final_data.get('target', '')} {final_data.get('summary', '')}"
             final_data["embedding"] = await rag_service.generate_embedding(embed_text)
 
-            supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
-            logger.info(f"      ✅ Saved: {final_data['product_name']} (Target: {final_data.get('target')})")
+            res = supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
+            
+            if res.data:
+                logger.info(f"      ✅ Saved: {final_data['product_name']} (Target: {final_data.get('target')})")
+                # [실시간 AI 정제 트리거]
+                asyncio.create_task(self._trigger_refinement(res.data[0]))
+            
         except Exception as e:
             logger.error(f"      ❌ Save failed: {e}")
 
+    async def _trigger_refinement(self, record: Dict):
+        """AI 정제 엔진 비동기 호출 (상세 로그 추가)"""
+        try:
+            logger.debug(f"🔍 [AI Trigger] Starting refinement for: {record.get('product_name')} (ID: {record.get('id')})")
+            
+            # AI 분석 서비스 호출
+            analysis = await ai_refiner.refine_single_record(record)
+            
+            if analysis and "error" not in analysis:
+                update_data = {
+                    "target": analysis.get("target"),
+                    "ai_refined": True,
+                    "properties": {**record.get("properties", {}), "ai_analysis": analysis}
+                }
+                res = supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
+                if res.data:
+                    logger.info(f"✨ [AI Success] Refined product: {record.get('product_name')}")
+                else:
+                    logger.error(f"❌ [AI DB Error] Failed to update record: {record.get('id')}")
+            else:
+                error_msg = analysis.get("error") if analysis else "Empty response"
+                logger.warning(f"⚠️ [AI Skip/Fail] Refinement skipped for {record.get('product_name')}: {error_msg}")
+                
+        except Exception as e:
+            logger.error(f"🔥 [AI Critical Error] Background refinement failed for {record.get('id')}: {str(e)}", exc_info=True)
+
     async def run(self, search_term: str, limit: int, job_id: str):
+        """Orchestrate the crawling process with Stability & Hanging Prevention"""
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
+        
+        logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        total_processed = 0
+        
         try:
             targets = {}
             if search_term and search_term != 'all':
@@ -182,13 +218,30 @@ class CreativeBiolabsCrawler:
 
             results = []
             for cat, url in targets.items():
-                res = await self.crawl_category(cat, url, limit)
-                results.append(res)
+                try:
+                    # Give each category a max of 15 minutes
+                    res = await asyncio.wait_for(self.crawl_category(cat, url, limit), timeout=900)
+                    results.append(res)
+                except Exception as cat_e:
+                    logger.error(f"❌ Category {cat} failed or timed out: {cat_e}")
+                    results.append(0)
                 
-            total = sum(results)
-            await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
+            total_processed = sum(results)
+            logger.info(f"🏁 [CRAWLER FINISHED] Total Records: {total_processed}")
+            
+            await update_job_status(
+                job_id, 
+                status="completed", 
+                records_drafted=total_processed, 
+                completed_at=datetime.utcnow().isoformat()
+            )
         except Exception as e:
-            logger.error(f"Run failed: {e}")
+            logger.error(f"🔥 Crawler run failed: {e}", exc_info=True)
             await update_job_status(job_id, status="failed", errors=[str(e)])
+        finally:
+            # Safety Fallback
+            job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
+            if job.data and job.data[0]['status'] == 'running':
+                await update_job_status(job_id, status="completed", message="Process ended (Fallback)")
 
 creative_crawler = CreativeBiolabsCrawler()

@@ -454,25 +454,41 @@ class AmbeedCrawler:
             logger.error(f"Save failed for {raw_data.get('product_name')}: {e}")
 
     async def _trigger_refinement(self, record: Dict):
+        """AI 정제 엔진 비동기 호출 (강력한 예외 처리 및 로그 추가)"""
         try:
+            logger.debug(f"🔍 [AI Trigger] Starting refinement for: {record.get('product_name')} (ID: {record.get('id')})")
+            
+            # AI 분석 서비스 호출
             analysis = await ai_refiner.refine_single_record(record)
+            
             if analysis and "error" not in analysis:
                 update_data = {
                     "target": analysis.get("target"),
                     "ai_refined": True,
                     "properties": {**record.get("properties", {}), "ai_analysis": analysis}
                 }
-                supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
-        except:
-            pass
+                res = supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
+                if res.data:
+                    logger.info(f"✨ [AI Success] Refined product: {record.get('product_name')}")
+                else:
+                    logger.error(f"❌ [AI DB Error] Failed to update record: {record.get('id')}")
+            else:
+                error_msg = analysis.get("error") if analysis else "Empty response"
+                logger.warning(f"⚠️ [AI Skip/Fail] Refinement skipped for {record.get('product_name')}: {error_msg}")
+                
+        except Exception as e:
+            logger.error(f"🔥 [AI Critical Error] Background refinement failed for {record.get('id')}: {str(e)}", exc_info=True)
 
     async def run(self, search_term: str, limit: int, job_id: str):
-        """Orchestrate the crawling process with Controlled Category Concurrency"""
-        from app.api.scheduler import update_job_status
+        """Orchestrate the crawling process with Enhanced Stability & Hanging Prevention"""
+        from app.api.scheduler import update_job_status, is_cancelled
         await update_job_status(job_id, status="running")
         
+        logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        total_processed = 0
+        
         try:
-            # Determine targets
+            # 1. Determine targets
             targets = {}
             if search_term and search_term != 'all':
                 for cat, url in self.CATEGORIES.items():
@@ -482,27 +498,53 @@ class AmbeedCrawler:
                 targets = self.CATEGORIES
 
             if not targets:
+                logger.warning(f"⚠️ No categories matched for term: {search_term}")
                 await update_job_status(job_id, status="completed", message="No categories matched.")
                 return
 
-            logger.info(f"🏁 Starting Controlled Crawl for {len(targets)} categories (Max Concurrent: {self.max_concurrent_categories})")
-            
-            # Use a semaphore to limit concurrent categories (Browser Instances)
+            # 2. Controlled Concurrency with Timeout
             cat_semaphore = asyncio.Semaphore(self.max_concurrent_categories)
 
             async def sem_crawl(cat, url):
+                if await is_cancelled(job_id):
+                    logger.info(f"🚫 Crawl cancelled before starting {cat}")
+                    return 0
+                
                 async with cat_semaphore:
-                    return await self.crawl_category(cat, url, limit)
+                    try:
+                        # Give each category a max of 20 minutes to finish
+                        return await asyncio.wait_for(self.crawl_category(cat, url, limit), timeout=1200)
+                    except asyncio.TimeoutError:
+                        logger.error(f"⏰ Category {cat} timed out after 20 minutes.")
+                        return 0
+                    except Exception as e:
+                        logger.error(f"❌ Category {cat} failed: {e}")
+                        return 0
 
             tasks = [sem_crawl(cat, url) for cat, url in targets.items()]
-            results = await asyncio.gather(*tasks)
             
+            # Use gather but monitor for global cancellation
+            results = await asyncio.gather(*tasks)
             total_processed = sum(results)
-            await update_job_status(job_id, status="completed", records_drafted=total_processed, completed_at=datetime.utcnow().isoformat())
+            
+            logger.info(f"🏁 [CRAWLER FINISHED] Total Records: {total_processed}")
+            
+            # Final Status Update
+            await update_job_status(
+                job_id, 
+                status="completed", 
+                records_drafted=total_processed, 
+                completed_at=datetime.utcnow().isoformat()
+            )
 
         except Exception as e:
-            logger.error(f"Crawler run failed: {e}")
+            logger.error(f"🔥 [CRITICAL] Crawler loop failed: {e}", exc_info=True)
             await update_job_status(job_id, status="failed", errors=[str(e)])
+        finally:
+            # Safety double-check
+            job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
+            if job.data and job.data[0]['status'] == 'running':
+                await update_job_status(job_id, status="completed", message="Crawler process ended (Safety Fallback)")
 
 # Singleton
 ambeed_crawler = AmbeedCrawler()
