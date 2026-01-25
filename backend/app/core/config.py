@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     
     # Google (Gemini)
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL_ID: str = "gemini-2.0-flash-exp"
+    GEMINI_MODEL_ID: str = "gemini-2.0-flash"
 
     # NCBI (PubMed)
     NCBI_EMAIL: str = "your-email@example.com"

@@ -243,7 +243,8 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
 
         try:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash')  # 2.5-flash (최신)
+            model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+            model = genai.GenerativeModel(model_id)
             
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
@@ -259,7 +260,7 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
             # 비용 추적
             usage = response.usage_metadata
             await cost_tracker.track_usage(
-                "gemini-2.5-flash",
+                model_id,
                 usage.prompt_token_count,
                 usage.candidates_token_count
             )

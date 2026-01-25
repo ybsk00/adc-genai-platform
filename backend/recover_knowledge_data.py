@@ -64,7 +64,7 @@ Abstract: {abstract[:3000]}"""
 
     try:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.5-flash')  # 2.5-flash (최신)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')  # 2.0-flash-exp
         
         response = model.generate_content(
             full_prompt,
@@ -169,7 +169,7 @@ async def verify_model():
     
     try:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.5-flash')  # 2.5-flash
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')  # 2.0-flash-exp
         
         response = model.generate_content(
             "Say 'OK' if you can respond.",

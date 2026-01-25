@@ -11,8 +11,8 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Test with gemini-2.0-flash-exp
-model = genai.GenerativeModel('gemini-2.0-flash-exp')
+# Test with gemini-2.0-flash
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 prompt = "Hello, tell me about ADC drugs in one sentence."
 

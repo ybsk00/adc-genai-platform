@@ -51,7 +51,7 @@ else:
 print("\n2. Testing Gemini 2.5 Flash...")
 try:
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash-exp')
     
     response = model.generate_content(
         "Return exactly: {\"test\": \"ok\"}",

@@ -99,8 +99,8 @@ class AmbeedCrawler:
             logger.warning(f"⚠️ PubChem fallback failed for {cas}: {e}")
         return None
 
-    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None, start_page: int = 1) -> int:
-        logger.info(f"🚀 [AMBEED SMILES CRAWL] {category_name} (Start Page: {start_page})")
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None, start_page: int = 1, batch_size: int = 2) -> int:
+        logger.info(f"🚀 [AMBEED SMILES CRAWL] {category_name} (Start Page: {start_page}, Batch: {batch_size})")
         from app.api.scheduler import update_job_status, get_job_from_db, is_cancelled
         
         count = 0
@@ -193,8 +193,8 @@ class AmbeedCrawler:
                                     batch_data.append(final_item)
                                     count += 1
                                     
-                                    if len(batch_data) >= 2:
-                                        logger.info(f"💾 [단계 3] 2개 도달! DB 저장 시도 (Page {page_num})")
+                                    if len(batch_data) >= batch_size:
+                                        logger.info(f"💾 [단계 3] {batch_size}개 도달! DB 저장 시도 (Page {page_num})")
                                         await self._save_batch(batch_data)
                                         batch_data = []
                                         if job_id:
@@ -239,12 +239,8 @@ class AmbeedCrawler:
             if not is_valid:
                 logger.error(f"❌ SMILES MISSING for {raw_data['ambeed_cat_no']} after fallback.")
             
-            # 2. AI 정제 (Gemini) - 실패해도 진행
-            try:
-                ai_data = await self._enrich_with_gemini(raw_data)
-            except Exception as e:
-                logger.warning(f"⚠️ AI Enrichment failed for {raw_data['ambeed_cat_no']}: {e}")
-                ai_data = {}
+            # 2. AI 정제 (Gemini) - 3단 SMILES 분리 로직 탑재
+            ai_data = await self._enrich_with_gemini(raw_data, smiles)
             
             final_data = {
                 "ambeed_cat_no": raw_data["ambeed_cat_no"],
@@ -253,12 +249,15 @@ class AmbeedCrawler:
                 "category": raw_data["category"],
                 "source_name": "Ambeed",
                 "smiles_code": smiles if is_valid else None,
+                "payload_smiles": ai_data.get("payload_smiles"),
+                "linker_smiles": ai_data.get("linker_smiles"),
+                "full_smiles": ai_data.get("full_smiles") or smiles, # 항체 제외 드럭-링커
                 "cas_number": raw_data.get("cas_number"),
                 "target": ai_data.get("target"),
                 "summary": ai_data.get("summary"),
                 "properties": ai_data.get("properties", {}),
                 "crawled_at": raw_data["crawled_at"],
-                "ai_refined": False # 초기값
+                "ai_refined": True
             }
             
             # 임베딩 생성 (실패해도 저장은 되어야 함)
@@ -358,21 +357,46 @@ class AmbeedCrawler:
                 return None
             finally: await page.close()
 
-    async def _enrich_with_gemini(self, raw_data: Dict) -> Dict:
-        prompt = f"Extract target, ic50/solubility, and summary from: {raw_data['body_text'][:1500]}\nJSON Output: {{ 'target': '...', 'properties': {{ 'ic50': '...', 'solubility': '...' }}, 'summary': '...' }}"
+    async def _enrich_with_gemini(self, raw_data: Dict, smiles: Optional[str] = None) -> Dict:
+        """Gemini를 이용한 3단 SMILES 분리 및 데이터 정제"""
+        prompt = f"""
+        Extract detailed ADC reagent information from the following content:
+        Title: {raw_data['product_name']}
+        Body: {raw_data['body_text'][:2000]}
+        Input SMILES: {smiles or 'None'}
+
+        Task:
+        1. Identify the 'payload_smiles' (the cytotoxic drug part).
+        2. Identify the 'linker_smiles' (the chemical linker part).
+        3. Identify the 'full_smiles' (the entire drug-linker structure, excluding the antibody).
+        4. Extract 'target' and 'summary'.
+
+        Output JSON format:
+        {{
+            "payload_smiles": "...",
+            "linker_smiles": "...",
+            "full_smiles": "...",
+            "target": "...",
+            "summary": "...",
+            "properties": {{ "ic50": "...", "solubility": "..." }}
+        }}
+        If a part is missing, return null. Ensure SMILES strings are valid and complete.
+        """
         try:
             model = self._get_model()
             response = await model.generate_content_async(prompt, generation_config=genai.GenerationConfig(response_mime_type="application/json"))
             return json.loads(response.text)
-        except: return {}
+        except Exception as e:
+            logger.error(f"Gemini API Error: {e}")
+            return {}
 
-    async def run(self, search_term: str, limit: int, job_id: str, start_page: int = 1):
+    async def run(self, search_term: str, limit: int, job_id: str, start_page: int = 1, batch_size: int = 2):
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
         targets = {cat: url for cat, url in self.CATEGORIES.items() if not search_term or search_term == 'all' or search_term.lower() in cat.lower()}
         total = 0
         for cat, url in targets.items():
-            total += await self.crawl_category(cat, url, limit, job_id, start_page)
+            total += await self.crawl_category(cat, url, limit, job_id, start_page, batch_size)
         await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
 
 ambeed_crawler = AmbeedCrawler()

@@ -33,15 +33,16 @@ async def main():
     parser.add_argument("--limit", type=int, default=10, help="Limit")
     parser.add_argument("--job_id", required=True, help="Job ID")
     parser.add_argument("--start_page", type=int, default=1, help="Start Page")
+    parser.add_argument("--batch_size", type=int, default=2, help="Batch size")
     
     args = parser.parse_args()
     
-    logger.info(f"🚀 [Isolated Crawler] Starting {args.crawler} for {args.category} (Job: {args.job_id}, Page: {args.start_page})")
+    logger.info(f"🚀 [Isolated Crawler] Starting {args.crawler} for {args.category} (Job: {args.job_id}, Page: {args.start_page}, Batch: {args.batch_size})")
     
     try:
         if args.crawler == "ambeed":
             from app.services.ambeed_crawler import ambeed_crawler
-            await ambeed_crawler.run(args.category, args.limit, args.job_id, args.start_page)
+            await ambeed_crawler.run(args.category, args.limit, args.job_id, args.start_page, args.batch_size)
         elif args.crawler == "creative_biolabs":
             from app.services.creative_biolabs_crawler import creative_crawler
             await creative_crawler.run(args.category, args.limit, args.job_id)

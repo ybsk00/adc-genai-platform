@@ -64,6 +64,8 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
     const [debouncedSmiles, setDebouncedSmiles] = useState(smiles)
     const [renderMode, setRenderMode] = useState<'canvas' | 'image' | 'error'>('canvas')
 
+    const [canvasId] = useState(() => `smiles-canvas-${Math.random().toString(36).substr(2, 9)}`)
+
     // Debounce logic
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -80,41 +82,50 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
         const canvas = canvasRef.current
         if (!canvas) return
 
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
+        // Use requestAnimationFrame to ensure the canvas is in the DOM and has dimensions
+        const renderId = requestAnimationFrame(() => {
+            try {
+                const ctx = canvas.getContext('2d')
+                if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+                const DrawerClass = (SmilesDrawer as any).SmiDrawer || (SmilesDrawer as any).Drawer
 
-        try {
-            const drawer = new SmilesDrawer.Drawer({
-                width: 400,
-                height: 250,
-                compactDrawing: false,
-                terminalCarbons: true,
-                explicitHydrogens: false,
-                bondThickness: 1.0,
-                atomMenu: false
-            })
-
-            SmilesDrawer.parse(debouncedSmiles, (tree: any) => {
-                if (canvasRef.current && renderMode === 'canvas') {
-                    try {
-                        drawer.draw(tree, canvasRef.current, 'dark', false)
-                    } catch (drawErr) {
-                        console.warn('SmilesDrawer Draw Error, switching to fallback:', drawErr)
-                        setRenderMode('image')
-                    }
+                if (!DrawerClass) {
+                    throw new Error('SmilesDrawer class not found')
                 }
-            }, (err: any) => {
-                console.warn('SMILES Parse Error, switching to fallback:', err)
+
+                // High resolution for better visibility
+                const drawer = new DrawerClass({
+                    width: 800,
+                    height: 500,
+                    compactDrawing: false,
+                    terminalCarbons: true,
+                    explicitHydrogens: false,
+                    bondThickness: 2.0, // Thicker bonds
+                    bondLength: 30, // Longer bonds
+                    fontSize: 24, // Larger font size for readability
+                    theme: 'dark'
+                })
+
+                if ((SmilesDrawer as any).SmiDrawer) {
+                    // SmilesDrawer 2.x expects the ID of the canvas
+                    drawer.draw(debouncedSmiles, `#${canvasId}`, 'dark')
+                } else {
+                    SmilesDrawer.parse(debouncedSmiles, (tree: any) => {
+                        drawer.draw(tree, canvas, 'dark', false)
+                    }, (err: any) => {
+                        console.warn('SMILES Parse Error:', err)
+                        setRenderMode('image')
+                    })
+                }
+            } catch (e) {
+                console.error('SmilesDrawer Error:', e)
                 setRenderMode('image')
-            })
-        } catch (e) {
-            console.error('SmilesDrawer Init Error:', e)
-            setRenderMode('image')
-        }
-    }, [debouncedSmiles, renderMode])
+            }
+        })
+
+        return () => cancelAnimationFrame(renderId)
+    }, [debouncedSmiles, renderMode, canvasId])
 
     if (!smiles) return (
         <div className="h-[250px] flex flex-col items-center justify-center bg-slate-950/50 text-slate-500 border border-dashed border-slate-800 rounded-lg">
@@ -126,7 +137,13 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
     return (
         <div className="bg-[#1a1b1e] rounded-lg p-4 border border-slate-800 shadow-inner flex justify-center items-center overflow-hidden h-[250px] relative">
             {renderMode === 'canvas' && (
-                <canvas ref={canvasRef} width={400} height={250} className="max-w-full max-h-full transition-transform hover:scale-105 duration-300" />
+                <canvas
+                    id={canvasId}
+                    ref={canvasRef}
+                    width={800}
+                    height={500}
+                    className="max-w-full max-h-full transition-transform hover:scale-105 duration-300"
+                />
             )}
 
             {renderMode === 'image' && (
@@ -182,12 +199,12 @@ function AISidebar({
         }
     }, [messages])
 
-    const handleSend = async () => {
-        if (!input.trim() || isTyping) return
+    const handleSend = async (overrideMsg?: string) => {
+        const userMsg = overrideMsg || input.trim()
+        if (!userMsg || isTyping) return
 
-        const userMsg = input.trim()
         setMessages(prev => [...prev, { role: 'user', content: userMsg }])
-        setInput('')
+        if (!overrideMsg) setInput('')
         setIsTyping(true)
 
         try {
@@ -251,6 +268,26 @@ function AISidebar({
             </ScrollArea>
 
             <div className="p-4 border-t border-slate-800 bg-slate-950">
+                <div className="flex flex-wrap gap-2 mb-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[10px] h-7 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                        onClick={() => handleSend("페이로드 좀 알려줘")}
+                        disabled={isTyping}
+                    >
+                        페이로드 좀 알려줘
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[10px] h-7 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                        onClick={() => handleSend("링커좀 알려줘")}
+                        disabled={isTyping}
+                    >
+                        링커좀 알려줘
+                    </Button>
+                </div>
                 <div className="flex gap-2">
                     <Input
                         placeholder="Type a message..."
@@ -259,7 +296,7 @@ function AISidebar({
                         onKeyDown={e => e.key === 'Enter' && handleSend()}
                         className="bg-slate-800 border-slate-700 text-white text-xs"
                     />
-                    <Button size="sm" className="bg-purple-600 hover:bg-purple-500" onClick={handleSend} disabled={isTyping}>
+                    <Button size="sm" className="bg-purple-600 hover:bg-purple-500" onClick={() => handleSend()} disabled={isTyping}>
                         Send
                     </Button>
                 </div>
@@ -282,6 +319,9 @@ export function StagingAreaTab() {
     const [isOpen, setIsOpen] = useState(false) // Drawer Open State
     const [isChatOpen, setIsChatOpen] = useState(false) // AI Chat Sidebar State
 
+    // Worker Control State
+    const [isTriggering, setIsTriggering] = useState(false)
+
     // Search State
     const [page, setPage] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
@@ -291,6 +331,43 @@ export function StagingAreaTab() {
         const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
         return () => clearTimeout(timer)
     }, [searchQuery])
+
+    // --- Worker Handlers ---
+    const handleTriggerWorker = async (type: 'ambeed_cloud' | 'ambeed_local' | 'cb_local') => {
+        setIsTriggering(true)
+        try {
+            const { session } = await getSession()
+            let endpoint = ''
+            let params = {}
+
+            if (type === 'ambeed_cloud') {
+                endpoint = '/api/scheduler/crawler/ambeed/run'
+                params = { start_page: 1, batch_size: 5, limit: 200 }
+            } else if (type === 'ambeed_local') {
+                endpoint = '/api/scheduler/crawler/ambeed/local'
+                params = { start_page: 51, batch_size: 20, limit: 1000 }
+            } else if (type === 'cb_local') {
+                endpoint = '/api/scheduler/crawler/creative-biolabs/local'
+                params = { limit: 500 }
+            }
+
+            const url = new URL(`${API_BASE_URL}${endpoint}`)
+            Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, String(v)))
+
+            const response = await fetch(url.toString(), {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+            })
+
+            if (!response.ok) throw new Error('Worker trigger failed')
+            toast.success(`${type} worker started successfully!`)
+            queryClient.invalidateQueries({ queryKey: ['syncJobs'] }) // If such query exists
+        } catch (e) {
+            toast.error('Failed to trigger worker')
+        } finally {
+            setIsTriggering(false)
+        }
+    }
 
     // --- Queries ---
     const { data: draftsResponse, isLoading } = useQuery({
@@ -449,8 +526,42 @@ export function StagingAreaTab() {
             <Card className={`bg-slate-900 border-slate-800 flex flex-col transition-all duration-300 ${isOpen ? 'w-1/2' : 'w-full'}`}>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-white flex justify-between items-center">
-                        <span>Inbox (Staging)</span>
-                        <Badge variant="secondary">{draftsResponse?.total || 0}</Badge>
+                        <div className="flex items-center gap-2">
+                            <span>Inbox (Staging)</span>
+                            <Badge variant="secondary">{draftsResponse?.total || 0}</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 text-[10px] border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                                onClick={() => handleTriggerWorker('ambeed_cloud')}
+                                disabled={isTriggering}
+                            >
+                                {isTriggering ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Activity className="w-3 h-3 mr-1" />}
+                                Ambeed (Cloud)
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 text-[10px] border-green-500/50 text-green-400 hover:bg-green-500/10"
+                                onClick={() => handleTriggerWorker('ambeed_local')}
+                                disabled={isTriggering}
+                            >
+                                <Activity className="w-3 h-3 mr-1" />
+                                Ambeed (Local)
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 text-[10px] border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                                onClick={() => handleTriggerWorker('cb_local')}
+                                disabled={isTriggering}
+                            >
+                                <Activity className="w-3 h-3 mr-1" />
+                                CB (Local)
+                            </Button>
+                        </div>
                     </CardTitle>
                     <div className="relative mt-2">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />

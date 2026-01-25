@@ -22,7 +22,7 @@ class CostTracker:
         "gpt-4-turbo": {"input": 0.01, "output": 0.03},
         # Google (Gemini)
         "gemini-2.0-flash": {"input": 0.00001, "output": 0.00004},
-        "gemini-2.5-flash": {"input": 0.000075, "output": 0.0003},
+        "gemini-2.0-flash-exp": {"input": 0.00001, "output": 0.00004},
         "gemini-1.5-pro": {"input": 0.00125, "output": 0.005},
     }
     

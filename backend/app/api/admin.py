@@ -99,16 +99,24 @@ async def ai_assistant_chat(req: AIChatRequest):
     """
     try:
         import google.generativeai as genai
+        if not settings.GOOGLE_API_KEY:
+            raise HTTPException(status_code=500, detail="GOOGLE_API_KEY is not configured")
+            
         genai.configure(api_key=settings.GOOGLE_API_KEY)
         
+        # 모델 선택 전략: Settings의 모델 -> 1.5 Flash
+        model_name = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash')
-        except Exception:
-            print("⚠️ gemini-2.0-flash not found, falling back to gemini-1.5-flash")
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel(model_name)
+        except Exception as e:
+            print(f"⚠️ {model_name} initialization failed: {e}")
+            model_name = 'gemini-1.5-flash'
+            model = genai.GenerativeModel(model_name)
+
         
         # 1. 컨텍스트 준비
-        context_str = json.dumps(req.context or {}, indent=2, ensure_ascii=False)
+        context_data = req.context or {}
+        context_str = json.dumps(context_data, indent=2, ensure_ascii=False)
         
         # 2. 프롬프트 구성
         system_prompt = f"""You are an ADC Data Analyst Assistant. 
@@ -119,31 +127,53 @@ RAW DATA:
 {context_str[:15000]} 
 
 INSTRUCTIONS:
-- Answer the user's question accurately based ONLY on the provided RAW DATA.
-- If the information is not in the RAW DATA, say "원문에서 해당 정보를 찾을 수 없습니다."
-- Keep the answer concise and professional in Korean.
-- If the user asks for a specific value (e.g., Kd, ORR), find it and mention the context where it was found.
+- Primary Source: Provided RAW DATA. Always check here first.
+- Secondary Source: Your internal knowledge about ADCs and pharmaceuticals.
+- If the information is in the RAW DATA, answer based on it and mention "원문에 따르면...".
+- If the information is NOT in the RAW DATA but you know it (e.g., general facts about Dato-DXd or Enhertu), provide the answer based on your knowledge and mention "원문에는 없지만, 일반적인 정보에 따르면...".
+- If you truly cannot find or know the information, then say "해당 정보를 찾을 수 없습니다."
+- Keep the answer professional, helpful, and in Korean.
+- For SMILES, provide it if requested and available.
 """
         
         full_prompt = f"{system_prompt}\n\nUser Question: {req.message}"
         
         # 3. Gemini 호출
-        response = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: model.generate_content(full_prompt)
-        )
-        
-        return {"answer": response.text.strip()}
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: model.generate_content(full_prompt)
+            )
+            
+            if not response or not response.text:
+                # 세이프티 필터 등에 의해 차단된 경우
+                if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
+                    print(f"AI Chat Blocked: {response.prompt_feedback}")
+                    return {"answer": "죄송합니다. 해당 질문에 대한 답변이 정책에 의해 차단되었습니다."}
+                return {"answer": "AI가 답변을 생성하지 못했습니다. (Empty Response)"}
+                
+            return {"answer": response.text.strip()}
+            
+        except Exception as gen_error:
+            print(f"Gemini Generation Error ({model_name}): {gen_error}")
+            # 2.5-flash 실패 시 1.5-flash로 재시도
+            if model_name == 'gemini-2.0-flash':
+                print("Retrying with gemini-1.5-flash...")
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: model.generate_content(full_prompt)
+                )
+                return {"answer": response.text.strip()}
+            raise gen_error
         
     except Exception as e:
-        print(f"AI Chat Error: {e}")
+        print(f"AI Chat Critical Error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============================================================
-# KPI Dashboard
-# ============================================================
-
 @router.get("/stats")
+
 async def get_admin_stats():
     """
     대시보드 KPI 조회
