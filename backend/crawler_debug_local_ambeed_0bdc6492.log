@@ -1,0 +1,3 @@
+Started at: 2026-01-25 15:55:40.122237
+Command: C:\Python313\python.exe C:\Users\유범석\개발소스코드\26_01\ADC플랫폼_최종\backend\run_crawler.py --crawler ambeed --category all --limit 5 --job_id local_ambeed_0bdc6492 --start_page 1 --batch_size 2
+

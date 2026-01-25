@@ -23,7 +23,7 @@ langgraph>=0.2.0
 openai==1.58.0
 
 # Bio/Chemistry
-rdkit==2024.3.6
+rdkit>=2024.3.6
 biopython==1.85
 
 # HTTP Client

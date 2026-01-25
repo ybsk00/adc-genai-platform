@@ -1,0 +1,324 @@
+2026-01-25 16:14:14,572 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-25 16:14:16,130 - WARNING - rdkit missing. SMILES validation disabled.
+2026-01-25 16:14:17,263 - INFO - 🚀 [AMBEED LITE] ADC Toxins (Page: 1, Limit: 100000)
+2026-01-25 16:14:18,005 - INFO - 🌐 [PAGE 1] accessing: https://www.ambeed.com/adc-toxins.html
+2026-01-25 16:14:22,863 - INFO - 📦 Found 20 products.
+2026-01-25 16:14:22,863 - INFO - 🔄 Processing: 7-aminomethyl-10-methyl-11-fluoro-camptothecin
+2026-01-25 16:14:26,759 - INFO - 🔄 Processing: daun02
+2026-01-25 16:14:31,250 - INFO - 🔄 Processing: (s)-seco-duocarmycin-sa
+2026-01-25 16:14:35,065 - INFO - 🔄 Processing: 1023758-14-6
+2026-01-25 16:14:38,399 - INFO - 🔄 Processing: exatecan
+2026-01-25 16:14:42,728 - INFO - 🔄 Processing: auristatin-f
+2026-01-25 16:14:47,091 - INFO - 🔄 Processing: Duostatin-5
+2026-01-25 16:14:51,645 - INFO - 🔄 Processing: auristatin-e
+2026-01-25 16:14:56,297 - INFO - 🔄 Processing: fmoc-mmae
+2026-01-25 16:15:01,494 - INFO - 🔄 Processing: ac-exatecan
+2026-01-25 16:15:05,507 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:15:06,241 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:15:06,241 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:15:06,242 - INFO - 🔄 Processing: 182182-31-6
+2026-01-25 16:15:10,003 - INFO - 🔄 Processing: 17-aep-ga
+2026-01-25 16:15:15,015 - INFO - 🔄 Processing: monomethyl-auristatin-f
+2026-01-25 16:15:19,355 - INFO - 🔄 Processing: maytansinol
+2026-01-25 16:15:23,683 - INFO - 🔄 Processing: dm4
+2026-01-25 16:15:27,995 - INFO - 🔄 Processing: drf-1042
+2026-01-25 16:15:31,750 - INFO - 🔄 Processing: calicheamicin
+2026-01-25 16:15:36,599 - INFO - 🔄 Processing: eribulin
+2026-01-25 16:15:41,451 - INFO - 🔄 Processing: sg3199
+2026-01-25 16:15:45,876 - INFO - 🔄 Processing: monomethyl-auristatin-d
+2026-01-25 16:15:50,463 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:15:50,591 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:15:50,592 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:15:50,592 - INFO - 🌐 [PAGE 2] accessing: https://www.ambeed.com/adc-toxins.html?page=2
+2026-01-25 16:15:54,563 - INFO - 📦 Found 20 products.
+2026-01-25 16:15:54,564 - INFO - 🔄 Processing: 7-aminomethyl-10-methyl-11-fluoro-camptothecin
+2026-01-25 16:15:58,790 - INFO - 🔄 Processing: daun02
+2026-01-25 16:16:02,993 - INFO - 🔄 Processing: (s)-seco-duocarmycin-sa
+2026-01-25 16:16:06,803 - INFO - 🔄 Processing: 1023758-14-6
+2026-01-25 16:16:10,370 - INFO - 🔄 Processing: exatecan
+2026-01-25 16:16:14,408 - INFO - 🔄 Processing: auristatin-f
+2026-01-25 16:16:18,676 - INFO - 🔄 Processing: Duostatin-5
+2026-01-25 16:16:23,369 - INFO - 🔄 Processing: auristatin-e
+2026-01-25 16:16:27,821 - INFO - 🔄 Processing: fmoc-mmae
+2026-01-25 16:16:32,362 - INFO - 🔄 Processing: ac-exatecan
+2026-01-25 16:16:36,040 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:16:36,160 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:16:36,161 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:16:36,163 - INFO - 🔄 Processing: 182182-31-6
+2026-01-25 16:16:39,878 - INFO - 🔄 Processing: 17-aep-ga
+2026-01-25 16:16:43,991 - INFO - 🔄 Processing: monomethyl-auristatin-f
+2026-01-25 16:16:48,227 - INFO - 🔄 Processing: maytansinol
+2026-01-25 16:16:52,066 - INFO - 🔄 Processing: dm4
+2026-01-25 16:16:56,374 - INFO - 🔄 Processing: drf-1042
+2026-01-25 16:17:00,090 - INFO - 🔄 Processing: calicheamicin
+2026-01-25 16:17:04,633 - INFO - 🔄 Processing: eribulin
+2026-01-25 16:17:08,979 - INFO - 🔄 Processing: sg3199
+2026-01-25 16:17:13,204 - INFO - 🔄 Processing: monomethyl-auristatin-d
+2026-01-25 16:17:17,321 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:17:17,687 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:17:17,687 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:17:17,687 - INFO - 🌐 [PAGE 3] accessing: https://www.ambeed.com/adc-toxins.html?page=3
+2026-01-25 16:17:21,269 - INFO - 📦 Found 20 products.
+2026-01-25 16:17:21,269 - INFO - 🔄 Processing: 7-aminomethyl-10-methyl-11-fluoro-camptothecin
+2026-01-25 16:17:25,009 - INFO - 🔄 Processing: daun02
+2026-01-25 16:17:29,509 - INFO - 🔄 Processing: (s)-seco-duocarmycin-sa
+2026-01-25 16:17:33,539 - INFO - 🔄 Processing: 1023758-14-6
+2026-01-25 16:17:37,203 - INFO - 🔄 Processing: exatecan
+2026-01-25 16:17:41,537 - INFO - 🔄 Processing: auristatin-f
+2026-01-25 16:17:45,378 - INFO - 🔄 Processing: Duostatin-5
+2026-01-25 16:17:49,508 - INFO - 🔄 Processing: auristatin-e
+2026-01-25 16:17:54,045 - INFO - 🔄 Processing: fmoc-mmae
+2026-01-25 16:18:02,463 - INFO - 🔄 Processing: ac-exatecan
+2026-01-25 16:18:06,224 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:18:06,361 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:18:06,361 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:18:06,362 - INFO - 🔄 Processing: 182182-31-6
+2026-01-25 16:18:09,585 - INFO - 🔄 Processing: 17-aep-ga
+2026-01-25 16:18:14,571 - INFO - 🔄 Processing: monomethyl-auristatin-f
+2026-01-25 16:18:18,580 - INFO - 🔄 Processing: maytansinol
+2026-01-25 16:18:22,787 - INFO - 🔄 Processing: dm4
+2026-01-25 16:18:26,979 - INFO - 🔄 Processing: drf-1042
+2026-01-25 16:18:30,829 - INFO - 🔄 Processing: calicheamicin
+2026-01-25 16:18:33,638 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-25 16:18:35,329 - WARNING - rdkit missing. SMILES validation disabled.
+2026-01-25 16:18:36,490 - INFO - 🔄 Processing: eribulin
+2026-01-25 16:18:36,543 - INFO - 🚀 [AMBEED LITE] ADC Toxins (Page: 100, Limit: 100000)
+2026-01-25 16:18:37,420 - INFO - 🌐 [PAGE 100] accessing: https://www.ambeed.com/adc-toxins.html?page=100
+2026-01-25 16:18:41,096 - INFO - 🔄 Processing: sg3199
+2026-01-25 16:18:41,832 - INFO - 📦 Found 20 products.
+2026-01-25 16:18:41,833 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:18:45,259 - INFO - 🔄 Processing: monomethyl-auristatin-d
+2026-01-25 16:18:46,036 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:18:49,703 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:18:49,815 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:18:49,816 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:18:49,816 - INFO - 🌐 [PAGE 4] accessing: https://www.ambeed.com/adc-toxins.html?page=4
+2026-01-25 16:18:50,700 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:18:53,412 - INFO - 📦 Found 20 products.
+2026-01-25 16:18:53,412 - INFO - 🔄 Processing: 7-aminomethyl-10-methyl-11-fluoro-camptothecin
+2026-01-25 16:18:54,539 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:18:57,381 - INFO - 🔄 Processing: daun02
+2026-01-25 16:18:58,711 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:19:02,205 - INFO - 🔄 Processing: (s)-seco-duocarmycin-sa
+2026-01-25 16:19:02,707 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:19:06,534 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:19:06,535 - INFO - 🔄 Processing: 1023758-14-6
+2026-01-25 16:19:10,057 - INFO - 🔄 Processing: exatecan
+2026-01-25 16:19:10,906 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:19:13,740 - INFO - 🔄 Processing: auristatin-f
+2026-01-25 16:19:16,407 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:19:17,923 - INFO - 🔄 Processing: Duostatin-5
+2026-01-25 16:19:22,080 - INFO - 🔄 Processing: auristatin-e
+2026-01-25 16:19:22,575 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:19:25,704 - INFO - 🔄 Processing: fmoc-mmae
+2026-01-25 16:19:26,479 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:19:27,182 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:19:27,182 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:19:27,183 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:19:30,207 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:19:30,699 - INFO - 🔄 Processing: ac-exatecan
+2026-01-25 16:19:34,251 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:19:34,381 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:19:34,382 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:19:34,383 - INFO - 🔄 Processing: 182182-31-6
+2026-01-25 16:19:34,886 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:19:37,766 - INFO - 🔄 Processing: 17-aep-ga
+2026-01-25 16:19:38,939 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:19:41,296 - INFO - 🔄 Processing: monomethyl-auristatin-f
+2026-01-25 16:19:43,206 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:19:45,685 - INFO - 🔄 Processing: maytansinol
+2026-01-25 16:19:46,924 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:19:49,602 - INFO - 🔄 Processing: dm4
+2026-01-25 16:19:50,769 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:19:53,703 - INFO - 🔄 Processing: drf-1042
+2026-01-25 16:19:55,954 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:19:57,218 - INFO - 🔄 Processing: calicheamicin
+2026-01-25 16:20:00,357 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:20:02,424 - INFO - 🔄 Processing: eribulin
+2026-01-25 16:20:04,387 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:20:07,369 - INFO - 🔄 Processing: sg3199
+2026-01-25 16:20:08,447 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:20:08,581 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:20:08,582 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:20:08,583 - INFO - 🌐 [PAGE 101] accessing: https://www.ambeed.com/adc-toxins.html?page=101
+2026-01-25 16:20:12,066 - INFO - 🔄 Processing: monomethyl-auristatin-d
+2026-01-25 16:20:12,244 - INFO - 📦 Found 20 products.
+2026-01-25 16:20:12,244 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:20:16,104 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:20:16,107 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:20:16,207 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:20:16,207 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:20:16,208 - INFO - 🌐 [PAGE 5] accessing: https://www.ambeed.com/adc-toxins.html?page=5
+2026-01-25 16:20:38,903 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-25 16:20:40,452 - WARNING - rdkit missing. SMILES validation disabled.
+2026-01-25 16:20:41,509 - INFO - 🚀 [AMBEED LITE] ADC Toxins (Page: 1, Limit: 100000)
+2026-01-25 16:20:42,284 - INFO - 🌐 [PAGE 1] accessing: https://www.ambeed.com/adc-toxins.html
+2026-01-25 16:20:46,865 - INFO - 📦 Found 20 products.
+2026-01-25 16:20:46,865 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:20:50,577 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:20:54,774 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:20:58,686 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:21:02,367 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:21:06,175 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:21:10,320 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:21:14,699 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:21:19,179 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:21:23,941 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:21:27,491 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:21:28,214 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:21:28,215 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:21:28,215 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:21:31,767 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:21:36,286 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:21:40,594 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:21:44,423 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:21:48,835 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:21:52,960 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:21:58,163 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:22:02,763 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:22:07,665 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:22:11,664 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:22:11,814 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:22:11,814 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:22:11,815 - INFO - ✅ [PAGE 1] Completed. [CRAWLER] Moving to Page 2...
+2026-01-25 16:22:11,815 - INFO - 🌐 [PAGE 2] accessing: https://www.ambeed.com/adc-toxins.html?page=2
+2026-01-25 16:22:15,861 - INFO - 📦 Found 20 products.
+2026-01-25 16:22:15,861 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:22:19,846 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:22:24,270 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:22:28,241 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:22:31,670 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:22:35,814 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:22:39,738 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:22:44,724 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:22:49,317 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:22:53,859 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:22:58,345 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:22:58,493 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:22:58,494 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:22:58,496 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:23:01,578 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:23:05,713 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:23:09,863 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:23:14,011 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:23:18,527 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:23:21,997 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:23:26,675 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:23:31,269 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:23:35,687 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:23:39,719 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:23:40,092 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:23:40,092 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:23:40,093 - INFO - ✅ [PAGE 2] Completed. [CRAWLER] Moving to Page 3...
+2026-01-25 16:23:40,093 - INFO - 🌐 [PAGE 3] accessing: https://www.ambeed.com/adc-toxins.html?page=3
+2026-01-25 16:23:43,592 - INFO - 📦 Found 20 products.
+2026-01-25 16:23:43,592 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:23:47,809 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:23:52,236 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:23:56,338 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:23:59,696 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:24:03,504 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:24:08,102 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:24:12,126 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:24:17,035 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:24:21,471 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:24:25,471 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:24:25,571 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:24:25,571 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:24:25,572 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:24:29,214 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:24:33,566 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:24:38,032 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:24:49,868 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:24:54,752 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:24:58,958 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:25:04,134 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:25:08,948 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:25:13,150 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:25:17,273 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:25:17,403 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:25:17,403 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:25:17,405 - INFO - ✅ [PAGE 3] Completed. [CRAWLER] Moving to Page 4...
+2026-01-25 16:25:17,405 - INFO - 🌐 [PAGE 4] accessing: https://www.ambeed.com/adc-toxins.html?page=4
+2026-01-25 16:25:20,989 - INFO - 📦 Found 20 products.
+2026-01-25 16:25:20,990 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:25:24,757 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:25:29,365 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:25:33,874 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:25:37,816 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:25:42,322 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:25:46,432 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:25:52,110 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:25:55,840 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:26:00,356 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:26:04,540 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:26:04,910 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:26:04,911 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:26:04,911 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:26:08,679 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:26:13,334 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:26:17,843 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:26:22,157 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:26:26,375 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:26:30,035 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:26:35,090 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:26:39,980 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:26:44,961 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:26:48,786 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:26:48,910 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:26:48,910 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:26:48,911 - INFO - ✅ [PAGE 4] Completed. [CRAWLER] Moving to Page 5...
+2026-01-25 16:26:48,911 - INFO - 🌐 [PAGE 5] accessing: https://www.ambeed.com/adc-toxins.html?page=5
+2026-01-25 16:26:52,820 - INFO - 📦 Found 20 products.
+2026-01-25 16:26:52,821 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:26:57,351 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:27:02,064 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:27:06,075 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:27:09,203 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:27:12,919 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:27:16,962 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:27:21,075 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:27:25,657 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:27:30,045 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:27:34,271 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:27:34,399 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:27:34,399 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:27:34,400 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:27:37,907 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:27:42,010 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:27:45,742 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:27:50,022 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:27:54,220 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:27:57,747 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:28:02,347 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:28:06,624 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:28:10,943 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:28:15,109 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:28:15,481 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:28:15,482 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:28:15,482 - INFO - ✅ [PAGE 5] Completed. [CRAWLER] Moving to Page 6...
+2026-01-25 16:28:15,482 - INFO - 🌐 [PAGE 6] accessing: https://www.ambeed.com/adc-toxins.html?page=6
+2026-01-25 16:28:19,125 - INFO - 📦 Found 20 products.
+2026-01-25 16:28:19,125 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:28:22,931 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:28:27,304 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:28:31,413 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:28:34,954 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:28:38,774 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:28:42,651 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:28:46,891 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:28:51,552 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:28:55,950 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:28:59,643 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:28:59,790 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:28:59,790 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:28:59,790 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:29:02,962 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:29:06,572 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:29:10,574 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:29:14,592 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:29:18,529 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:29:22,258 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:29:27,037 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:29:32,245 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:29:37,098 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)

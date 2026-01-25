@@ -128,7 +128,15 @@ class AmbeedCrawler:
                         break
 
                     separator = "&" if "?" in base_url else "?"
-                    url = base_url if page_num == 1 else f"{base_url}{separator}page={page_num}"
+                    # User identified correct pagination: ?pagesize=20&pageindex=2
+                    # We apply this format. For page 1, we can also use it or stick to base_url.
+                    # Let's try appending it for all pages if page_num > 1 to be safe, or just use it.
+                    # Usually page 1 is fine without params, but let's follow the pattern for > 1.
+                    if page_num == 1:
+                        url = base_url
+                    else:
+                        url = f"{base_url}{separator}pagesize=20&pageindex={page_num}"
+                    
                     logger.info(f"🌐 [PAGE {page_num}] 다음 페이지 접속 중: {url} (현재 수집량: {count}/{limit})")
                     
                     try:
