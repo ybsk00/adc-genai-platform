@@ -1,3 +1,8 @@
+import os
+# Fix for gRPC fork support (must be set before any grpc import)
+os.environ["GRPC_ENABLE_FORK_SUPPORT"] = "1"
+os.environ["GRPC_POLL_STRATEGY"] = "epoll1"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager

@@ -66,7 +66,12 @@ function StructureViewer({ smiles, id }: { smiles: string, id: string }) {
 
     useEffect(() => {
         const canvas = canvasRef.current
-        if (canvas && smiles) {
+        if (canvas) {
+            const ctx = canvas.getContext('2d')
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            if (!smiles) return
+
             // Prevent drawing if canvas is hidden (e.g. inactive tab)
             if (canvas.offsetParent === null) return
 
@@ -81,13 +86,19 @@ function StructureViewer({ smiles, id }: { smiles: string, id: string }) {
                     // Double check if component is still mounted and visible
                     if (canvasRef.current && canvasRef.current.offsetParent !== null) {
                         try {
-                            drawer.draw(tree, canvasRef.current, 'light', false)
+                            drawer.draw(tree, canvasRef.current, 'dark', false)
                         } catch (e) {
                             console.warn("SmilesDrawer draw error (likely hidden canvas):", e)
                         }
                     }
                 }, (err: any) => {
                     console.warn("SmilesDrawer parse error:", err)
+                    if (ctx) {
+                        ctx.fillStyle = '#64748b'
+                        ctx.font = '10px Inter'
+                        ctx.textAlign = 'center'
+                        ctx.fillText('Parse Error', canvas.width / 2, canvas.height / 2)
+                    }
                 })
             } catch (e) {
                 console.warn("SmilesDrawer init error:", e)
@@ -239,7 +250,7 @@ export function GoldenSetLibraryTab() {
             accessorKey: 'smiles_code',
             header: 'Structure',
             cell: ({ row }) => (
-                <div className="w-[100px] h-[50px] bg-white rounded overflow-hidden flex items-center justify-center">
+                <div className="w-[100px] h-[50px] bg-[#1a1b1e] rounded overflow-hidden flex items-center justify-center border border-slate-800">
                     {row.original.smiles_code ? (
                         <StructureViewer smiles={row.original.smiles_code} id={row.original.id} />
                     ) : row.original.ai_refined === false ? (
@@ -393,7 +404,7 @@ export function GoldenSetLibraryTab() {
                                         />
                                     </div>
                                     {/* SMILES Preview */}
-                                    <div className="h-[120px] bg-white rounded-lg flex items-center justify-center border border-slate-700 mt-2">
+                                    <div className="h-[120px] bg-[#1a1b1e] rounded-lg flex items-center justify-center border border-slate-700 mt-2">
                                         {newEntry.smiles ? (
                                             <StructureViewer smiles={newEntry.smiles} id="preview" />
                                         ) : (

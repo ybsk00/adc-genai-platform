@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.supabase import supabase
 from app.services.ai_refiner import ai_refiner
 from app.services.rag_service import rag_service
+from app.services.job_lock import job_lock
 
 logger = logging.getLogger(__name__)
 
@@ -44,74 +45,86 @@ class AmbeedCrawler:
         self.max_concurrent_categories = 2  # Reduced from 3
         self.global_semaphore = asyncio.Semaphore(2) # Reduced from 5 to 2 (Strict Limit)
 
-        # Configure Gemini
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        # Lazy init for Gemini to avoid gRPC fork issues
         self.model_id = 'gemini-2.5-flash'
-        try:
-             self.model = genai.GenerativeModel(self.model_id)
-        except Exception:
-             logger.warning(f"⚠️ Model {self.model_id} not found, falling back to gemini-1.5-flash")
-             self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = None
+
+    def _get_model(self):
+        """Lazy initialization of Gemini model"""
+        if not self.model:
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            try:
+                self.model = genai.GenerativeModel(self.model_id)
+            except Exception:
+                logger.warning(f"⚠️ Model {self.model_id} not found, falling back to gemini-1.5-flash")
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
+        return self.model
 
     async def _init_browser(self, p) -> BrowserContext:
         """Initialize browser with stealth, proxy settings AND RESOURCE BLOCKING"""
-        user_agent = self.ua.random
-        
-        proxy_config = None
-        if settings.PROXY_ENABLED:
-            ports = settings.PROXY_PORTS.split(',')
-            port = random.choice(ports).strip()
-            proxy_config = {
-                "server": f"http://{settings.PROXY_HOST}:{port}",
-                "username": settings.PROXY_USERNAME,
-                "password": settings.PROXY_PASSWORD
-            }
-            logger.info(f"🌐 Using Proxy: {settings.PROXY_HOST}:{port}")
+        try:
+            user_agent = self.ua.random
+            
+            proxy_config = None
+            if settings.PROXY_ENABLED:
+                ports = settings.PROXY_PORTS.split(',')
+                port = random.choice(ports).strip()
+                proxy_config = {
+                    "server": f"http://{settings.PROXY_HOST}:{port}",
+                    "username": settings.PROXY_USERNAME,
+                    "password": settings.PROXY_PASSWORD
+                }
+                logger.info(f"🌐 Using Proxy: {settings.PROXY_HOST}:{port}")
 
-        # Launch options
-        browser = await p.chromium.launch(
-            headless=True,
-            proxy=proxy_config if settings.PROXY_ENABLED else None,
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-infobars',
-                '--window-position=0,0',
-                '--ignore-certificate-errors',
-                '--ignore-ssl-errors',
-                '--disable-dev-shm-usage',
-                '--disable-gpu' # Added for performance
-            ]
-        )
-        
-        context = await browser.new_context(
-            user_agent=user_agent,
-            viewport={'width': 1920, 'height': 1080},
-            locale='en-US',
-            timezone_id='America/New_York',
-            java_script_enabled=True
-        )
-        
-        # Inject stealth scripts
-        await context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            window.navigator.chrome = { runtime: {} };
-            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-        """)
+            # Launch options
+            logger.info("🌐 Launching Browser (Headless)...")
+            browser = await p.chromium.launch(
+                headless=True,
+                proxy=proxy_config if settings.PROXY_ENABLED else None,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-infobars',
+                    '--window-position=0,0',
+                    '--ignore-certificate-errors',
+                    '--ignore-ssl-errors',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu' # Added for performance
+                ],
+                timeout=60000
+            )
+            
+            context = await browser.new_context(
+                user_agent=user_agent,
+                viewport={'width': 1920, 'height': 1080},
+                locale='en-US',
+                timezone_id='America/New_York',
+                java_script_enabled=True
+            )
+            
+            # Inject stealth scripts
+            await context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                window.navigator.chrome = { runtime: {} };
+                Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+            """)
 
-        # --- RESOURCE BLOCKING (Critical for Proxy Health) ---
-        # Blocks Images, Fonts, Media, Stylesheets to save bandwidth
-        async def route_intercept(route):
-            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                await route.abort()
-            else:
-                await route.continue_()
+            # --- RESOURCE BLOCKING (Critical for Proxy Health) ---
+            # Blocks Images, Fonts, Media, Stylesheets to save bandwidth
+            async def route_intercept(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
 
-        await context.route("**/*", route_intercept)
-        
-        return context
+            await context.route("**/*", route_intercept)
+            
+            return context
+        except Exception as e:
+            logger.error(f"🔥 Browser Launch Failed: {e}")
+            raise e
 
     async def _smart_delay(self, min_s=2.0, max_s=5.0):
         """Random delay to mimic human behavior"""
@@ -150,7 +163,10 @@ class AmbeedCrawler:
         consecutive_empty_pages = 0
         
         async with async_playwright() as p:
-            context = await self._init_browser(p)
+            try:
+                context = await self._init_browser(p)
+            except Exception:
+                return 0
             
             # Create a main listing page
             page = await context.new_page()
@@ -218,7 +234,7 @@ class AmbeedCrawler:
                     links = list(set(links))
                     logger.debug(f"🔎 Found {len(links)} links on page {page_num} ({category_name})")
                     if not links:
-                        logger.warning(f"⚠️ No links found on page {page_num} ({category_name}). HTML content length: {len(await page.content())}")
+                        logger.warning(f"⚠️ No product list selector found on page {page_num}. HTML content length: {len(await page.content())}")
                     
                     if not links:
                         logger.info(f"   ⚠️ No links found on page {page_num} ({category_name}).")
@@ -403,7 +419,8 @@ class AmbeedCrawler:
         }}
         """
         try:
-            response = await self.model.generate_content_async(
+            model = self._get_model()
+            response = await model.generate_content_async(
                 prompt, 
                 generation_config=genai.GenerationConfig(response_mime_type="application/json")
             )
@@ -489,6 +506,20 @@ class AmbeedCrawler:
         await update_job_status(job_id, status="running")
         
         logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        
+        # --- Sequential Execution Lock ---
+        lock_acquired = False
+        wait_start = time.time()
+        while not lock_acquired:
+            if await job_lock.acquire("global_crawler_lock"):
+                lock_acquired = True
+            else:
+                if time.time() - wait_start > 3600: # 1 hour timeout
+                    await update_job_status(job_id, status="failed", errors=["Timed out waiting for global crawler lock"])
+                    return
+                logger.info(f"⏳ Job {job_id} waiting for global crawler lock...")
+                await asyncio.sleep(30)
+        
         total_processed = 0
         
         try:
@@ -545,6 +576,9 @@ class AmbeedCrawler:
             logger.error(f"🔥 [CRITICAL] Crawler loop failed: {e}", exc_info=True)
             await update_job_status(job_id, status="failed", errors=[str(e)])
         finally:
+            # Release Lock
+            await job_lock.release("global_crawler_lock")
+            
             # Safety double-check
             job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
             if job.data and job.data[0]['status'] == 'running':

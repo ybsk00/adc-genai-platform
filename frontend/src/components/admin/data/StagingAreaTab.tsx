@@ -63,13 +63,15 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
-        if (!canvasRef.current || !smiles) return
+        if (!canvasRef.current) return
         
-        try {
-            // Clear canvas
-            const ctx = canvasRef.current.getContext('2d')
-            if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
+        const canvas = canvasRef.current
+        const ctx = canvas.getContext('2d')
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+        if (!smiles) return
+
+        try {
             const drawer = new SmilesDrawer.Drawer({
                 width: 400,
                 height: 250,
@@ -80,26 +82,34 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
             
             SmilesDrawer.parse(smiles, (tree: any) => {
                 if (canvasRef.current) {
-                    drawer.draw(tree, canvasRef.current, 'light', false)
+                    // Using 'dark' theme for SmilesDrawer
+                    drawer.draw(tree, canvasRef.current, 'dark', false)
                 }
             }, (err: any) => {
                 console.warn('SMILES Parse Error:', err)
+                // Draw error text on canvas
+                if (ctx) {
+                    ctx.fillStyle = '#64748b'
+                    ctx.font = '12px Inter'
+                    ctx.textAlign = 'center'
+                    ctx.fillText('Invalid SMILES Structure', canvas.width / 2, canvas.height / 2)
+                }
             })
         } catch (e) {
-            console.error(e)
+            console.error('SmilesDrawer Error:', e)
         }
     }, [smiles])
 
     if (!smiles) return (
-        <div className="h-[250px] flex flex-col items-center justify-center bg-slate-900/50 text-slate-500 border border-dashed border-slate-700 rounded-lg">
+        <div className="h-[250px] flex flex-col items-center justify-center bg-slate-950/50 text-slate-500 border border-dashed border-slate-800 rounded-lg">
             <FlaskConical className="w-8 h-8 mb-2 opacity-20" />
-            <span className="text-xs">No SMILES Data Available</span>
+            <span className="text-xs font-medium">구조 정보 없음 (No SMILES)</span>
         </div>
     )
 
     return (
-        <div className="bg-white rounded-lg p-4 border border-slate-700 shadow-inner flex justify-center items-center overflow-hidden h-[250px]">
-            <canvas ref={canvasRef} className="max-w-full max-h-full transition-transform hover:scale-105 duration-300" />
+        <div className="bg-[#1a1b1e] rounded-lg p-4 border border-slate-800 shadow-inner flex justify-center items-center overflow-hidden h-[250px]">
+            <canvas ref={canvasRef} width={400} height={250} className="max-w-full max-h-full transition-transform hover:scale-105 duration-300" />
         </div>
     )
 }
@@ -444,11 +454,10 @@ export function StagingAreaTab() {
                                             size="sm" 
                                             variant="outline" 
                                             className="h-7 text-[10px] gap-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
-                                            onClick={() => refineMutation.mutate(selectedDraft.id)}
-                                            disabled={refineMutation.isPending}
+                                            onClick={() => setIsChatOpen(true)}
                                         >
-                                            {refineMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin"/> : <Sparkles className="w-3 h-3" />}
-                                            AI에게 다시 분석시키기
+                                            <Sparkles className="w-3 h-3" />
+                                            AI에게 분석 시키기
                                         </Button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">

@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.supabase import supabase
 from app.services.ai_refiner import ai_refiner
 from app.services.rag_service import rag_service
+from app.services.job_lock import job_lock
 
 logger = logging.getLogger(__name__)
 
@@ -35,28 +36,49 @@ class CreativeBiolabsCrawler:
     def __init__(self):
         self.ua = UserAgent()
         self.global_semaphore = asyncio.Semaphore(2)
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # genai.configure is NOT called here to avoid fork/gRPC issues
+        self.model = None
+
+    def _get_model(self):
+        """Lazy initialization of Gemini model to prevent gRPC fork issues"""
+        if not self.model:
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+        return self.model
 
     async def _init_browser(self, p) -> BrowserContext:
-        browser = await p.chromium.launch(headless=True, args=['--no-sandbox'])
-        context = await browser.new_context(user_agent=self.ua.random)
-        
-        async def route_intercept(route):
-            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                await route.abort()
-            else:
-                await route.continue_()
-        await context.route("**/*", route_intercept)
-        return context
+        try:
+            logger.info("🌐 Launching Browser (Headless)...")
+            browser = await p.chromium.launch(
+                headless=True, 
+                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+                timeout=60000
+            )
+            context = await browser.new_context(user_agent=self.ua.random)
+            
+            async def route_intercept(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await context.route("**/*", route_intercept)
+            return context
+        except Exception as e:
+            logger.error(f"🔥 Browser Launch Failed: {e}")
+            raise e
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
         logger.info(f"🚀 [Start] {category_name}")
         count = 0
         async with async_playwright() as p:
-            context = await self._init_browser(p)
+            try:
+                context = await self._init_browser(p)
+            except Exception:
+                return 0
+
             page = await context.new_page()
             try:
+                logger.info(f"📄 Navigating to {base_url}...")
                 await page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
                 links = await page.evaluate("""
                     () => Array.from(document.querySelectorAll('a[href*="/adc/"], a[href*="/p-"]'))
@@ -137,7 +159,8 @@ class CreativeBiolabsCrawler:
         Text: """ + text
         
         try:
-            response = await self.model.generate_content_async(
+            model = self._get_model()
+            response = await model.generate_content_async(
                 prompt,
                 generation_config=genai.GenerationConfig(response_mime_type="application/json")
             )
@@ -210,6 +233,20 @@ class CreativeBiolabsCrawler:
         await update_job_status(job_id, status="running")
         
         logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        
+        # --- Sequential Execution Lock ---
+        lock_acquired = False
+        wait_start = time.time()
+        while not lock_acquired:
+            if await job_lock.acquire("global_crawler_lock"):
+                lock_acquired = True
+            else:
+                if time.time() - wait_start > 3600: # 1 hour timeout
+                    await update_job_status(job_id, status="failed", errors=["Timed out waiting for global crawler lock"])
+                    return
+                logger.info(f"⏳ Job {job_id} waiting for global crawler lock...")
+                await asyncio.sleep(30)
+        
         total_processed = 0
         
         try:
@@ -244,6 +281,9 @@ class CreativeBiolabsCrawler:
             logger.error(f"🔥 Crawler run failed: {e}", exc_info=True)
             await update_job_status(job_id, status="failed", errors=[str(e)])
         finally:
+            # Release Lock
+            await job_lock.release("global_crawler_lock")
+            
             # Safety Fallback
             job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
             if job.data and job.data[0]['status'] == 'running':
