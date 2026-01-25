@@ -467,7 +467,7 @@ class AmbeedCrawler:
             pass
 
     async def run(self, search_term: str, limit: int, job_id: str):
-        """Orchestrate the crawling process with Category Concurrency"""
+        """Orchestrate the crawling process with Controlled Category Concurrency"""
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
         
@@ -485,16 +485,19 @@ class AmbeedCrawler:
                 await update_job_status(job_id, status="completed", message="No categories matched.")
                 return
 
-            logger.info(f"🏁 Starting Concurrent Crawl for {len(targets)} categories...")
+            logger.info(f"🏁 Starting Controlled Crawl for {len(targets)} categories (Max Concurrent: {self.max_concurrent_categories})")
             
-            # Create tasks for each category
-            # Use semaphore to limit how many categories run strictly in parallel if needed, 
-            # though we handled tab concurrency with global_semaphore.
-            tasks = [self.crawl_category(cat, url, limit) for cat, url in targets.items()]
-            
+            # Use a semaphore to limit concurrent categories (Browser Instances)
+            cat_semaphore = asyncio.Semaphore(self.max_concurrent_categories)
+
+            async def sem_crawl(cat, url):
+                async with cat_semaphore:
+                    return await self.crawl_category(cat, url, limit)
+
+            tasks = [sem_crawl(cat, url) for cat, url in targets.items()]
             results = await asyncio.gather(*tasks)
-            total_processed = sum(results)
             
+            total_processed = sum(results)
             await update_job_status(job_id, status="completed", records_drafted=total_processed, completed_at=datetime.utcnow().isoformat())
 
         except Exception as e:
