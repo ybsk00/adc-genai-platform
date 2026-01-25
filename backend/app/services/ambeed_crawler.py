@@ -41,9 +41,8 @@ class AmbeedCrawler:
         self.request_count = 0
         self.break_threshold = 100
         self.batch_size = 5
-        self.max_concurrent_categories = 3  # Limit concurrent category crawls
-        self.max_concurrent_tabs = 5 # Limit tabs per category or global? Global semaphore is better.
-        self.global_semaphore = asyncio.Semaphore(5) # Max 5 concurrent tabs globally
+        self.max_concurrent_categories = 2  # Reduced from 3
+        self.global_semaphore = asyncio.Semaphore(2) # Reduced from 5 to 2 (Strict Limit)
 
         # Configure Gemini
         genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -55,7 +54,7 @@ class AmbeedCrawler:
              self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     async def _init_browser(self, p) -> BrowserContext:
-        """Initialize browser with stealth and proxy settings"""
+        """Initialize browser with stealth, proxy settings AND RESOURCE BLOCKING"""
         user_agent = self.ua.random
         
         proxy_config = None
@@ -71,7 +70,7 @@ class AmbeedCrawler:
 
         # Launch options
         browser = await p.chromium.launch(
-            headless=True, # Set False for debugging
+            headless=True,
             proxy=proxy_config if settings.PROXY_ENABLED else None,
             args=[
                 '--disable-blink-features=AutomationControlled',
@@ -81,7 +80,8 @@ class AmbeedCrawler:
                 '--window-position=0,0',
                 '--ignore-certificate-errors',
                 '--ignore-ssl-errors',
-                '--disable-dev-shm-usage'
+                '--disable-dev-shm-usage',
+                '--disable-gpu' # Added for performance
             ]
         )
         
@@ -100,6 +100,16 @@ class AmbeedCrawler:
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
             Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
         """)
+
+        # --- RESOURCE BLOCKING (Critical for Proxy Health) ---
+        # Blocks Images, Fonts, Media, Stylesheets to save bandwidth
+        async def route_intercept(route):
+            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                await route.abort()
+            else:
+                await route.continue_()
+
+        await context.route("**/*", route_intercept)
         
         return context
 
@@ -109,18 +119,25 @@ class AmbeedCrawler:
         await asyncio.sleep(delay)
 
     async def _scroll_to_bottom(self, page: Page):
-        """Scroll to bottom to trigger lazy loading"""
+        """Scroll to bottom to trigger lazy loading (Safe Mode)"""
         try:
             previous_height = await page.evaluate("document.body.scrollHeight")
-            while True:
+            max_scrolls = 10 # Hard Limit
+            scroll_count = 0
+            
+            while scroll_count < max_scrolls:
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                await asyncio.sleep(1.5) # Wait for load
+                await asyncio.sleep(1.0) # Wait for load
                 new_height = await page.evaluate("document.body.scrollHeight")
+                
                 if new_height == previous_height:
                     break
+                
                 previous_height = new_height
+                scroll_count += 1
+                
         except Exception as e:
-            logger.warning(f"Scroll failed: {e}")
+            logger.warning(f"Scroll warning: {e}")
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
         """Crawl a specific category with robust pagination"""
@@ -131,7 +148,6 @@ class AmbeedCrawler:
         max_pages = 200 # Safety limit
         is_full_crawl = limit > 1000
         consecutive_empty_pages = 0
-        consecutive_load_failures = 0
         
         async with async_playwright() as p:
             context = await self._init_browser(p)
@@ -150,9 +166,6 @@ class AmbeedCrawler:
                     if consecutive_empty_pages >= 3:
                         logger.info(f"🛑 No products found for 3 consecutive pages in {category_name}. Stopping.")
                         break
-                    if consecutive_load_failures >= 3:
-                        logger.error(f"🛑 Failed to load 3 consecutive pages in {category_name}. Aborting to save resources.")
-                        break
 
                     # Construct URL (Handle ?page= vs &page=)
                     separator = "&" if "?" in base_url else "?"
@@ -162,9 +175,10 @@ class AmbeedCrawler:
                     
                     retry_count = 0
                     success = False
-                    while retry_count < 3:
+                    while retry_count < 2: # Reduced retries from 3 to 2
                         try:
-                            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                            # Reduced timeout from 60s to 30s
+                            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                             await self._smart_delay(1, 2)
                             
                             # Check if page is valid (Ambeed sometimes redirects to home on invalid page)
@@ -174,7 +188,7 @@ class AmbeedCrawler:
                                 success = True
                                 break
 
-                            # Dynamic Scroll
+                            # Dynamic Scroll (Safe)
                             await self._scroll_to_bottom(page)
                             
                             # Wait for product list
@@ -186,18 +200,14 @@ class AmbeedCrawler:
                             success = True
                             break
                         except Exception as e:
-                            logger.warning(f"   Retry {retry_count+1}/3 failed for page {page_num}: {e}")
+                            logger.warning(f"   Retry {retry_count+1}/2 failed for page {page_num}: {e}")
                             retry_count += 1
-                            await asyncio.sleep(5)
+                            await asyncio.sleep(3)
                     
                     if not success:
                         logger.error(f"❌ Failed to load page {page_num} after retries. Skipping.")
-                        consecutive_load_failures += 1
                         page_num += 1
                         continue
-                    
-                    # Reset load failure count on success
-                    consecutive_load_failures = 0
 
                     # Extract Links
                     links = await page.evaluate("""
