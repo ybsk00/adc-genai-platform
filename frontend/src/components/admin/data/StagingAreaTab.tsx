@@ -36,6 +36,7 @@ interface GoldenSetDraft {
     outcome_type?: string
     failure_reason?: string
     is_ai_extracted?: boolean
+    raw_data?: any
     // Bio Metrics
     binding_affinity?: string
     isotype?: string
@@ -440,7 +441,7 @@ export function StagingAreaTab() {
                                             <Activity className="w-4 h-4" /> Core Identity
                                         </h4>
                                         <Button 
-                                            size="xs" 
+                                            size="sm" 
                                             variant="outline" 
                                             className="h-7 text-[10px] gap-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
                                             onClick={() => refineMutation.mutate(selectedDraft.id)}
