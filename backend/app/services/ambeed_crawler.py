@@ -48,7 +48,8 @@ class AmbeedCrawler:
     def _get_model(self):
         if not self.model:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            # 사장님 지시: 최신 2.0 Flash 모델로 업그레이드
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
         return self.model
 
     async def _init_browser(self, p) -> BrowserContext:
@@ -199,6 +200,10 @@ class AmbeedCrawler:
                                         batch_data = []
                                         if job_id:
                                             await update_job_status(job_id, records_drafted=count, last_processed_page=page_num)
+                                else:
+                                    logger.warning(f"⚠️ [SKIP] Enrichment failed for {cat_no}")
+                            else:
+                                logger.warning(f"⚠️ [SKIP] Processing failed for {cat_no}")
 
                         # 한 페이지 처리가 끝나면 "무조건" 페이지 번호 증가
                         logger.info(f"✅ [PAGE {page_num}] 처리 완료. 다음 페이지({page_num + 1})로 이동합니다.")
@@ -214,6 +219,7 @@ class AmbeedCrawler:
                 
                 # 남은 데이터 저장
                 if batch_data:
+                    logger.info(f"💾 [Final Batch] 남은 {len(batch_data)}개 저장 시도")
                     await self._save_batch(batch_data)
                     if job_id:
                         await update_job_status(job_id, records_drafted=count)
@@ -239,9 +245,18 @@ class AmbeedCrawler:
             if not is_valid:
                 logger.error(f"❌ SMILES MISSING for {raw_data['ambeed_cat_no']} after fallback.")
             
-            # 2. AI 정제 (Gemini) - 3단 SMILES 분리 로직 탑재
+            # 2. AI 정제 (Gemini 2.0 Flash) - 3단 SMILES 분리 로직 탑재
             ai_data = await self._enrich_with_gemini(raw_data, smiles)
             
+            # DB 컬럼 누락 대비: properties 안에 상세 SMILES 정보 백업
+            extended_properties = raw_data.get("properties", {})
+            if isinstance(extended_properties, dict):
+                extended_properties.update({
+                    "payload_smiles": ai_data.get("payload_smiles"),
+                    "linker_smiles": ai_data.get("linker_smiles"),
+                    "full_smiles": ai_data.get("full_smiles") or smiles
+                })
+
             final_data = {
                 "ambeed_cat_no": raw_data["ambeed_cat_no"],
                 "product_name": raw_data["product_name"],
@@ -249,13 +264,14 @@ class AmbeedCrawler:
                 "category": raw_data["category"],
                 "source_name": "Ambeed",
                 "smiles_code": smiles if is_valid else None,
+                # 아래 컬럼들은 DB에 추가되어야 작동합니다.
                 "payload_smiles": ai_data.get("payload_smiles"),
                 "linker_smiles": ai_data.get("linker_smiles"),
-                "full_smiles": ai_data.get("full_smiles") or smiles, # 항체 제외 드럭-링커
+                "full_smiles": ai_data.get("full_smiles") or smiles,
                 "cas_number": raw_data.get("cas_number"),
                 "target": ai_data.get("target"),
                 "summary": ai_data.get("summary"),
-                "properties": ai_data.get("properties", {}),
+                "properties": extended_properties, # 백업용으로 JSON 안에도 저장
                 "crawled_at": raw_data["crawled_at"],
                 "ai_refined": True
             }
