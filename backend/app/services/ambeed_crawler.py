@@ -135,10 +135,19 @@ class AmbeedCrawler:
                         response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
                         await asyncio.sleep(3) # 로딩 대기 시간 충분히 부여
                         
-                        # 상품 목록 추출
+                        # 상품 목록 추출 (다양한 선택자 시도)
                         products = await page.evaluate("""
                             () => {
-                                const items = Array.from(document.querySelectorAll('.product-item, .item, .product-info-main'));
+                                // 1. 표준 제품 아이템 클래스
+                                let items = Array.from(document.querySelectorAll('.product-item, .item, .product-info-main, .product-item-info'));
+                                
+                                // 2. 만약 없다면 모든 제품 상세 링크 찾기
+                                if (items.length === 0) {
+                                    return Array.from(document.querySelectorAll('a[href*="/products/"]'))
+                                        .map(a => ({ href: a.href, cat_no: null }))
+                                        .filter((v, i, a) => a.findIndex(t => t.href === v.href) === i); // 중복 제거
+                                }
+
                                 return items.map(el => {
                                     const linkEl = el.querySelector('a[href*="/products/"], a[href*="/record/"]');
                                     const catNoEl = el.innerText.match(/Cat No:?\s*([A-Z0-9-]+)/i);

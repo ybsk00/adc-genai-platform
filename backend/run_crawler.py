@@ -44,20 +44,20 @@ async def main():
             await ambeed_crawler.run(args.category, args.limit, args.job_id, args.start_page)
         elif args.crawler == "creative_biolabs":
             from app.services.creative_biolabs_crawler import creative_crawler
-            # creative_biolabs doesn't have _run_internal yet, it uses run()
-            # But run() in creative_biolabs DOES NOT spawn a subprocess, so it's safe to call here.
             await creative_crawler.run(args.category, args.limit, args.job_id)
             
     except Exception as e:
-        logger.error(f"🔥 [Isolated Crawler] Failed: {e}", exc_info=True)
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"🔥 [Isolated Crawler] Fatal Error: {error_detail}")
         try:
             from app.core.supabase import supabase
             supabase.table("sync_jobs").update({
                 "status": "failed",
-                "errors": [str(e)]
+                "errors": [str(e), error_detail[:500]]
             }).eq("id", args.job_id).execute()
-        except:
-            pass
+        except Exception as db_e:
+            logger.error(f"❌ Failed to report error to DB: {db_e}")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -115,14 +115,16 @@ async def is_cancelled(job_id: str) -> bool:
 
 async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job_id: str, start_page: int = 1):
     """실행 격리를 위해 별도 프로세스로 크롤러 실행"""
+    log_file = f"crawler_debug_{job_id}.log"
     try:
-        # Docker 환경에서는 /app/run_crawler.py, 로컬에서는 ./run_crawler.py
-        script_path = "run_crawler.py"
+        # 절대 경로 계산
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        script_path = os.path.join(base_dir, "run_crawler.py")
+        
         if not os.path.exists(script_path):
-            # backend 디렉토리 내부인 경우 체크
-            script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "run_crawler.py")
-            if not os.path.exists(script_path):
-                script_path = "run_crawler.py" # Fallback to PATH
+            logger.error(f"❌ Crawler script not found at: {script_path}")
+            await update_job_status(job_id, status="failed", errors=[f"Script not found: {script_path}"])
+            return
 
         cmd = [
             sys.executable,
@@ -134,21 +136,29 @@ async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job
             "--start_page", str(start_page)
         ]
         
-        logger.info(f"🚀 Launching isolated crawler: {' '.join(cmd)}")
+        logger.info(f"🚀 Launching isolated crawler (Absolute Path): {' '.join(cmd)}")
         
+        # 로그 파일 생성
+        with open(log_file, "w") as f:
+            f.write(f"Started at: {datetime.now()}\nCommand: {' '.join(cmd)}\n\n")
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={**os.environ, "GRPC_ENABLE_FORK_SUPPORT": "false"}
+            env={**os.environ, "GRPC_ENABLE_FORK_SUPPORT": "false", "PYTHONPATH": base_dir}
         )
         
+        # 비동기로 로그 캡처 (서버 로그에 출력)
         stdout, stderr = await process.communicate()
         
+        if stdout: logger.info(f"📝 Crawler Output: {stdout.decode()[:500]}")
+        if stderr: logger.error(f"⚠️ Crawler Error Output: {stderr.decode()[:500]}")
+
         if process.returncode != 0:
-            error_msg = stderr.decode().strip()
+            error_msg = stderr.decode().strip() if stderr else "Unknown error"
             logger.error(f"❌ Crawler process failed (code {process.returncode}): {error_msg}")
-            await update_job_status(job_id, status="failed", errors=[f"Process exit code {process.returncode}", error_msg])
+            await update_job_status(job_id, status="failed", errors=[f"Exit code {process.returncode}", error_msg])
         else:
             logger.info(f"✅ Crawler process finished successfully.")
 
