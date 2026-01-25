@@ -99,21 +99,21 @@ class AmbeedCrawler:
             logger.warning(f"⚠️ PubChem fallback failed for {cas}: {e}")
         return None
 
-    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None) -> int:
-        logger.info(f"🚀 [AMBEED SMILES CRAWL] {category_name}")
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None, start_page: int = 1) -> int:
+        logger.info(f"🚀 [AMBEED SMILES CRAWL] {category_name} (Start Page: {start_page})")
         from app.api.scheduler import update_job_status, get_job_from_db, is_cancelled
         
         count = 0
-        start_page = 1
+        current_start_page = start_page
         
-        # 1. Offset 관리: DB에서 마지막 진행 페이지 조회
-        if job_id:
+        # 1. Offset 관리: DB에서 마지막 진행 페이지 조회 (start_page가 1일 때만 DB 조회)
+        if job_id and current_start_page == 1:
             job_data = await get_job_from_db(job_id)
             if job_data and job_data.get("last_processed_page"):
-                start_page = job_data["last_processed_page"] + 1
-                logger.info(f"⏭️ Resuming from page {start_page}")
+                current_start_page = job_data["last_processed_page"] + 1
+                logger.info(f"⏭️ Resuming from page {current_start_page}")
 
-        page_num = start_page
+        page_num = current_start_page
         batch_data = []
         
         async with async_playwright() as p:
@@ -128,16 +128,18 @@ class AmbeedCrawler:
 
                     separator = "&" if "?" in base_url else "?"
                     url = base_url if page_num == 1 else f"{base_url}{separator}page={page_num}"
-                    logger.info(f"📂 Navigating to Page {page_num}... (Current Count: {count}/{limit})")
+                    logger.info(f"🌐 [PAGE {page_num}] 다음 페이지 접속 중: {url} (현재 수집량: {count}/{limit})")
                     
                     try:
-                        await page.goto(url, wait_until="domcontentloaded", timeout=45000)
-                        await asyncio.sleep(2)
+                        # 페이지 접속 시도 (타임아웃 강화 및 재시도 로직은 생략하되 확실히 대기)
+                        response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                        await asyncio.sleep(3) # 로딩 대기 시간 충분히 부여
                         
-                        # 제품 링크 및 고유 번호 동시 추출 시도 (필터링 효율화)
+                        # 상품 목록 추출
                         products = await page.evaluate("""
                             () => {
-                                return Array.from(document.querySelectorAll('.product-item, .item')).map(el => {
+                                const items = Array.from(document.querySelectorAll('.product-item, .item, .product-info-main'));
+                                return items.map(el => {
                                     const linkEl = el.querySelector('a[href*="/products/"], a[href*="/record/"]');
                                     const catNoEl = el.innerText.match(/Cat No:?\s*([A-Z0-9-]+)/i);
                                     return {
@@ -149,70 +151,57 @@ class AmbeedCrawler:
                         """)
                         
                         if not products:
-                            # Fallback for simple links if structured parsing fails
+                            # <a> 태그만이라도 뒤져서 찾기
                             links = await page.evaluate("""
-                                () => Array.from(document.querySelectorAll('a[href*="/products/"], a[href*="/record/"]'))
+                                () => Array.from(document.querySelectorAll('a[href*="/products/"]'))
                                     .map(a => a.href)
-                                    .filter(href => !href.includes('javascript') && !href.includes('google'))
+                                    .filter(href => href.includes('.html'))
                             """)
                             products = [{"href": link, "cat_no": None} for link in set(links)]
 
                         if not products:
-                            logger.info(f"🏁 No more products found on page {page_num}. Ending.")
-                            break
+                            logger.warning(f"⚠️ [PAGE {page_num}] 상품을 찾지 못했습니다. 1페이지를 더 건너뛰어 봅니다.")
+                            page_num += 1
+                            if page_num > start_page + 50: # 너무 많이 비어있으면 종료
+                                logger.error("🏁 연속된 빈 페이지 발생으로 종료합니다.")
+                                break
+                            continue
                         
+                        logger.info(f"📦 [PAGE {page_num}] {len(products)}개의 상품을 찾았습니다. 수집을 시작합니다.")
+
                         for prod in products:
                             if count >= limit: break
                             
                             link = prod["href"]
                             cat_no = prod["cat_no"] or link.split('/')[-1].replace('.html', '')
                             
-                            # 2. ID 기반 필터링: 이미 DB에 존재하면 Skip
-                            existing = supabase.table("commercial_reagents").select("id").eq("ambeed_cat_no", cat_no).execute()
-                            if existing.data:
-                                logger.info(f"⏩ Skipping existing product: {cat_no}")
-                                continue
+                            logger.info(f"🔄 [PROCESS] Item: {cat_no} (Page {page_num})")
 
                             res = await self._process_single_product(context, link, category_name)
                             if res:
-                                # ⚡ 실시간 추적 로그
-                                logger.info(f"🔍 [단계 1] 제품 분석 완료: {res.get('ambeed_cat_no')}")
-                                
                                 final_item = await self._enrich_and_prepare_item(res)
                                 if final_item:
-                                    logger.info(f"🧪 [단계 2] 데이터 보강 완료: {final_item.get('ambeed_cat_no')}")
                                     batch_data.append(final_item)
                                     count += 1
                                     
-                                    # 3. 5개 단위 배치 저장 (Batch Upsert) - 사장님 지시: 5개 하향
-                                    if len(batch_data) >= 5:
-                                        logger.info(f"💾 [단계 3] 5개 도달! DB 쓰기 시도 중... (ID목록: {[x['ambeed_cat_no'] for x in batch_data]})")
-                                        save_res = await self._save_batch(batch_data)
-                                        
-                                        if save_res:
-                                            # 첫 배치 저장 성공 보고용 로그
-                                            has_smiles = any(item.get("smiles_code") for item in batch_data)
-                                            smiles_status = "SMILES 포함" if has_smiles else "SMILES 미포함"
-                                            logger.info(f"📢 [보고] 첫 5건 저장 완료 ({smiles_status}). 현재 총 수집: {count}")
-                                        else:
-                                            logger.error(f"❌ [단계 3 실패] DB 쓰기 명령은 보냈으나 저장이 확인되지 않았습니다.")
-
-                                        batch_data = [] # Clear memory
+                                    if len(batch_data) >= 2:
+                                        logger.info(f"💾 [단계 3] 2개 도달! DB 저장 시도 (Page {page_num})")
+                                        await self._save_batch(batch_data)
+                                        batch_data = []
                                         if job_id:
                                             await update_job_status(job_id, records_drafted=count, last_processed_page=page_num)
-                                else:
-                                    logger.warning(f"⚠️ [단계 2 실패] 데이터 보강(AI/SMILES) 단계에서 누락됨: {res.get('ambeed_cat_no')}")
-                            else:
-                                logger.warning(f"⚠️ [단계 1 실패] 제품 상세 정보를 가져오지 못함: {link}")
 
-                        # 페이지 종료 후 상태 업데이트
+                        # 한 페이지 처리가 끝나면 "무조건" 페이지 번호 증가
+                        logger.info(f"✅ [PAGE {page_num}] 처리 완료. 다음 페이지({page_num + 1})로 이동합니다.")
+                        page_num += 1
+                        
                         if job_id:
                             await update_job_status(job_id, last_processed_page=page_num)
-                        
-                        page_num += 1
+
                     except Exception as e:
                         logger.error(f"❌ Error on page {page_num}: {e}")
-                        break
+                        page_num += 1 # 에러 나도 다음 페이지 시도
+                        await asyncio.sleep(5)
                 
                 # 남은 데이터 저장
                 if batch_data:
@@ -354,13 +343,13 @@ class AmbeedCrawler:
             return json.loads(response.text)
         except: return {}
 
-    async def run(self, search_term: str, limit: int, job_id: str):
+    async def run(self, search_term: str, limit: int, job_id: str, start_page: int = 1):
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
         targets = {cat: url for cat, url in self.CATEGORIES.items() if not search_term or search_term == 'all' or search_term.lower() in cat.lower()}
         total = 0
         for cat, url in targets.items():
-            total += await self.crawl_category(cat, url, limit, job_id)
+            total += await self.crawl_category(cat, url, limit, job_id, start_page)
         await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
 
 ambeed_crawler = AmbeedCrawler()

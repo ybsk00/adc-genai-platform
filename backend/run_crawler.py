@@ -23,15 +23,16 @@ async def main():
     parser.add_argument("--category", required=True, help="Category or Search term")
     parser.add_argument("--limit", type=int, default=10, help="Limit")
     parser.add_argument("--job_id", required=True, help="Job ID")
+    parser.add_argument("--start_page", type=int, default=1, help="Start Page")
     
     args = parser.parse_args()
     
-    logger.info(f"🚀 [Isolated Crawler] Starting {args.crawler} for {args.category} (Job: {args.job_id})")
+    logger.info(f"🚀 [Isolated Crawler] Starting {args.crawler} for {args.category} (Job: {args.job_id}, Page: {args.start_page})")
     
     try:
         if args.crawler == "ambeed":
             from app.services.ambeed_crawler import ambeed_crawler
-            await ambeed_crawler.run(args.category, args.limit, args.job_id)
+            await ambeed_crawler.run(args.category, args.limit, args.job_id, args.start_page)
         elif args.crawler == "creative_biolabs":
             from app.services.creative_biolabs_crawler import creative_crawler
             # creative_biolabs doesn't have _run_internal yet, it uses run()

@@ -113,7 +113,7 @@ async def is_cancelled(job_id: str) -> bool:
     job = await get_job_from_db(job_id)
     return job.get("cancel_requested", False) if job else False
 
-async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job_id: str):
+async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job_id: str, start_page: int = 1):
     """실행 격리를 위해 별도 프로세스로 크롤러 실행"""
     try:
         # Docker 환경에서는 /app/run_crawler.py, 로컬에서는 ./run_crawler.py
@@ -130,7 +130,8 @@ async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job
             "--crawler", crawler_type,
             "--category", category,
             "--limit", str(limit),
-            "--job_id", job_id
+            "--job_id", job_id,
+            "--start_page", str(start_page)
         ]
         
         logger.info(f"🚀 Launching isolated crawler: {' '.join(cmd)}")
@@ -449,7 +450,7 @@ async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, catego
     return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started (Isolated Process).")
 
 @router.post("/crawler/ambeed/run", response_model=SyncJobResponse)
-async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = "all", limit: int = 10):
+async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = "all", limit: int = 10, start_page: int = 1):
     """Ambeed Stealth Crawler 실행 (격리 프로세스 방식)"""
     job_id = f"crawl_ambeed_{uuid4().hex[:8]}"
     
@@ -462,9 +463,9 @@ async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = 
     supabase.table("sync_jobs").insert(data).execute()
     
     job_manager.add_job(job_id)
-    background_tasks.add_task(run_isolated_crawler, "ambeed", category, limit, job_id)
+    background_tasks.add_task(run_isolated_crawler, "ambeed", category, limit, job_id, start_page)
     
-    return SyncJobResponse(job_id=job_id, status="queued", message="Ambeed crawler started (Isolated Process).")
+    return SyncJobResponse(job_id=job_id, status="queued", message=f"Ambeed crawler started (Isolated Process) from page {start_page}.")
 
 @router.get("/sync/{job_id}")
 async def get_sync_status(job_id: str):
