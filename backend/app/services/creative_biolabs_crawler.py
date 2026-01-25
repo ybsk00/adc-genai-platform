@@ -4,6 +4,10 @@ import logging
 import json
 import time
 import subprocess
+import os
+
+# Force gRPC to be less aggressive
+os.environ["GRPC_TYPE_CHECK"] = "0"
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -49,32 +53,43 @@ class CreativeBiolabsCrawler:
 
     async def _init_browser(self, p) -> BrowserContext:
         try:
-            logger.info("🌐 Launching Browser (Headless)...")
-            browser = await p.chromium.launch(
-                headless=True, 
-                args=[
-                    '--no-sandbox', 
-                    '--disable-setuid-sandbox', 
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-zygote',
-                    '--single-process',
-                    '--disable-extensions',
-                    '--disable-software-rasterizer'
-                ],
-                timeout=60000
-            )
-            context = await browser.new_context(user_agent=self.ua.random)
-            
-            async def route_intercept(route):
-                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                    await route.abort()
-                else:
-                    await route.continue_()
-            await context.route("**/*", route_intercept)
-            return context
+            # Retry logic for browser launch
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    logger.info("🌐 Launching Browser (Headless)...")
+                    browser = await p.chromium.launch(
+                        headless=True, 
+                        args=[
+                            '--no-sandbox', 
+                            '--disable-setuid-sandbox', 
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu',
+                            '--no-zygote',
+                            '--single-process',
+                            '--disable-extensions',
+                            '--disable-software-rasterizer'
+                        ],
+                        timeout=60000
+                    )
+                    context = await browser.new_context(user_agent=self.ua.random)
+                    
+                    async def route_intercept(route):
+                        if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                            await route.abort()
+                        else:
+                            await route.continue_()
+                    await context.route("**/*", route_intercept)
+                    return context
+                except Exception as e:
+                    logger.warning(f"⚠️ Browser launch attempt {attempt+1} failed: {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(5)
+                        self._kill_zombies()
+                    else:
+                        raise e
         except Exception as e:
-            logger.error(f"🔥 Browser Launch Failed: {e}")
+            logger.error(f"🔥 Browser Launch Failed after retries: {e}")
             raise e
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:

@@ -4,6 +4,10 @@ import logging
 import json
 import time
 import subprocess
+import os
+
+# Force gRPC to be less aggressive
+os.environ["GRPC_TYPE_CHECK"] = "0"
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -78,57 +82,70 @@ class AmbeedCrawler:
                 logger.info(f"🌐 Using Proxy: {settings.PROXY_HOST}:{port}")
 
             # Launch options
+            # Launch options
             logger.info("🌐 Launching Browser (Headless)...")
-            browser = await p.chromium.launch(
-                headless=True,
-                proxy=proxy_config if settings.PROXY_ENABLED else None,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-infobars',
-                    '--window-position=0,0',
-                    '--ignore-certificate-errors',
-                    '--ignore-ssl-errors',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-zygote',
-                    '--single-process',
-                    '--disable-extensions',
-                    '--disable-software-rasterizer'
-                ],
-                timeout=60000
-            )
             
-            context = await browser.new_context(
-                user_agent=user_agent,
-                viewport={'width': 1920, 'height': 1080},
-                locale='en-US',
-                timezone_id='America/New_York',
-                java_script_enabled=True
-            )
-            
-            # Inject stealth scripts
-            await context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                window.navigator.chrome = { runtime: {} };
-                Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-            """)
+            # Retry logic for browser launch
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        proxy=proxy_config if settings.PROXY_ENABLED else None,
+                        args=[
+                            '--disable-blink-features=AutomationControlled',
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-infobars',
+                            '--window-position=0,0',
+                            '--ignore-certificate-errors',
+                            '--ignore-ssl-errors',
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu',
+                            '--no-zygote',
+                            '--single-process',
+                            '--disable-extensions',
+                            '--disable-software-rasterizer'
+                        ],
+                        timeout=60000
+                    )
+                    
+                    context = await browser.new_context(
+                        user_agent=user_agent,
+                        viewport={'width': 1920, 'height': 1080},
+                        locale='en-US',
+                        timezone_id='America/New_York',
+                        java_script_enabled=True
+                    )
+                    
+                    # Inject stealth scripts
+                    await context.add_init_script("""
+                        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                        window.navigator.chrome = { runtime: {} };
+                        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                    """)
 
-            # --- RESOURCE BLOCKING (Critical for Proxy Health) ---
-            # Blocks Images, Fonts, Media, Stylesheets to save bandwidth
-            async def route_intercept(route):
-                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                    await route.abort()
-                else:
-                    await route.continue_()
+                    # --- RESOURCE BLOCKING (Critical for Proxy Health) ---
+                    async def route_intercept(route):
+                        if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                            await route.abort()
+                        else:
+                            await route.continue_()
 
-            await context.route("**/*", route_intercept)
+                    await context.route("**/*", route_intercept)
+                    
+                    return context
+                except Exception as e:
+                    logger.warning(f"⚠️ Browser launch attempt {attempt+1} failed: {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(5)
+                        self._kill_zombies() # Clean up before retry
+                    else:
+                        raise e
             
-            return context
         except Exception as e:
-            logger.error(f"🔥 Browser Launch Failed: {e}")
+            logger.error(f"🔥 Browser Launch Failed after retries: {e}")
             raise e
 
     async def _smart_delay(self, min_s=2.0, max_s=5.0):
