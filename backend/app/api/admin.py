@@ -89,6 +89,49 @@ class AIChatRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
 
 
+@router.post("/ai/chat")
+async def ai_assistant_chat(req: AIChatRequest):
+    """
+    AI 어시스턴트 사이드바용 채팅 API
+    원문(Raw Data)을 기반으로 사장님의 질문에 답변
+    """
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # 1. 컨텍스트 준비
+        context_str = json.dumps(req.context or {}, indent=2, ensure_ascii=False)
+        
+        # 2. 프롬프트 구성
+        system_prompt = f"""You are an ADC Data Analyst Assistant. 
+You are helping a user (the "Boss") verify and refine pharmaceutical data for an Antibody-Drug Conjugate (ADC) platform.
+The user is looking at a specific record. Below is the RAW DATA (JSON) for this record.
+
+RAW DATA:
+{context_str[:15000]} 
+
+INSTRUCTIONS:
+- Answer the user's question accurately based ONLY on the provided RAW DATA.
+- If the information is not in the RAW DATA, say "원문에서 해당 정보를 찾을 수 없습니다."
+- Keep the answer concise and professional in Korean.
+- If the user asks for a specific value (e.g., Kd, ORR), find it and mention the context where it was found.
+"""
+        
+        full_prompt = f"{system_prompt}\n\nUser Question: {req.message}"
+        
+        # 3. Gemini 호출
+        response = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: model.generate_content(full_prompt)
+        )
+        
+        return {"answer": response.text.strip()}
+        
+    except Exception as e:
+        print(f"AI Chat Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================
 # KPI Dashboard
 # ============================================================
