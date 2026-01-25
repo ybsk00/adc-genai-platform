@@ -51,7 +51,14 @@ class CreativeBiolabsCrawler:
             logger.info("🌐 Launching Browser (Headless)...")
             browser = await p.chromium.launch(
                 headless=True, 
-                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+                args=[
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox', 
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process'
+                ],
                 timeout=60000
             )
             context = await browser.new_context(user_agent=self.ua.random)
@@ -285,7 +292,7 @@ class CreativeBiolabsCrawler:
             await job_lock.release("global_crawler_lock")
             
             # Safety Fallback
-            job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
+            job = supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
             if job.data and job.data[0]['status'] == 'running':
                 await update_job_status(job_id, status="completed", message="Process ended (Fallback)")
 

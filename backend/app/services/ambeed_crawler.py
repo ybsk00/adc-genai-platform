@@ -90,7 +90,9 @@ class AmbeedCrawler:
                     '--ignore-certificate-errors',
                     '--ignore-ssl-errors',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu' # Added for performance
+                    '--disable-gpu',
+                    '--no-zygote', # Added for stability
+                    '--single-process' # Try single process if memory is tight
                 ],
                 timeout=60000
             )
@@ -580,7 +582,7 @@ class AmbeedCrawler:
             await job_lock.release("global_crawler_lock")
             
             # Safety double-check
-            job = await supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
+            job = supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
             if job.data and job.data[0]['status'] == 'running':
                 await update_job_status(job_id, status="completed", message="Crawler process ended (Safety Fallback)")
 
