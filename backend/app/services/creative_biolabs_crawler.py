@@ -141,13 +141,13 @@ class CreativeBiolabsCrawler:
                                     batch_data.append(final_item)
                                     count += 1
                                     
-                                    # 3. 20개 단위 배치 저장
-                                    if len(batch_data) >= 20:
+                                    # 3. 5개 단위 배치 저장 - 사장님 지시 하향 조정
+                                    if len(batch_data) >= 5:
                                         await self._save_batch(batch_data)
+                                        logger.info(f"📢 [보고] CB 첫 5건 저장 완료. 현재 총 수집: {count}")
                                         batch_data = []
                                         if job_id:
                                             await update_job_status(job_id, records_drafted=count, last_processed_page=processed_pages_count)
-                                            logger.info(f"💾 20 CB items saved. Count: {count}")
 
                             await asyncio.sleep(0.5)
                         

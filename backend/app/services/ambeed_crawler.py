@@ -180,13 +180,18 @@ class AmbeedCrawler:
                                     batch_data.append(final_item)
                                     count += 1
                                     
-                                    # 3. 20개 단위 배치 저장 (Batch Upsert)
-                                    if len(batch_data) >= 20:
+                                    # 3. 5개 단위 배치 저장 (Batch Upsert) - 사장님 지시: 20개에서 5개로 하향
+                                    if len(batch_data) >= 5:
                                         await self._save_batch(batch_data)
+                                        
+                                        # 첫 배치 저장 성공 보고용 로그
+                                        has_smiles = any(item.get("smiles_code") for item in batch_data)
+                                        smiles_status = "SMILES 포함" if has_smiles else "SMILES 미포함"
+                                        logger.info(f"📢 [보고] 첫 5건 저장 완료 ({smiles_status}). 현재 총 수집: {count}")
+
                                         batch_data = [] # Clear memory
                                         if job_id:
                                             await update_job_status(job_id, records_drafted=count, last_processed_page=page_num)
-                                            logger.info(f"💾 20 items batch saved. Current count: {count}")
 
                         # 페이지 종료 후 상태 업데이트
                         if job_id:
