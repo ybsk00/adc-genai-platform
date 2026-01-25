@@ -175,23 +175,35 @@ class AmbeedCrawler:
 
                             res = await self._process_single_product(context, link, category_name)
                             if res:
+                                # ⚡ 실시간 추적 로그
+                                logger.info(f"🔍 [단계 1] 제품 분석 완료: {res.get('ambeed_cat_no')}")
+                                
                                 final_item = await self._enrich_and_prepare_item(res)
                                 if final_item:
+                                    logger.info(f"🧪 [단계 2] 데이터 보강 완료: {final_item.get('ambeed_cat_no')}")
                                     batch_data.append(final_item)
                                     count += 1
                                     
-                                    # 3. 5개 단위 배치 저장 (Batch Upsert) - 사장님 지시: 20개에서 5개로 하향
+                                    # 3. 5개 단위 배치 저장 (Batch Upsert) - 사장님 지시: 5개 하향
                                     if len(batch_data) >= 5:
-                                        await self._save_batch(batch_data)
+                                        logger.info(f"💾 [단계 3] 5개 도달! DB 쓰기 시도 중... (ID목록: {[x['ambeed_cat_no'] for x in batch_data]})")
+                                        save_res = await self._save_batch(batch_data)
                                         
-                                        # 첫 배치 저장 성공 보고용 로그
-                                        has_smiles = any(item.get("smiles_code") for item in batch_data)
-                                        smiles_status = "SMILES 포함" if has_smiles else "SMILES 미포함"
-                                        logger.info(f"📢 [보고] 첫 5건 저장 완료 ({smiles_status}). 현재 총 수집: {count}")
+                                        if save_res:
+                                            # 첫 배치 저장 성공 보고용 로그
+                                            has_smiles = any(item.get("smiles_code") for item in batch_data)
+                                            smiles_status = "SMILES 포함" if has_smiles else "SMILES 미포함"
+                                            logger.info(f"📢 [보고] 첫 5건 저장 완료 ({smiles_status}). 현재 총 수집: {count}")
+                                        else:
+                                            logger.error(f"❌ [단계 3 실패] DB 쓰기 명령은 보냈으나 저장이 확인되지 않았습니다.")
 
                                         batch_data = [] # Clear memory
                                         if job_id:
                                             await update_job_status(job_id, records_drafted=count, last_processed_page=page_num)
+                                else:
+                                    logger.warning(f"⚠️ [단계 2 실패] 데이터 보강(AI/SMILES) 단계에서 누락됨: {res.get('ambeed_cat_no')}")
+                            else:
+                                logger.warning(f"⚠️ [단계 1 실패] 제품 상세 정보를 가져오지 못함: {link}")
 
                         # 페이지 종료 후 상태 업데이트
                         if job_id:
@@ -246,22 +258,33 @@ class AmbeedCrawler:
                 "crawled_at": raw_data["crawled_at"]
             }
             
-            # 임베딩 생성
-            embed_text = f"{final_data['product_name']} {final_data.get('smiles_code') or ''} {final_data.get('target') or ''}"
-            final_data["embedding"] = await rag_service.generate_embedding(embed_text)
+            # 임베딩 생성 (실패해도 저장은 되어야 함)
+            try:
+                embed_text = f"{final_data['product_name']} {final_data.get('smiles_code') or ''} {final_data.get('target') or ''}"
+                final_data["embedding"] = await rag_service.generate_embedding(embed_text)
+            except Exception as e:
+                logger.warning(f"⚠️ Embedding failed for {final_data['ambeed_cat_no']}, proceeding without it: {e}")
             
             return final_data
         except Exception as e:
-            logger.error(f"Failed to prepare item {raw_data.get('ambeed_cat_no')}: {e}")
+            logger.error(f"🔥 [치명적 에러] 데이터 준비 단계 실패 ({raw_data.get('ambeed_cat_no')}): {e}", exc_info=True)
             return None
 
     async def _save_batch(self, items: List[Dict]):
         """배치 UPSERT 실행"""
         try:
-            if not items: return
-            supabase.table("commercial_reagents").upsert(items, on_conflict="ambeed_cat_no").execute()
+            if not items: return False
+            logger.info(f"📤 Supabase UPSERT 요청 중... ({len(items)}건)")
+            res = supabase.table("commercial_reagents").upsert(items, on_conflict="ambeed_cat_no").execute()
+            if res.data:
+                logger.info(f"✅ DB 저장 완료! ({len(res.data)}건 반영됨)")
+                return True
+            else:
+                logger.error("❌ DB 저장 실패: 응답 데이터가 없습니다.")
+                return False
         except Exception as e:
-            logger.error(f"Batch save failed: {e}")
+            logger.error(f"🔥 [DB 치명적 에러] Batch save failed: {e}", exc_info=True)
+            return False
 
     async def _enrich_and_save_single(self, raw_data):
         # This is now handled by _enrich_and_prepare_item and _save_batch
