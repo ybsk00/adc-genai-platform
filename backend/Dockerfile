@@ -32,6 +32,7 @@ COPY app/ ./app/
 # 환경 변수
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
+ENV GRPC_ENABLE_FORK_SUPPORT=false
 
 # 실행
 # 시작 스크립트 복사 및 실행 권한 부여

@@ -98,7 +98,12 @@ async def ai_assistant_chat(req: AIChatRequest):
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        try:
+            model = genai.GenerativeModel('gemini-2.0-flash')
+        except Exception:
+            print("⚠️ gemini-2.0-flash not found, falling back to gemini-1.5-flash")
+            model = genai.GenerativeModel('gemini-1.5-flash')
         
         # 1. 컨텍스트 준비
         context_str = json.dumps(req.context or {}, indent=2, ensure_ascii=False)

@@ -87,6 +87,10 @@ class AmbeedCrawler:
             
             # Retry logic for browser launch
             max_retries = 3
+            
+            # Pre-emptive cleanup
+            self._kill_zombies()
+            
             for attempt in range(max_retries):
                 try:
                     browser = await p.chromium.launch(
@@ -532,6 +536,62 @@ class AmbeedCrawler:
             logger.warning(f"Zombie cleanup warning: {e}")
 
     async def run(self, search_term: str, limit: int, job_id: str):
+        """
+        Public entry point: Spawns a completely isolated subprocess to run the crawler.
+        This avoids gRPC fork/inheritance issues.
+        """
+        logger.info(f"🚀 [Launcher] Spawning isolated crawler process for Job {job_id}")
+        
+        try:
+            # Path to the runner script
+            script_path = os.path.join(os.getcwd(), "run_crawler.py")
+            if not os.path.exists(script_path):
+                # Try relative to backend if we are in app
+                script_path = os.path.join(os.getcwd(), "backend", "run_crawler.py")
+            
+            if not os.path.exists(script_path):
+                # Fallback
+                script_path = "run_crawler.py"
+
+            cmd = [
+                sys.executable,
+                script_path,
+                "--job_id", job_id,
+                "--search_term", search_term,
+                "--limit", str(limit)
+            ]
+            
+            # Use subprocess.Popen to run independently
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env={**os.environ, "GRPC_ENABLE_FORK_SUPPORT": "false"}
+            )
+            
+            # We don't wait for it here if we want it to be async background, 
+            # BUT the caller (scheduler) expects us to manage it.
+            # Since this is an async method, we can await the process completion using asyncio.
+            
+            stdout, stderr = await asyncio.get_event_loop().run_in_executor(
+                None, process.communicate
+            )
+            
+            if process.returncode != 0:
+                logger.error(f"❌ [Launcher] Crawler process failed with code {process.returncode}")
+                logger.error(f"Stderr: {stderr}")
+                # Status update is handled by the subprocess or here if it crashed hard
+            else:
+                logger.info(f"✅ [Launcher] Crawler process finished successfully.")
+                logger.info(f"Stdout: {stdout}")
+
+        except Exception as e:
+            logger.error(f"🔥 [Launcher] Failed to spawn crawler: {e}")
+            from app.api.scheduler import update_job_status
+            await update_job_status(job_id, status="failed", errors=[f"Launcher failed: {str(e)}"])
+
+    async def _run_internal(self, search_term: str, limit: int, job_id: str):
         """Orchestrate the crawling process with Enhanced Stability & Hanging Prevention"""
         from app.api.scheduler import update_job_status, is_cancelled
         await update_job_status(job_id, status="running")

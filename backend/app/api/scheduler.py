@@ -12,6 +12,9 @@ import asyncio
 from Bio import Entrez
 import logging
 import json
+import subprocess
+import sys
+import os
 
 from app.core.config import settings
 from app.core.supabase import supabase
@@ -381,12 +384,28 @@ async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: O
     
     async def run_wrapper(search_term, limit, job_id):
         try:
-            await creative_crawler.run(search_term, limit, job_id)
+            # Run as subprocess
+            cmd = [
+                sys.executable, 
+                "run_crawler.py", 
+                "--crawler", "creative",
+                "--category", search_term or "all",
+                "--limit", str(limit),
+                "--job_id", job_id
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                logger.error(f"Crawler subprocess failed: {stderr.decode()}")
         finally:
             job_manager.remove_job(job_id)
 
-    background_tasks.add_task(run_wrapper, search_term, 10, job_id) # Default limit for simple run
-    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started.")
+    background_tasks.add_task(run_wrapper, search_term, 10, job_id)
+    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started (Isolated Process).")
 
 @router.post("/crawler/creative-biolabs/run", response_model=SyncJobResponse)
 async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, category: str = "ADC Cytotoxin", limit: int = 10):
@@ -457,16 +476,28 @@ async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = 
     
     async def run_wrapper(cat, lim, jid):
         try:
-            await ambeed_crawler.run(cat, lim, jid)
+            # Run as subprocess
+            cmd = [
+                sys.executable, 
+                "run_crawler.py", 
+                "--crawler", "ambeed",
+                "--category", cat,
+                "--limit", str(lim),
+                "--job_id", jid
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                logger.error(f"Crawler subprocess failed: {stderr.decode()}")
         finally:
             job_manager.remove_job(jid)
 
-    if category == "all":
-        background_tasks.add_task(run_wrapper, "all", limit, job_id)
-        message = f"Ambeed crawler started for ALL categories (limit={limit})."
-    else:
-        background_tasks.add_task(run_wrapper, category, limit, job_id)
-        message = f"Ambeed crawler started for {category} (limit={limit})."
+    background_tasks.add_task(run_wrapper, category, limit, job_id)
+    message = f"Ambeed crawler started for {category} (limit={limit}) in Isolated Process."
     
     return SyncJobResponse(job_id=job_id, status="queued", message=message)
 
