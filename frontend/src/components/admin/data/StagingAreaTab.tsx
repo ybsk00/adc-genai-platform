@@ -524,14 +524,9 @@ export function StagingAreaTab() {
                                         size="sm"
                                         variant="outline"
                                         className="h-9 px-6 text-xs gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)]"
-                                        onClick={() => refineMutation.mutate(selectedDraft.id)}
-                                        disabled={refineMutation.isPending}
+                                        onClick={() => setIsChatOpen(true)}
                                     >
-                                        {refineMutation.isPending ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Sparkles className="w-4 h-4" />
-                                        )}
+                                        <Sparkles className="w-4 h-4" />
                                         Analyze with AI
                                     </Button>
                                 </div>

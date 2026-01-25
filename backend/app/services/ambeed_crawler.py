@@ -58,6 +58,15 @@ class AmbeedCrawler:
                 args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
             )
             context = await browser.new_context(user_agent=self.ua.random)
+            
+            # --- RESOURCE BLOCKING (Critical for Speed) ---
+            async def route_intercept(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
+
+            await context.route("**/*", route_intercept)
             return context
         except Exception as e:
             logger.error(f"🔥 Ambeed Browser Launch Failed: {e}")

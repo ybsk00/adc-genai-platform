@@ -10,6 +10,8 @@ from datetime import datetime
 from uuid import uuid4
 import tempfile
 import os
+import json
+import asyncio
 
 from app.core.config import settings
 from app.core.supabase import supabase
@@ -436,6 +438,7 @@ async def get_golden_set_drafts(
                     "os_months": item.get("os_months") or item.get("properties", {}).get("os_months"),
                     "pfs_months": item.get("pfs_months") or item.get("properties", {}).get("pfs_months"),
                     "is_ai_extracted": item.get("ai_refined") or False,
+                    "raw_data": item.get("raw_data", {}),
                     "properties": item.get("properties", {}) or {}  # 전체 properties도 포함, None일 경우 빈 dict
                 })
             except Exception as item_error:
@@ -491,7 +494,6 @@ async def refine_single_golden_set(golden_set_id: str, background_tasks: Backgro
         record = item_res.data[0]
         
         # 2. AI Refiner로 분석 (동기 실행)
-        import asyncio
         analysis = await ai_refiner.refine_single_record(record)
         
         if analysis and "error" not in analysis:
