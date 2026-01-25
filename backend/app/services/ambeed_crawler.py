@@ -450,6 +450,7 @@ class AmbeedCrawler:
             res = supabase.table("commercial_reagents").upsert(raw_data, on_conflict="ambeed_cat_no").execute()
             
             if res.data:
+                logger.info(f"[DB_SAVE_SUCCESS] {raw_data['product_name']} (Target: {raw_data.get('target')})")
                 # Fire & Forget Refinement
                 asyncio.create_task(self._trigger_refinement(res.data[0]))
                 

@@ -138,7 +138,7 @@ export function DataSourcesTab() {
                 pollingIntervalsRef.current.delete(sourceId)
                 setSyncingIds(prev => prev.filter(id => id !== sourceId))
             }
-        }, 2000)
+        }, 5000)
 
         // Store interval reference for cleanup
         pollingIntervalsRef.current.set(sourceId, interval)

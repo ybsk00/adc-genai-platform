@@ -188,6 +188,12 @@ Output ONLY valid JSON:
     "approval_status": "Approved",
     "boxed_warning": "Summary of Boxed Warning or 'None'",
     "indication": "Primary cancer/disease indication",
+    "binding_affinity": "extracted Kd value (e.g. 1.2 nM) or null",
+    "isotype": "extracted isotype (e.g. IgG1) or null",
+    "host_species": "extracted host (e.g. Human) or null",
+    "orr_pct": "ORR percentage value (number only) or null",
+    "os_months": "OS in months (number only) or null",
+    "pfs_months": "PFS in months (number only) or null",
     "relevance_score": 0.0-1.0,
     "confidence": 0.0-1.0
 }
@@ -237,6 +243,12 @@ Output ONLY valid JSON in this exact format:
     "target": "molecular target (e.g., HER2, TROP2) or null",
     "outcome_type": "Success|Failure|Ongoing|Unknown",
     "failure_reason": "reason if failed, null otherwise",
+    "binding_affinity": "extracted Kd value or null",
+    "isotype": "extracted isotype or null",
+    "host_species": "extracted host or null",
+    "orr_pct": "ORR percentage or null",
+    "os_months": "OS in months or null",
+    "pfs_months": "PFS in months or null",
     "relevance_score": 0.0-1.0 (relevance to ADC research),
     "confidence": 0.0-1.0
 }
@@ -294,6 +306,12 @@ Description: {description[:1000] if description else 'N/A'}"""
                 "target": analysis.get("target"),
                 "outcome_type": analysis.get("outcome_type", "Unknown"),
                 "failure_reason": analysis.get("failure_reason"),
+                "binding_affinity": analysis.get("binding_affinity"),
+                "isotype": analysis.get("isotype"),
+                "host_species": analysis.get("host_species"),
+                "orr_pct": analysis.get("orr_pct"),
+                "os_months": analysis.get("os_months"),
+                "pfs_months": analysis.get("pfs_months"),
                 "ai_confidence": analysis.get("confidence", 0.5),
                 "relevance_score": analysis.get("relevance_score", 0.0),
                 "boxed_warning": analysis.get("boxed_warning"), # OpenFDA specific

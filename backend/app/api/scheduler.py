@@ -25,6 +25,23 @@ from app.services.job_lock import job_lock
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+# --- Job Manager (In-Memory Tracking) ---
+class JobManager:
+    def __init__(self):
+        self.active_jobs = set()
+
+    def add_job(self, job_id: str):
+        self.active_jobs.add(job_id)
+
+    def remove_job(self, job_id: str):
+        if job_id in self.active_jobs:
+            self.active_jobs.remove(job_id)
+
+    def is_active(self, job_id: str) -> bool:
+        return job_id in self.active_jobs
+
+job_manager = JobManager()
+
 # Entrez 설정
 Entrez.email = settings.NCBI_EMAIL
 if settings.NCBI_API_KEY:
@@ -360,7 +377,15 @@ async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: O
     job_id = f"crawl_creative_{uuid4().hex[:8]}"
     data = {"id": job_id, "status": "queued", "source": "creative_biolabs", "started_at": datetime.utcnow().isoformat()}
     supabase.table("sync_jobs").insert(data).execute()
-    background_tasks.add_task(creative_crawler.run, search_term, 10, job_id) # Default limit for simple run
+    job_manager.add_job(job_id) # Register job
+    
+    async def run_wrapper(search_term, limit, job_id):
+        try:
+            await creative_crawler.run(search_term, limit, job_id)
+        finally:
+            job_manager.remove_job(job_id)
+
+    background_tasks.add_task(run_wrapper, search_term, 10, job_id) # Default limit for simple run
     return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started.")
 
 @router.post("/crawler/creative-biolabs/run", response_model=SyncJobResponse)
@@ -379,17 +404,37 @@ async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, catego
     }
     supabase.table("sync_jobs").insert(data).execute()
     
+    job_manager.add_job(job_id) # Register job
+
+    async def run_wrapper(category, url, limit, job_id):
+        try:
+            await creative_crawler.crawl_category(category, url, limit)
+            # Manually update status since crawl_category doesn't do it fully like run()
+            # But wait, creative_crawler.run() handles status updates. 
+            # crawl_category is a lower level function.
+            # We should probably wrap it to ensure status update if we call it directly.
+            # However, for now let's assume the user wants the 'run' method logic if possible, 
+            # but here we are calling crawl_category directly.
+            # Let's just ensure we remove the job from manager.
+            pass 
+        except Exception as e:
+            logger.error(f"Crawler wrapper error: {e}")
+        finally:
+            job_manager.remove_job(job_id)
+            # Also ensure DB is updated if it wasn't
+            await update_job_status(job_id, status="completed")
+
     # 백그라운드 작업 시작
     if category == "all":
-        for cat, url in creative_crawler.CATEGORIES.items():
-            background_tasks.add_task(creative_crawler.crawl_category, cat, url, limit)
+        # For 'all', we should use the run() method of the crawler if available or loop here.
+        # The original code looped and added multiple tasks. This is problematic for single job ID tracking.
+        # Let's change to use the crawler's run method which handles 'all'.
+        background_tasks.add_task(creative_crawler.run, "all", limit, job_id)
         message = f"Creative Biolabs crawler started for ALL categories (limit={limit})."
     else:
-        url = creative_crawler.CATEGORIES.get(category)
-        if not url:
-            raise HTTPException(status_code=400, detail=f"Invalid category. Available: {list(creative_crawler.CATEGORIES.keys())}")
-            
-        background_tasks.add_task(creative_crawler.crawl_category, category, url, limit)
+        # Use run method for single category too to ensure consistent status management
+        background_tasks.add_task(creative_crawler.run, category, limit, job_id)
+        message = f"Creative Biolabs crawler started for {category} (limit={limit})."
     
     return SyncJobResponse(job_id=job_id, status="queued", message=message)
 
@@ -408,16 +453,19 @@ async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = 
     }
     supabase.table("sync_jobs").insert(data).execute()
     
+    job_manager.add_job(job_id) # Register job
+    
+    async def run_wrapper(cat, lim, jid):
+        try:
+            await ambeed_crawler.run(cat, lim, jid)
+        finally:
+            job_manager.remove_job(jid)
+
     if category == "all":
-        # Run for all categories
-        # Note: This might spawn multiple background tasks. 
-        # For simplicity, we'll just pass 'all' to the run method if it supported it, 
-        # but the run method in AmbeedCrawler (like Creative) iterates if search_term is provided.
-        # Let's use the run method which orchestrates it.
-        background_tasks.add_task(ambeed_crawler.run, "all", limit, job_id)
+        background_tasks.add_task(run_wrapper, "all", limit, job_id)
         message = f"Ambeed crawler started for ALL categories (limit={limit})."
     else:
-        background_tasks.add_task(ambeed_crawler.run, category, limit, job_id)
+        background_tasks.add_task(run_wrapper, category, limit, job_id)
         message = f"Ambeed crawler started for {category} (limit={limit})."
     
     return SyncJobResponse(job_id=job_id, status="queued", message=message)
@@ -426,6 +474,18 @@ async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = 
 async def get_sync_status(job_id: str):
     job = await get_job_from_db(job_id)
     if not job: raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Zombie Check
+    if job.get("status") == "running" and not job_manager.is_active(job_id):
+        # Double check: maybe it just finished?
+        # If completed_at is null and started_at is old (> 1 min), it's a zombie.
+        started_at = datetime.fromisoformat(job.get("started_at"))
+        if (datetime.utcnow() - started_at).total_seconds() > 30:
+            logger.warning(f"🧟 Zombie Job Detected: {job_id}. Marking as failed.")
+            await update_job_status(job_id, status="failed", errors=["Zombie process detected (or running on different instance/server restarted)"])
+            job["status"] = "failed"
+            job["errors"] = ["Zombie process detected (or running on different instance)"]
+            
     return job
 
 @router.post("/sync/{job_id}/stop")

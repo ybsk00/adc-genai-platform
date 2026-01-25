@@ -82,6 +82,13 @@ class PromptUpdateRequest(BaseModel):
     version: Optional[str] = None  # 없으면 자동 생성
 
 
+class AIChatRequest(BaseModel):
+    """AI 어시스턴트 채팅 요청"""
+    record_id: str
+    message: str
+    context: Optional[Dict[str, Any]] = None
+
+
 # ============================================================
 # KPI Dashboard
 # ============================================================
@@ -374,6 +381,12 @@ async def get_golden_set_drafts(
                     "created_at": item.get("created_at"),
                     "outcome_type": item.get("outcome_type"),
                     "failure_reason": item.get("failure_reason"),
+                    "binding_affinity": item.get("binding_affinity") or item.get("properties", {}).get("binding_affinity"),
+                    "isotype": item.get("isotype") or item.get("properties", {}).get("isotype"),
+                    "host_species": item.get("host_species") or item.get("properties", {}).get("host_species"),
+                    "orr_pct": item.get("orr_pct") or item.get("properties", {}).get("orr_pct"),
+                    "os_months": item.get("os_months") or item.get("properties", {}).get("os_months"),
+                    "pfs_months": item.get("pfs_months") or item.get("properties", {}).get("pfs_months"),
                     "is_ai_extracted": item.get("ai_refined") or False,
                     "properties": item.get("properties", {}) or {}  # 전체 properties도 포함, None일 경우 빈 dict
                 })
@@ -1040,10 +1053,30 @@ async def patch_inventory_item(table: str, id: str, req: PatchRequest, backgroun
     try:
         updates = req.updates
         
-        # 1. 수동 수정 플래그 설정 (commercial_reagents 전용)
-        if table == "commercial_reagents":
+        # 0. Bio Metrics Mapping (Handle missing columns by putting into properties)
+        bio_metrics = ["binding_affinity", "isotype", "host_species", "orr_pct", "os_months", "pfs_months"]
+        
+        # 1. 수동 수정 플래그 설정
+        if table in ["commercial_reagents", "golden_set_library"]:
             updates["is_manual_override"] = True
             updates["ai_refined"] = True  # 사람이 고쳤으므로 정제된 것으로 간주
+            
+            # golden_set_library에서 아직 컬럼이 없는 경우 properties로 이동
+            if table == "golden_set_library":
+                # 기존 레코드의 properties 가져오기
+                existing = supabase.table(table).select("properties").eq("id", id).execute()
+                props = (existing.data[0].get("properties") or {}) if existing.data else {}
+                
+                changed = False
+                for metric in bio_metrics:
+                    if metric in updates:
+                        props[metric] = updates[metric]
+                        # columns don't exist yet, so we remove from top-level updates to avoid PGRST204
+                        del updates[metric]
+                        changed = True
+                
+                if changed:
+                    updates["properties"] = props
 
         # 2. 임베딩 실시간 재생성 (RAG 동기화)
         # 수정된 내용 + 기존 내용을 합쳐서 새로운 벡터 생성

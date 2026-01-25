@@ -171,7 +171,7 @@ class CreativeBiolabsCrawler:
             res = supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
             
             if res.data:
-                logger.info(f"      ✅ Saved: {final_data['product_name']} (Target: {final_data.get('target')})")
+                logger.info(f"[DB_SAVE_SUCCESS] {final_data['product_name']} (Target: {final_data.get('target')})")
                 # [실시간 AI 정제 트리거]
                 asyncio.create_task(self._trigger_refinement(res.data[0]))
             
