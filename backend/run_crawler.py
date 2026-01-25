@@ -4,11 +4,20 @@ import sys
 import logging
 import argparse
 from datetime import datetime
+from dotenv import load_dotenv
 
-# Add the backend directory to sys.path so we can import app modules
+# Add the backend directory to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
+
+# Load environment variables BEFORE importing any app modules
+env_path = os.path.join(current_dir, ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+    print(f"✅ Loaded .env from {env_path}")
+else:
+    print(f"⚠️ .env file not found at {env_path}")
 
 # Setup logging
 logging.basicConfig(

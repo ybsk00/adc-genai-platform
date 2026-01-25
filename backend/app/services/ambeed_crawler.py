@@ -230,8 +230,12 @@ class AmbeedCrawler:
             if not is_valid:
                 logger.error(f"❌ SMILES MISSING for {raw_data['ambeed_cat_no']} after fallback.")
             
-            # 2. AI 정제 (Gemini)
-            ai_data = await self._enrich_with_gemini(raw_data)
+            # 2. AI 정제 (Gemini) - 실패해도 진행
+            try:
+                ai_data = await self._enrich_with_gemini(raw_data)
+            except Exception as e:
+                logger.warning(f"⚠️ AI Enrichment failed for {raw_data['ambeed_cat_no']}: {e}")
+                ai_data = {}
             
             final_data = {
                 "ambeed_cat_no": raw_data["ambeed_cat_no"],
@@ -244,13 +248,17 @@ class AmbeedCrawler:
                 "target": ai_data.get("target"),
                 "summary": ai_data.get("summary"),
                 "properties": ai_data.get("properties", {}),
-                "crawled_at": raw_data["crawled_at"]
+                "crawled_at": raw_data["crawled_at"],
+                "ai_refined": False # 초기값
             }
             
             # 임베딩 생성 (실패해도 저장은 되어야 함)
             try:
                 embed_text = f"{final_data['product_name']} {final_data.get('smiles_code') or ''} {final_data.get('target') or ''}"
-                final_data["embedding"] = await rag_service.generate_embedding(embed_text)
+                # 768 차원인지 확인 등 RAG 서비스 내부 로직에 의존
+                embedding = await rag_service.generate_embedding(embed_text)
+                if embedding:
+                    final_data["embedding"] = embedding
             except Exception as e:
                 logger.warning(f"⚠️ Embedding failed for {final_data['ambeed_cat_no']}, proceeding without it: {e}")
             
@@ -263,6 +271,12 @@ class AmbeedCrawler:
         """배치 UPSERT 실행"""
         try:
             if not items: return False
+            
+            # DB 연결 상태 체크 (MockClient 방지)
+            if hasattr(supabase, "is_mock") and supabase.is_mock:
+                logger.error("🔥 [CRITICAL] Supabase is running as a MOCK client. Check .env file!")
+                return False
+
             logger.info(f"📤 Supabase UPSERT 요청 중... ({len(items)}건)")
             res = supabase.table("commercial_reagents").upsert(items, on_conflict="ambeed_cat_no").execute()
             if res.data:
