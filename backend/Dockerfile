@@ -28,6 +28,7 @@ RUN playwright install --with-deps chromium
 
 # 앱 코드 복사
 COPY app/ ./app/
+COPY run_crawler.py .
 
 # 환경 변수
 ENV PORT=8080

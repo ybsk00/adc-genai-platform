@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class CreativeBiolabsCrawler:
     """
-    Creative Biolabs ADC/Antibody Stealth Crawler & AI Enrichment (V3 Fixed)
+    Creative Biolabs Full-Scale Crawler (V4 Final Fixed)
     """
     
     BASE_URL = "https://www.creative-biolabs.com/adc/"
@@ -41,11 +41,9 @@ class CreativeBiolabsCrawler:
     def __init__(self):
         self.ua = UserAgent()
         self.global_semaphore = asyncio.Semaphore(1)
-        # genai.configure is NOT called here to avoid fork/gRPC issues
         self.model = None
 
     def _get_model(self):
-        """Lazy initialization of Gemini model to prevent gRPC fork issues"""
         if not self.model:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
             self.model = genai.GenerativeModel('gemini-1.5-flash')
@@ -53,74 +51,66 @@ class CreativeBiolabsCrawler:
 
     async def _init_browser(self, p) -> BrowserContext:
         try:
-            # Retry logic for browser launch
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    logger.info("🌐 Launching Browser (Headless)...")
-                    browser = await p.chromium.launch(
-                        headless=True, 
-                        args=[
-                            '--no-sandbox', 
-                            '--disable-setuid-sandbox', 
-                            '--disable-dev-shm-usage',
-                            '--disable-gpu',
-                            '--no-zygote',
-                            '--single-process',
-                            '--disable-extensions',
-                            '--disable-software-rasterizer'
-                        ],
-                        timeout=60000
-                    )
-                    context = await browser.new_context(user_agent=self.ua.random)
-                    
-                    async def route_intercept(route):
-                        if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                            await route.abort()
-                        else:
-                            await route.continue_()
-                    await context.route("**/*", route_intercept)
-                    return context
-                except Exception as e:
-                    logger.warning(f"⚠️ Browser launch attempt {attempt+1} failed: {e}")
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(5)
-                        self._kill_zombies()
-                    else:
-                        raise e
+            browser = await p.chromium.launch(
+                headless=True, 
+                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+            )
+            context = await browser.new_context(user_agent=self.ua.random)
+            return context
         except Exception as e:
-            logger.error(f"🔥 Browser Launch Failed after retries: {e}")
+            logger.error(f"🔥 Browser Launch Failed: {e}")
             raise e
 
-    async def crawl_category(self, category_name: str, base_url: str, limit: int = 10) -> int:
-        logger.info(f"🚀 [Start] {category_name}")
+    async def crawl_category(self, category_name: str, base_url: str, limit: int = 1000) -> int:
+        logger.info(f"🚀 [CRAWL START] Category: {category_name} | URL: {base_url}")
         count = 0
         async with async_playwright() as p:
             try:
                 context = await self._init_browser(p)
-            except Exception:
-                return 0
-
-            page = await context.new_page()
-            try:
-                logger.info(f"📄 Navigating to {base_url}...")
-                await page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
-                links = await page.evaluate("""
-                    () => Array.from(document.querySelectorAll('a[href*="/adc/"], a[href*="/p-"]'))
-                        .map(a => a.href)
-                        .filter(href => href.includes('.htm') && !href.includes('index.htm') && !href.includes('classify-'))
-                """)
-                links = list(set(links))[:limit]
-                logger.debug(f"🔎 Found {len(links)} links in {category_name}")
-                if not links:
-                    logger.warning(f"⚠️ No links found for {category_name} at {base_url}")
-                for link in links:
-                    res = await self._process_single_product(context, link, category_name)
-                    if res:
-                        await self._enrich_and_save_single(res)
-                        count += 1
+                page = await context.new_page()
+                current_url = base_url.strip().replace("biollabs", "biolabs").replace("--", "-").replace("..", ".")
+                processed_pages = set()
+                while current_url and count < limit:
+                    if current_url in processed_pages: break
+                    processed_pages.add(current_url)
+                    logger.info(f"📄 Scraping Page: {current_url}")
+                    try:
+                        await page.goto(current_url, wait_until="domcontentloaded", timeout=45000)
+                        await asyncio.sleep(4)
+                        links = await page.evaluate(r"""
+                            () => Array.from(document.querySelectorAll('a'))
+                                .map(a => a.href)
+                                .filter(href => {
+                                    const isProduct = href.includes('/p-') || (href.includes('/adc/') && href.match(/-[0-9]+\.htm/));
+                                    const isClassify = href.includes('classify-');
+                                    return isProduct && !isClassify && href.endsWith('.htm');
+                                })
+                        """
+                        )
+                        product_links = list(set(links))
+                        logger.info(f"🔎 Found {len(product_links)} product links.")
+                        for link in product_links:
+                            if count >= limit: break
+                            res = await self._process_single_product(context, link, category_name)
+                            if res:
+                                await self._enrich_and_save_single(res)
+                                count += 1
+                            await asyncio.sleep(0.5)
+                        next_page = await page.evaluate(r"""
+                            () => {
+                                const nextBtn = Array.from(document.querySelectorAll('a')).find(a => 
+                                    ['Next', '>', 'Next Page'].includes(a.innerText.trim())
+                                );
+                                return nextBtn ? nextBtn.href : null;
+                            }
+                        """
+                        )
+                        current_url = next_page if next_page and next_page != current_url else None
+                    except Exception as page_e:
+                        logger.error(f"Page processing error: {page_e}")
+                        break
             except Exception as e:
-                logger.error(f"Error in crawl_category {category_name}: {e}", exc_info=True)
+                logger.error(f"Category crawl error: {e}", exc_info=True)
             finally:
                 await context.close()
         return count
@@ -132,24 +122,21 @@ class CreativeBiolabsCrawler:
                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 title = await page.title()
                 body = await page.inner_text("body")
-                specs = await page.evaluate("""
+                specs = await page.evaluate(r"""
                     () => {
                         const data = {};
-                        const tables = Array.from(document.querySelectorAll('table'));
-                        tables.forEach(table => {
-                            const rows = Array.from(table.querySelectorAll('tr'));
-                            rows.forEach(row => {
-                                const cells = Array.from(row.querySelectorAll('td, th'));
-                                if (cells.length >= 2) {
-                                    const key = cells[0].innerText.replace(':', '').trim();
-                                    const val = cells[1].innerText.trim();
-                                    if (key.length < 50) data[key] = val;
-                                }
-                            });
+                        document.querySelectorAll('tr').forEach(row => {
+                            const cells = row.querySelectorAll('td, th');
+                            if (cells.length >= 2) {
+                                const key = cells[0].innerText.replace(':', '').trim();
+                                const val = cells[1].innerText.trim();
+                                if (key && val && key.length < 50) data[key] = val;
+                            }
                         });
                         return data;
                     }
-                """)
+                """
+                )
                 return {
                     "ambeed_cat_no": f"CB-{url.split('/')[-1].replace('.htm', '')}",
                     "product_name": title.split('|')[0].strip(),
@@ -166,164 +153,50 @@ class CreativeBiolabsCrawler:
             finally: await page.close()
 
     async def _enrich_with_gemini(self, raw_data: Dict) -> Dict:
-        """AI Deep Enrichment - Extracting Biological Indicators"""
-        text = f"Product: {raw_data['product_name']}\nSpecs: {json.dumps(raw_data['specs'])}\nText: {raw_data['body_text'][:2000]}"
-        
-        prompt = """
-        Extract ADC metadata from text.
-        JSON format:
-        {
-            "target": "Antigen Symbol",
-            "properties": {
-                "binding_affinity": "Kd value",
-                "isotype": "...",
-                "host": "..."
-            },
-            "summary": "1-sentence summary"
-        }
-        Text: """ + text
-        
+        cat = raw_data.get("category", "").lower()
+        goal = "Extract IC50 for Toxins, Solubility/Cleavability for Linkers."
+        prompt = f"Extract ADC reagent data. Goal: {goal}\nJSON Output: {{ 'target': '...', 'properties': {{ 'ic50': '...', 'solubility': '...', 'cleavability': '...', 'mw': '...', 'purity': '...' }}, 'summary': '...' }}\nText: {raw_data['body_text'][:2000]}"
         try:
             model = self._get_model()
-            response = await model.generate_content_async(
-                prompt,
-                generation_config=genai.GenerationConfig(response_mime_type="application/json")
-            )
+            response = await model.generate_content_async(prompt, generation_config=genai.GenerationConfig(response_mime_type="application/json"))
             return json.loads(response.text)
-        except:
-            return {}
+        except: return {}
 
     async def _enrich_and_save_single(self, raw_data):
         try:
             ai_data = await self._enrich_with_gemini(raw_data)
-            
+            orig_specs = raw_data.get("specs", {})
+            ai_props = ai_data.get("properties", {})
+            merged_props = {**orig_specs}
+            if isinstance(ai_props, dict): merged_props.update(ai_props)
             final_data = {
                 "ambeed_cat_no": raw_data["ambeed_cat_no"],
                 "product_name": raw_data["product_name"],
                 "product_url": raw_data["product_url"],
                 "category": raw_data["category"],
-                "source_name": raw_data["source_name"],
+                "source_name": "Creative Biolabs",
                 "target": ai_data.get("target"),
                 "summary": ai_data.get("summary"),
-                "properties": {
-                    **raw_data.get("specs", {}),
-                    **ai_data.get("properties", {})
-                },
+                "properties": merged_props,
                 "crawled_at": raw_data["crawled_at"]
             }
-            
-            # Embedding
-            embed_text = f"{final_data['product_name']} {final_data.get('target', '')} {final_data.get('summary', '')}"
+            embed_text = f"{final_data['product_name']} {final_data.get('target') or ''}"
             final_data["embedding"] = await rag_service.generate_embedding(embed_text)
-
-            res = supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
-            
-            if res.data:
-                logger.info(f"[DB_SAVE_SUCCESS] {final_data['product_name']} (Target: {final_data.get('target')})")
-                # [실시간 AI 정제 트리거]
-                asyncio.create_task(self._trigger_refinement(res.data[0]))
-            
+            supabase.table("commercial_reagents").upsert(final_data, on_conflict="ambeed_cat_no").execute()
+            logger.info(f"✅ [CB SAVE] {final_data['product_name']}")
         except Exception as e:
-            logger.error(f"      ❌ Save failed: {e}")
-
-    async def _trigger_refinement(self, record: Dict):
-        """AI 정제 엔진 비동기 호출 (상세 로그 추가)"""
-        try:
-            logger.debug(f"🔍 [AI Trigger] Starting refinement for: {record.get('product_name')} (ID: {record.get('id')})")
-            
-            # AI 분석 서비스 호출
-            analysis = await ai_refiner.refine_single_record(record)
-            
-            if analysis and "error" not in analysis:
-                update_data = {
-                    "target": analysis.get("target"),
-                    "ai_refined": True,
-                    "properties": {**record.get("properties", {}), "ai_analysis": analysis}
-                }
-                res = supabase.table("commercial_reagents").update(update_data).eq("id", record["id"]).execute()
-                if res.data:
-                    logger.info(f"✨ [AI Success] Refined product: {record.get('product_name')}")
-                else:
-                    logger.error(f"❌ [AI DB Error] Failed to update record: {record.get('id')}")
-            else:
-                error_msg = analysis.get("error") if analysis else "Empty response"
-                logger.warning(f"⚠️ [AI Skip/Fail] Refinement skipped for {record.get('product_name')}: {error_msg}")
-                
-        except Exception as e:
-            logger.error(f"🔥 [AI Critical Error] Background refinement failed for {record.get('id')}: {str(e)}", exc_info=True)
-
-    def _kill_zombies(self):
-        """Kill any lingering browser processes to free memory"""
-        try:
-            logger.info("🧹 Cleaning up zombie processes...")
-            subprocess.run(["pkill", "-f", "chrome"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-f", "playwright"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception as e:
-            logger.warning(f"Zombie cleanup warning: {e}")
+            logger.error(f"Save failed: {e}")
 
     async def run(self, search_term: str, limit: int, job_id: str):
-        """Orchestrate the crawling process with Stability & Hanging Prevention"""
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
-        
-        logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
-        
-        # 0. Kill Zombies
-        self._kill_zombies()
-        
-        # --- Sequential Execution Lock ---
-        lock_acquired = False
-        wait_start = time.time()
-        while not lock_acquired:
-            if await job_lock.acquire("global_crawler_lock"):
-                lock_acquired = True
-            else:
-                if time.time() - wait_start > 3600: # 1 hour timeout
-                    await update_job_status(job_id, status="failed", errors=["Timed out waiting for global crawler lock"])
-                    return
-                logger.info(f"⏳ Job {job_id} waiting for global crawler lock...")
-                await asyncio.sleep(30)
-        
-        total_processed = 0
-        
-        try:
-            targets = {}
-            if search_term and search_term != 'all':
-                for cat, url in self.CATEGORIES.items():
-                    if search_term.lower() in cat.lower():
-                        targets[cat] = url
-            else:
-                targets = self.CATEGORIES
-
-            results = []
-            for cat, url in targets.items():
-                try:
-                    # Give each category a max of 15 minutes
-                    res = await asyncio.wait_for(self.crawl_category(cat, url, limit), timeout=900)
-                    results.append(res)
-                except Exception as cat_e:
-                    logger.error(f"❌ Category {cat} failed or timed out: {cat_e}")
-                    results.append(0)
-                
-            total_processed = sum(results)
-            logger.info(f"🏁 [CRAWLER FINISHED] Total Records: {total_processed}")
-            
-            await update_job_status(
-                job_id, 
-                status="completed", 
-                records_drafted=total_processed, 
-                completed_at=datetime.utcnow().isoformat()
-            )
-        except Exception as e:
-            logger.error(f"🔥 Crawler run failed: {e}", exc_info=True)
-            await update_job_status(job_id, status="failed", errors=[str(e)])
-        finally:
-            # Release Lock
-            await job_lock.release("global_crawler_lock")
-            
-            # Safety Fallback
-            job = supabase.table("sync_jobs").select("status").eq("id", job_id).execute()
-            if job.data and job.data[0]['status'] == 'running':
-                await update_job_status(job_id, status="completed", message="Process ended (Fallback)")
+        targets = {}
+        if search_term and search_term != 'all':
+            for cat, url in self.CATEGORIES.items():
+                if search_term.lower() in cat.lower(): targets[cat] = url
+        else: targets = self.CATEGORIES
+        total = 0
+        for cat, url in targets.items(): total += await self.crawl_category(cat, url, limit)
+        await update_job_status(job_id, status="completed", records_drafted=total, completed_at=datetime.utcnow().isoformat())
 
 creative_crawler = CreativeBiolabsCrawler()

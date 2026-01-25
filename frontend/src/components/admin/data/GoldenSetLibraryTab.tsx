@@ -257,7 +257,7 @@ export function GoldenSetLibraryTab() {
                         // AI가 아직 처리하지 않은 경우
                         <div className="flex flex-col items-center gap-0.5">
                             <Sparkles className="w-3 h-3 text-purple-500 animate-pulse" />
-                            <span className="text-[9px] text-purple-500 font-medium">AI 분석 중</span>
+                            <span className="text-[9px] text-purple-500 font-medium">AI Analyzing</span>
                         </div>
                     ) : (
                         // AI 처리 완료됐지만 SMILES를 못 찾은 경우

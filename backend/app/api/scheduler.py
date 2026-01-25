@@ -5,7 +5,7 @@ DB 기반 상태 관리(Supabase) 및 PubChem 화학 정보 연동
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 import aiohttp
 import asyncio
@@ -101,6 +101,50 @@ async def is_cancelled(job_id: str) -> bool:
     """중단 요청 여부 확인"""
     job = await get_job_from_db(job_id)
     return job.get("cancel_requested", False) if job else False
+
+async def run_isolated_crawler(crawler_type: str, category: str, limit: int, job_id: str):
+    """실행 격리를 위해 별도 프로세스로 크롤러 실행"""
+    try:
+        # Docker 환경에서는 /app/run_crawler.py, 로컬에서는 ./run_crawler.py
+        script_path = "run_crawler.py"
+        if not os.path.exists(script_path):
+            # backend 디렉토리 내부인 경우 체크
+            script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "run_crawler.py")
+            if not os.path.exists(script_path):
+                script_path = "run_crawler.py" # Fallback to PATH
+
+        cmd = [
+            sys.executable,
+            script_path,
+            "--crawler", crawler_type,
+            "--category", category,
+            "--limit", str(limit),
+            "--job_id", job_id
+        ]
+        
+        logger.info(f"🚀 Launching isolated crawler: {' '.join(cmd)}")
+        
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={**os.environ, "GRPC_ENABLE_FORK_SUPPORT": "false"}
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode().strip()
+            logger.error(f"❌ Crawler process failed (code {process.returncode}): {error_msg}")
+            await update_job_status(job_id, status="failed", errors=[f"Process exit code {process.returncode}", error_msg])
+        else:
+            logger.info(f"✅ Crawler process finished successfully.")
+
+    except Exception as e:
+        logger.error(f"🔥 Failed to launch isolated crawler: {e}", exc_info=True)
+        await update_job_status(job_id, status="failed", errors=[str(e)])
+    finally:
+        job_manager.remove_job(job_id)
 
 # --- LLM & Chemical Enrichment ---
 
@@ -374,132 +418,42 @@ async def sync_openfda(background_tasks: BackgroundTasks, mode: str = "daily", l
     background_tasks.add_task(openfda_service.sync_to_db, job_id, mode, limit)
     return SyncJobResponse(job_id=job_id, status="queued", message=f"OpenFDA sync started (mode: {mode}, limit: {limit}).")
 
-@router.post("/crawler/creative/run", response_model=SyncJobResponse)
-async def run_creative_crawler(background_tasks: BackgroundTasks, search_term: Optional[str] = None):
-    from app.services.creative_biolabs_crawler import creative_crawler
-    job_id = f"crawl_creative_{uuid4().hex[:8]}"
-    data = {"id": job_id, "status": "queued", "source": "creative_biolabs", "started_at": datetime.utcnow().isoformat()}
-    supabase.table("sync_jobs").insert(data).execute()
-    job_manager.add_job(job_id) # Register job
-    
-    async def run_wrapper(search_term, limit, job_id):
-        try:
-            # Run as subprocess
-            cmd = [
-                sys.executable, 
-                "run_crawler.py", 
-                "--crawler", "creative",
-                "--category", search_term or "all",
-                "--limit", str(limit),
-                "--job_id", job_id
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                logger.error(f"Crawler subprocess failed: {stderr.decode()}")
-        finally:
-            job_manager.remove_job(job_id)
-
-    background_tasks.add_task(run_wrapper, search_term, 10, job_id)
-    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started (Isolated Process).")
-
 @router.post("/crawler/creative-biolabs/run", response_model=SyncJobResponse)
 async def run_creative_biolabs_crawler(background_tasks: BackgroundTasks, category: str = "ADC Cytotoxin", limit: int = 10):
-    """Creative Biolabs Stealth Crawler 실행"""
-    from app.services.creative_biolabs_crawler import creative_crawler
-    
-    job_id = f"crawl_creative_bio_{uuid4().hex[:8]}"
+    """Creative Biolabs Stealth Crawler 실행 (격리 프로세스 방식)"""
+    job_id = f"crawl_cb_{uuid4().hex[:8]}"
     
     # DB에 작업 기록
     data = {
         "id": job_id, 
         "status": "running", 
         "source": "creative_biolabs", 
-        "started_at": datetime.utcnow().isoformat()
+        "started_at": datetime.now(timezone.utc).isoformat()
     }
     supabase.table("sync_jobs").insert(data).execute()
     
-    job_manager.add_job(job_id) # Register job
-
-    async def run_wrapper(category, url, limit, job_id):
-        try:
-            await creative_crawler.crawl_category(category, url, limit)
-            # Manually update status since crawl_category doesn't do it fully like run()
-            # But wait, creative_crawler.run() handles status updates. 
-            # crawl_category is a lower level function.
-            # We should probably wrap it to ensure status update if we call it directly.
-            # However, for now let's assume the user wants the 'run' method logic if possible, 
-            # but here we are calling crawl_category directly.
-            # Let's just ensure we remove the job from manager.
-            pass 
-        except Exception as e:
-            logger.error(f"Crawler wrapper error: {e}")
-        finally:
-            job_manager.remove_job(job_id)
-            # Also ensure DB is updated if it wasn't
-            await update_job_status(job_id, status="completed")
-
-    # 백그라운드 작업 시작
-    if category == "all":
-        # For 'all', we should use the run() method of the crawler if available or loop here.
-        # The original code looped and added multiple tasks. This is problematic for single job ID tracking.
-        # Let's change to use the crawler's run method which handles 'all'.
-        background_tasks.add_task(creative_crawler.run, "all", limit, job_id)
-        message = f"Creative Biolabs crawler started for ALL categories (limit={limit})."
-    else:
-        # Use run method for single category too to ensure consistent status management
-        background_tasks.add_task(creative_crawler.run, category, limit, job_id)
-        message = f"Creative Biolabs crawler started for {category} (limit={limit})."
+    job_manager.add_job(job_id)
+    background_tasks.add_task(run_isolated_crawler, "creative_biolabs", category, limit, job_id)
     
-    return SyncJobResponse(job_id=job_id, status="queued", message=message)
+    return SyncJobResponse(job_id=job_id, status="queued", message="Creative Biolabs crawler started (Isolated Process).")
 
 @router.post("/crawler/ambeed/run", response_model=SyncJobResponse)
 async def run_ambeed_crawler(background_tasks: BackgroundTasks, category: str = "all", limit: int = 10):
-    """Ambeed Stealth Crawler 실행"""
-    from app.services.ambeed_crawler import ambeed_crawler
-    
+    """Ambeed Stealth Crawler 실행 (격리 프로세스 방식)"""
     job_id = f"crawl_ambeed_{uuid4().hex[:8]}"
     
     data = {
         "id": job_id, 
         "status": "running", 
         "source": "ambeed", 
-        "started_at": datetime.utcnow().isoformat()
+        "started_at": datetime.now(timezone.utc).isoformat()
     }
     supabase.table("sync_jobs").insert(data).execute()
     
-    job_manager.add_job(job_id) # Register job
+    job_manager.add_job(job_id)
+    background_tasks.add_task(run_isolated_crawler, "ambeed", category, limit, job_id)
     
-    async def run_wrapper(cat, lim, jid):
-        try:
-            # Run as subprocess
-            cmd = [
-                sys.executable, 
-                "run_crawler.py", 
-                "--crawler", "ambeed",
-                "--category", cat,
-                "--limit", str(lim),
-                "--job_id", jid
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                logger.error(f"Crawler subprocess failed: {stderr.decode()}")
-        finally:
-            job_manager.remove_job(jid)
-
-    background_tasks.add_task(run_wrapper, category, limit, job_id)
-    message = f"Ambeed crawler started for {category} (limit={limit}) in Isolated Process."
-    
-    return SyncJobResponse(job_id=job_id, status="queued", message=message)
+    return SyncJobResponse(job_id=job_id, status="queued", message="Ambeed crawler started (Isolated Process).")
 
 @router.get("/sync/{job_id}")
 async def get_sync_status(job_id: str):
@@ -508,14 +462,22 @@ async def get_sync_status(job_id: str):
     
     # Zombie Check
     if job.get("status") == "running" and not job_manager.is_active(job_id):
-        # Double check: maybe it just finished?
-        # If completed_at is null and started_at is old (> 1 min), it's a zombie.
-        started_at = datetime.fromisoformat(job.get("started_at"))
-        if (datetime.utcnow() - started_at).total_seconds() > 30:
-            logger.warning(f"🧟 Zombie Job Detected: {job_id}. Marking as failed.")
-            await update_job_status(job_id, status="failed", errors=["Zombie process detected (or running on different instance/server restarted)"])
-            job["status"] = "failed"
-            job["errors"] = ["Zombie process detected (or running on different instance)"]
+        started_at_str = job.get("started_at")
+        try:
+            # Handle ISO format with 'Z' or offset
+            if started_at_str.endswith('Z'):
+                started_at = datetime.fromisoformat(started_at_str[:-1]).replace(tzinfo=timezone.utc)
+            else:
+                started_at = datetime.fromisoformat(started_at_str)
+                if started_at.tzinfo is None:
+                    started_at = started_at.replace(tzinfo=timezone.utc)
+
+            if (datetime.now(timezone.utc) - started_at).total_seconds() > 120: # 2분으로 상향
+                logger.warning(f"🧟 Zombie Job Detected: {job_id}. Marking as failed.")
+                await update_job_status(job_id, status="failed", errors=["Zombie process detected (timeout)"])
+                job["status"] = "failed"
+        except Exception as e:
+            logger.error(f"Error parsing started_at: {e}")
             
     return job
 

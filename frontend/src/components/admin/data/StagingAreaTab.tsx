@@ -119,7 +119,7 @@ function ChemicalStructure({ smiles }: { smiles: string }) {
     if (!smiles) return (
         <div className="h-[250px] flex flex-col items-center justify-center bg-slate-950/50 text-slate-500 border border-dashed border-slate-800 rounded-lg">
             <FlaskConical className="w-8 h-8 mb-2 opacity-20" />
-            <span className="text-xs font-medium">구조 정보 없음 (No SMILES)</span>
+            <span className="text-xs font-medium">No Structure Info (No SMILES)</span>
         </div>
     )
 
@@ -171,7 +171,7 @@ function AISidebar({
         if (isOpen && messages.length === 0) {
             setMessages([{
                 role: 'ai',
-                content: "안녕하세요! 해당 데이터에 대해 궁금한 점을 물어보세요. 원문(Raw Data)을 기반으로 분석해 드립니다. \n예: '이 약물의 Kd값은 얼마야?', '임상 결과 요약해줘'"
+                content: "Hello! Feel free to ask anything about this data. I can analyze it based on the raw data. \nExample: 'What is the Kd value of this drug?', 'Summarize the clinical results'"
             }])
         }
     }, [isOpen])
@@ -210,7 +210,7 @@ function AISidebar({
 
             setMessages(prev => [...prev, { role: 'ai', content: data.answer }])
         } catch (e) {
-            toast.error('AI 답변 실패')
+            toast.error('AI Response Failed')
         } finally {
             setIsTyping(false)
         }
@@ -253,14 +253,14 @@ function AISidebar({
             <div className="p-4 border-t border-slate-800 bg-slate-950">
                 <div className="flex gap-2">
                     <Input
-                        placeholder="메시지를 입력하세요..."
+                        placeholder="Type a message..."
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSend()}
                         className="bg-slate-800 border-slate-700 text-white text-xs"
                     />
                     <Button size="sm" className="bg-purple-600 hover:bg-purple-500" onClick={handleSend} disabled={isTyping}>
-                        전송
+                        Send
                     </Button>
                 </div>
             </div>
@@ -342,10 +342,10 @@ export function StagingAreaTab() {
             return response.json()
         },
         onSuccess: () => {
-            toast.success('저장되었습니다 (임베딩 갱신 완료)')
+            toast.success('Saved (Embedding updated)')
             queryClient.invalidateQueries({ queryKey: ['stagingDrafts'] })
         },
-        onError: () => toast.error('저장 실패')
+        onError: () => toast.error('Save failed')
     })
 
     const approveMutation = useMutation({
@@ -359,7 +359,7 @@ export function StagingAreaTab() {
             return response.json()
         },
         onSuccess: () => {
-            toast.success('승인되었습니다.')
+            toast.success('Approved.')
             setIsOpen(false)
             setSelectedDraftId(null)
             queryClient.invalidateQueries({ queryKey: ['stagingDrafts'] })
@@ -377,13 +377,13 @@ export function StagingAreaTab() {
             return response.json()
         },
         onSuccess: (data) => {
-            toast.success('AI 분석이 완료되었습니다.')
+            toast.success('AI Analysis completed.')
             if (data.analysis) {
                 setFormData(prev => ({ ...prev, ...data.analysis }))
             }
             queryClient.invalidateQueries({ queryKey: ['stagingDrafts'] })
         },
-        onError: () => toast.error('AI 분석 실패')
+        onError: () => toast.error('AI Analysis failed')
     })
 
     // AI SMILES Fix Mutation
@@ -423,9 +423,9 @@ export function StagingAreaTab() {
             const cleanSmiles = smiles.trim().replace(/`/g, '').replace(/smiles/gi, '').trim()
             setFormData(prev => ({ ...prev, smiles_code: cleanSmiles }))
             handleAutoSave('smiles_code', cleanSmiles)
-            toast.success('AI가 SMILES 코드를 복구했습니다.')
+            toast.success('AI recovered SMILES code.')
         },
-        onError: () => toast.error('SMILES 복구 실패')
+        onError: () => toast.error('SMILES recovery failed')
     })
 
     const handleAutoSave = (field: string, value: any) => {
@@ -455,7 +455,7 @@ export function StagingAreaTab() {
                     <div className="relative mt-2">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
                         <Input
-                            placeholder="약물명, 타겟 검색..."
+                            placeholder="Search drug name, target..."
                             className="pl-8 bg-slate-800 border-slate-700 text-white"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
@@ -518,21 +518,30 @@ export function StagingAreaTab() {
                         {/* Scrollable Form Content */}
                         <ScrollArea className="flex-1 p-6">
                             <div className="space-y-8 pb-20">
+                                {/* AI Analysis Button (Centered) */}
+                                <div className="flex justify-center mb-6">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 px-6 text-xs gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                                        onClick={() => refineMutation.mutate(selectedDraft.id)}
+                                        disabled={refineMutation.isPending}
+                                    >
+                                        {refineMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="w-4 h-4" />
+                                        )}
+                                        Analyze with AI
+                                    </Button>
+                                </div>
+
                                 {/* Core Identity */}
                                 <section>
-                                    <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                                    <div className="flex items-center mb-4 gap-2">
                                         <h4 className="text-sm font-semibold text-purple-400 flex items-center gap-2">
                                             <Activity className="w-4 h-4" /> Core Identity
                                         </h4>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-7 text-[10px] gap-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 shrink-0"
-                                            onClick={() => setIsChatOpen(true)}
-                                        >
-                                            <Sparkles className="w-3 h-3" />
-                                            AI에게 분석 시키기
-                                        </Button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -610,7 +619,7 @@ export function StagingAreaTab() {
                                                 disabled={fixSmilesMutation.isPending}
                                             >
                                                 {fixSmilesMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Wand2 className="w-3 h-3 mr-1" />}
-                                                AI 구조 복구
+                                                AI Structure Fix
                                             </Button>
                                         </Label>
                                         <Textarea
