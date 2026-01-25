@@ -3,6 +3,7 @@ import random
 import logging
 import json
 import time
+import subprocess
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -35,7 +36,7 @@ class CreativeBiolabsCrawler:
     
     def __init__(self):
         self.ua = UserAgent()
-        self.global_semaphore = asyncio.Semaphore(2)
+        self.global_semaphore = asyncio.Semaphore(1)
         # genai.configure is NOT called here to avoid fork/gRPC issues
         self.model = None
 
@@ -57,7 +58,9 @@ class CreativeBiolabsCrawler:
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
                     '--no-zygote',
-                    '--single-process'
+                    '--single-process',
+                    '--disable-extensions',
+                    '--disable-software-rasterizer'
                 ],
                 timeout=60000
             )
@@ -234,12 +237,24 @@ class CreativeBiolabsCrawler:
         except Exception as e:
             logger.error(f"🔥 [AI Critical Error] Background refinement failed for {record.get('id')}: {str(e)}", exc_info=True)
 
+    def _kill_zombies(self):
+        """Kill any lingering browser processes to free memory"""
+        try:
+            logger.info("🧹 Cleaning up zombie processes...")
+            subprocess.run(["pkill", "-f", "chrome"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-f", "playwright"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            logger.warning(f"Zombie cleanup warning: {e}")
+
     async def run(self, search_term: str, limit: int, job_id: str):
         """Orchestrate the crawling process with Stability & Hanging Prevention"""
         from app.api.scheduler import update_job_status
         await update_job_status(job_id, status="running")
         
         logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        
+        # 0. Kill Zombies
+        self._kill_zombies()
         
         # --- Sequential Execution Lock ---
         lock_acquired = False

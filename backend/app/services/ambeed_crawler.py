@@ -3,6 +3,7 @@ import random
 import logging
 import json
 import time
+import subprocess
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -42,8 +43,8 @@ class AmbeedCrawler:
         self.request_count = 0
         self.break_threshold = 100
         self.batch_size = 5
-        self.max_concurrent_categories = 2  # Reduced from 3
-        self.global_semaphore = asyncio.Semaphore(2) # Reduced from 5 to 2 (Strict Limit)
+        self.max_concurrent_categories = 1  # Strict Limit: 1 Browser at a time
+        self.global_semaphore = asyncio.Semaphore(1) # Strict Limit
 
         # Lazy init for Gemini to avoid gRPC fork issues
         self.model_id = 'gemini-2.5-flash'
@@ -91,8 +92,10 @@ class AmbeedCrawler:
                     '--ignore-ssl-errors',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
-                    '--no-zygote', # Added for stability
-                    '--single-process' # Try single process if memory is tight
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-extensions',
+                    '--disable-software-rasterizer'
                 ],
                 timeout=60000
             )
@@ -502,12 +505,24 @@ class AmbeedCrawler:
         except Exception as e:
             logger.error(f"🔥 [AI Critical Error] Background refinement failed for {record.get('id')}: {str(e)}", exc_info=True)
 
+    def _kill_zombies(self):
+        """Kill any lingering browser processes to free memory"""
+        try:
+            logger.info("🧹 Cleaning up zombie processes...")
+            subprocess.run(["pkill", "-f", "chrome"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-f", "playwright"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            logger.warning(f"Zombie cleanup warning: {e}")
+
     async def run(self, search_term: str, limit: int, job_id: str):
         """Orchestrate the crawling process with Enhanced Stability & Hanging Prevention"""
         from app.api.scheduler import update_job_status, is_cancelled
         await update_job_status(job_id, status="running")
         
         logger.info(f"🚀 [CRAWLER START] Job: {job_id} | Term: {search_term} | Limit: {limit}")
+        
+        # 0. Kill Zombies
+        self._kill_zombies()
         
         # --- Sequential Execution Lock ---
         lock_acquired = False
