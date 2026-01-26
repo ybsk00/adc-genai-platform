@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     CheckCircle, Loader2, ArrowRight, Sparkles,
     Search, FlaskConical, Microscope, Activity, X, Wand2,
-    FileText, AlertTriangle, Copy, Database
+    FileText, AlertTriangle, Copy, Database, MessageSquare
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSession } from '@/lib/supabase'
@@ -194,6 +194,17 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearchQuery || '')
     const [showRawData, setShowRawData] = useState(false)
     const [aiTrigger, setAiTrigger] = useState<string | undefined>(undefined)
+    const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
+    const [aiPanelKey, setAiPanelKey] = useState(0)
+
+    const toggleAI = () => {
+        if (!isAIPanelOpen) {
+            setAiPanelKey(prev => prev + 1) // Reset on open
+            setIsAIPanelOpen(true)
+        } else {
+            setIsAIPanelOpen(false)
+        }
+    }
 
     // Update search when prop changes (from cross-tab link)
     useEffect(() => {
@@ -299,6 +310,7 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
 
     const handleMagicFill = (field: string) => {
         setAiTrigger(`Find the value for '${field}' of ${formData.drug_name}`)
+        if (!isAIPanelOpen) toggleAI()
     }
 
     // Helper for Input with Magic Fill
@@ -404,7 +416,7 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
             </div>
 
             {/* 2. Right Panel: Details & AI */}
-            <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden flex flex-col">
+            <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden flex flex-col relative">
                 {selectedDraft ? (
                     <div className="flex h-full">
                         {/* Main Detail Content (Scrollable) */}
@@ -555,15 +567,27 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
                             </ScrollArea>
                         </div>
 
-                        {/* AI Panel (Right Side, Fixed Width) */}
-                        <div className="w-[350px] border-l border-slate-800 bg-slate-950/50">
+                        {/* AI Panel Slide-out */}
+                        <div className={`absolute top-0 right-0 h-full w-[400px] bg-slate-950 border-l border-slate-800 shadow-2xl transform transition-transform duration-300 z-20 ${isAIPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                            {/* Only render content if open (or keep mounted but hidden? User wants reset, so key change handles reset) */}
                             <AIAssistantPanel
+                                key={aiPanelKey}
                                 contextData={selectedDraft}
                                 onSourceClick={handleSourceClick}
                                 triggerQuery={aiTrigger}
                                 onClearTrigger={() => setAiTrigger(undefined)}
+                                onClose={() => setIsAIPanelOpen(false)}
                             />
                         </div>
+
+                        {/* Floating AI Toggle Button */}
+                        <Button
+                            className={`absolute bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-10 transition-all duration-300 ${isAIPanelOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+                            onClick={toggleAI}
+                            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}
+                        >
+                            <MessageSquare className="w-6 h-6 text-white" />
+                        </Button>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
@@ -572,6 +596,6 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Bot, User, Sparkles, Database, ExternalLink, Wand2, AlertTriangle } from 'lucide-react'
+import { Bot, User, Sparkles, Database, ExternalLink, Wand2, AlertTriangle, X } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api'
 import { getSession } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -22,9 +22,10 @@ interface AIAssistantPanelProps {
     onSourceClick?: (sourceType: string, sourceId: string) => void
     triggerQuery?: string // Prop to trigger a query externally (Magic Fill)
     onClearTrigger?: () => void
+    onClose?: () => void
 }
 
-export function AIAssistantPanel({ contextData, onSourceClick, triggerQuery, onClearTrigger }: AIAssistantPanelProps) {
+export function AIAssistantPanel({ contextData, onSourceClick, triggerQuery, onClearTrigger, onClose }: AIAssistantPanelProps) {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -140,7 +141,7 @@ export function AIAssistantPanel({ contextData, onSourceClick, triggerQuery, onC
     }
 
     return (
-        <Card className="bg-slate-900 border-slate-800 h-full flex flex-col">
+        <Card className="bg-slate-900 border-slate-800 h-full flex flex-col shadow-xl">
             <CardHeader className="py-3 px-4 border-b border-slate-800 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium flex items-center gap-2 text-slate-200">
                     <Bot className="w-4 h-4 text-purple-400" />
@@ -156,6 +157,11 @@ export function AIAssistantPanel({ contextData, onSourceClick, triggerQuery, onC
                         onCheckedChange={(c) => setMode(c ? 'general' : 'rag')}
                         className="scale-75 data-[state=checked]:bg-purple-600"
                     />
+                    {onClose && (
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2 text-slate-400 hover:text-white" onClick={onClose}>
+                            <X className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
             </CardHeader>
 

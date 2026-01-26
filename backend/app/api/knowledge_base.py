@@ -88,3 +88,33 @@ async def add_to_knowledge_base(req: IndexRequest, background_tasks: BackgroundT
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class KnowledgeItemUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    summary: Optional[str] = None
+    ai_reasoning: Optional[str] = None
+    relevance_score: Optional[float] = None
+    properties: Optional[dict] = None
+    rag_status: Optional[str] = None
+
+@router.patch("/{item_id}")
+async def patch_knowledge_item(item_id: int, updates: KnowledgeItemUpdate):
+    """
+    지식 베이스 항목 수정
+    """
+    try:
+        # Filter out None values
+        update_data = {k: v for k, v in updates.dict().items() if v is not None}
+        
+        if not update_data:
+            return {"message": "No updates provided"}
+
+        res = supabase.table("knowledge_base").update(update_data).eq("id", item_id).execute()
+        
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Item not found")
+            
+        return res.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

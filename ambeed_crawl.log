@@ -1,0 +1,604 @@
+2026-01-26 18:55:14,731 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-26 18:55:22,067 - INFO - === 🔄 Starting Round 1 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 18:55:22,068 - INFO - 🎯 [ADC Linker] Fetching Page 1...
+2026-01-26 18:55:25,422 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=1
+2026-01-26 18:55:37,124 - INFO - 🎯 [ADC Toxins] Fetching Page 1...
+2026-01-26 18:55:40,863 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-26 18:55:44,433 - INFO - ⏩ [SKIP] 7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 18:55:44,463 - INFO - ⏩ [SKIP] daun02 exists.
+2026-01-26 18:55:44,495 - INFO - ⏩ [SKIP] (s)-seco-duocarmycin-sa exists.
+2026-01-26 18:55:44,524 - INFO - ⏩ [SKIP] 1023758-14-6 exists.
+2026-01-26 18:55:44,553 - INFO - ⏩ [SKIP] exatecan exists.
+2026-01-26 18:55:44,581 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 18:55:44,611 - INFO - ⏩ [SKIP] Duostatin-5 exists.
+2026-01-26 18:55:44,639 - INFO - ⏩ [SKIP] auristatin-e exists.
+2026-01-26 18:55:44,666 - INFO - ⏩ [SKIP] fmoc-mmae exists.
+2026-01-26 18:55:44,698 - INFO - ⏩ [SKIP] ac-exatecan exists.
+2026-01-26 18:55:44,739 - INFO - ⏩ [SKIP] 182182-31-6 exists.
+2026-01-26 18:55:44,768 - INFO - ⏩ [SKIP] 17-aep-ga exists.
+2026-01-26 18:55:44,797 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 18:55:44,832 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 18:55:44,867 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 18:55:44,901 - INFO - ⏩ [SKIP] drf-1042 exists.
+2026-01-26 18:55:44,935 - INFO - ⏩ [SKIP] calicheamicin exists.
+2026-01-26 18:55:44,962 - INFO - ⏩ [SKIP] eribulin exists.
+2026-01-26 18:55:44,992 - INFO - ⏩ [SKIP] sg3199 exists.
+2026-01-26 18:55:45,042 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 18:55:51,270 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 1...
+2026-01-26 18:55:54,347 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=1
+2026-01-26 18:55:57,355 - INFO - ⏩ [SKIP] mc-mmad exists.
+2026-01-26 18:55:57,395 - INFO - ⏩ [SKIP] psma-alb-56 exists.
+2026-01-26 18:55:57,447 - INFO - ⏩ [SKIP] 1473403-87-0 exists.
+2026-01-26 18:55:57,484 - INFO - ⏩ [SKIP] 2680543-57-9 exists.
+2026-01-26 18:55:57,527 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 18:55:57,565 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Exatecan exists.
+2026-01-26 18:55:57,604 - INFO - ⏩ [SKIP] 1620837-70-8 exists.
+2026-01-26 18:55:57,646 - INFO - ⏩ [SKIP] 1810001-93-4 exists.
+2026-01-26 18:55:57,699 - INFO - ⏩ [SKIP] 2129164-91-4 exists.
+2026-01-26 18:55:57,745 - INFO - ⏩ [SKIP] 1895916-24-1 exists.
+2026-01-26 18:55:57,791 - INFO - ⏩ [SKIP] 1228105-51-8 exists.
+2026-01-26 18:55:57,848 - INFO - ⏩ [SKIP] 1912408-92-4 exists.
+2026-01-26 18:55:57,890 - INFO - ⏩ [SKIP] fl118 exists.
+2026-01-26 18:55:57,931 - INFO - ⏩ [SKIP] 1600418-29-8 exists.
+2026-01-26 18:55:57,969 - INFO - ⏩ [SKIP] mal-c2-gly3-eda-pnu-159682 exists.
+2026-01-26 18:55:58,007 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Auristatin-E exists.
+2026-01-26 18:55:58,046 - INFO - ⏩ [SKIP] mmae-smcc exists.
+2026-01-26 18:55:58,091 - INFO - ⏩ [SKIP] 1801838-28-7 exists.
+2026-01-26 18:55:58,137 - INFO - ⏩ [SKIP] 2353409-69-3 exists.
+2026-01-26 18:55:58,180 - INFO - ⏩ [SKIP] mal-phe-c4-vc-pab-mmae exists.
+2026-01-26 18:59:41,329 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-26 18:59:44,509 - INFO - === 🔄 Starting Round 1 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 18:59:44,510 - INFO - 🎯 [ADC Linker] Fetching Page 1...
+2026-01-26 18:59:47,788 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=1
+2026-01-26 19:00:00,463 - INFO - 🎯 [ADC Toxins] Fetching Page 1...
+2026-01-26 19:00:04,172 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-26 19:00:07,320 - INFO - ⏩ [SKIP] 7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 19:00:07,352 - INFO - ⏩ [SKIP] daun02 exists.
+2026-01-26 19:00:07,411 - INFO - ⏩ [SKIP] (s)-seco-duocarmycin-sa exists.
+2026-01-26 19:00:07,445 - INFO - ⏩ [SKIP] 1023758-14-6 exists.
+2026-01-26 19:00:07,480 - INFO - ⏩ [SKIP] exatecan exists.
+2026-01-26 19:00:07,513 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:00:07,547 - INFO - ⏩ [SKIP] Duostatin-5 exists.
+2026-01-26 19:00:07,579 - INFO - ⏩ [SKIP] auristatin-e exists.
+2026-01-26 19:00:07,619 - INFO - ⏩ [SKIP] fmoc-mmae exists.
+2026-01-26 19:00:07,666 - INFO - ⏩ [SKIP] ac-exatecan exists.
+2026-01-26 19:00:07,703 - INFO - ⏩ [SKIP] 182182-31-6 exists.
+2026-01-26 19:00:07,732 - INFO - ⏩ [SKIP] 17-aep-ga exists.
+2026-01-26 19:00:07,762 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:00:07,822 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:00:07,852 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 19:00:07,881 - INFO - ⏩ [SKIP] drf-1042 exists.
+2026-01-26 19:00:07,925 - INFO - ⏩ [SKIP] calicheamicin exists.
+2026-01-26 19:00:07,955 - INFO - ⏩ [SKIP] eribulin exists.
+2026-01-26 19:00:07,987 - INFO - ⏩ [SKIP] sg3199 exists.
+2026-01-26 19:00:08,016 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 19:00:15,121 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 1...
+2026-01-26 19:00:19,148 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=1
+2026-01-26 19:00:21,820 - INFO - ⏩ [SKIP] mc-mmad exists.
+2026-01-26 19:00:21,858 - INFO - ⏩ [SKIP] psma-alb-56 exists.
+2026-01-26 19:00:21,901 - INFO - ⏩ [SKIP] 1473403-87-0 exists.
+2026-01-26 19:00:21,937 - INFO - ⏩ [SKIP] 2680543-57-9 exists.
+2026-01-26 19:00:21,970 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:00:22,004 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Exatecan exists.
+2026-01-26 19:00:22,045 - INFO - ⏩ [SKIP] 1620837-70-8 exists.
+2026-01-26 19:00:22,081 - INFO - ⏩ [SKIP] 1810001-93-4 exists.
+2026-01-26 19:00:22,118 - INFO - ⏩ [SKIP] 2129164-91-4 exists.
+2026-01-26 19:00:22,156 - INFO - ⏩ [SKIP] 1895916-24-1 exists.
+2026-01-26 19:00:22,208 - INFO - ⏩ [SKIP] 1228105-51-8 exists.
+2026-01-26 19:00:22,264 - INFO - ⏩ [SKIP] 1912408-92-4 exists.
+2026-01-26 19:00:22,298 - INFO - ⏩ [SKIP] fl118 exists.
+2026-01-26 19:00:22,346 - INFO - ⏩ [SKIP] 1600418-29-8 exists.
+2026-01-26 19:00:22,380 - INFO - ⏩ [SKIP] mal-c2-gly3-eda-pnu-159682 exists.
+2026-01-26 19:00:22,414 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Auristatin-E exists.
+2026-01-26 19:00:22,449 - INFO - ⏩ [SKIP] mmae-smcc exists.
+2026-01-26 19:00:22,489 - INFO - ⏩ [SKIP] 1801838-28-7 exists.
+2026-01-26 19:00:22,524 - INFO - ⏩ [SKIP] 2353409-69-3 exists.
+2026-01-26 19:00:22,558 - INFO - ⏩ [SKIP] mal-phe-c4-vc-pab-mmae exists.
+2026-01-26 19:00:28,539 - INFO - 💤 Resting between rounds...
+2026-01-26 19:00:38,551 - INFO - === 🔄 Starting Round 2 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:00:38,552 - INFO - 🎯 [ADC Linker] Fetching Page 2...
+2026-01-26 19:00:42,229 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=2
+2026-01-26 19:00:44,973 - WARNING - ⚠️ ADC Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:00:53,039 - INFO - 🎯 [ADC Toxins] Fetching Page 2...
+2026-01-26 19:00:56,179 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2
+2026-01-26 19:00:58,635 - INFO - ⏩ [SKIP] exatecan-mesylate-dihydrate exists.
+2026-01-26 19:00:58,665 - INFO - ⏩ [SKIP] 10-methoxycamptothecin exists.
+2026-01-26 19:00:58,699 - INFO - ⏩ [SKIP] mmaf-ome exists.
+2026-01-26 19:00:58,744 - INFO - ⏩ [SKIP] ansamitocin-p-3 exists.
+2026-01-26 19:00:58,774 - INFO - ⏩ [SKIP] dm4-sme exists.
+2026-01-26 19:00:58,803 - INFO - ⏩ [SKIP] Tomaymycin-DM exists.
+2026-01-26 19:00:58,835 - INFO - ⏩ [SKIP] dm1 exists.
+2026-01-26 19:00:58,882 - INFO - ⏩ [SKIP] monomethyl-auristatin-e exists.
+2026-01-26 19:00:58,911 - INFO - ⏩ [SKIP] dolastatin-10 exists.
+2026-01-26 19:00:58,940 - INFO - ⏩ [SKIP] dm1-sme exists.
+2026-01-26 19:00:58,977 - INFO - ⏩ [SKIP] hemiasterlin exists.
+2026-01-26 19:00:59,012 - INFO - ⏩ [SKIP] c-11 exists.
+2026-01-26 19:00:59,043 - INFO - ⏩ [SKIP] duocarmycin-mb exists.
+2026-01-26 19:00:59,073 - INFO - ⏩ [SKIP] azonafide-peaba exists.
+2026-01-26 19:00:59,109 - INFO - ⏩ [SKIP] dc10sme exists.
+2026-01-26 19:00:59,137 - INFO - ⏩ [SKIP] sc209 exists.
+2026-01-26 19:00:59,165 - INFO - ⏩ [SKIP] corixetan exists.
+2026-01-26 19:00:59,195 - INFO - ⏩ [SKIP] tubulysin-im-2 exists.
+2026-01-26 19:00:59,226 - INFO - ⏩ [SKIP] 2',3'-cgamp-c2-sh exists.
+2026-01-26 19:00:59,265 - INFO - ⏩ [SKIP] fmoc-mmaf-ome exists.
+2026-01-26 19:00:59,269 - WARNING - ⚠️ ADC Toxins Page 2 returned no items. Assuming end.
+2026-01-26 19:01:05,983 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 2...
+2026-01-26 19:01:09,609 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=2
+2026-01-26 19:01:12,294 - INFO - ⏩ [SKIP] sc-vc-pab-mmae exists.
+2026-01-26 19:01:12,332 - INFO - ⏩ [SKIP] doxorubicin-smcc exists.
+2026-01-26 19:01:12,370 - INFO - ⏩ [SKIP] 2845164-91-0 exists.
+2026-01-26 19:01:12,406 - INFO - ⏩ [SKIP] 2866301-18-8 exists.
+2026-01-26 19:01:12,447 - INFO - ⏩ [SKIP] cb07-exatecan exists.
+2026-01-26 19:01:12,488 - INFO - ⏩ [SKIP] 2170118-23-5 exists.
+2026-01-26 19:01:12,524 - INFO - ⏩ [SKIP] br-val-ala-nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt exists.
+2026-01-26 19:01:12,561 - INFO - ⏩ [SKIP] mc-gly-gly-phe-gly-(r)-cyclopropane-exatecan exists.
+2026-01-26 19:01:12,595 - INFO - ⏩ [SKIP] glucocorticoid-receptor-agonist-1-ala-ala-mal exists.
+2026-01-26 19:01:12,632 - INFO - ⏩ [SKIP] dbco-peg4-ggfg-exatecan exists.
+2026-01-26 19:01:12,667 - INFO - ⏩ [SKIP] topotecan exists.
+2026-01-26 19:01:12,710 - INFO - ⏩ [SKIP] (s)-10-hydroxycamptothecin exists.
+2026-01-26 19:01:12,748 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:01:12,787 - INFO - ⏩ [SKIP] 2758671-45-1 exists.
+2026-01-26 19:01:12,831 - INFO - ⏩ [SKIP] deruxtecan-analog-2 exists.
+2026-01-26 19:01:12,869 - INFO - ⏩ [SKIP] 2414393-22-7 exists.
+2026-01-26 19:01:12,914 - INFO - ⏩ [SKIP] 1818864-51-5 exists.
+2026-01-26 19:01:12,956 - INFO - ⏩ [SKIP] 1650569-89-3 exists.
+2026-01-26 19:01:13,000 - INFO - ⏩ [SKIP] 9-aminocamptothecin exists.
+2026-01-26 19:01:13,043 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:01:13,046 - WARNING - ⚠️ ADC Payload-Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:01:20,974 - INFO - 💤 Resting between rounds...
+2026-01-26 19:01:30,979 - INFO - 🎉 All categories completed!
+2026-01-26 19:12:35,316 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-26 19:12:38,240 - INFO - === 🔄 Starting Round 1 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:12:38,240 - INFO - 🎯 [ADC Linker] Fetching Page 1...
+2026-01-26 19:12:41,167 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=1
+2026-01-26 19:12:41,820 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-26 19:12:44,642 - INFO - === 🔄 Starting Round 1 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:12:44,643 - INFO - 🎯 [ADC Linker] Fetching Page 1...
+2026-01-26 19:12:47,829 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=1
+2026-01-26 19:12:52,188 - INFO - 🎯 [ADC Toxins] Fetching Page 1...
+2026-01-26 19:12:55,419 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-26 19:12:58,887 - INFO - ⏩ [SKIP] 7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 19:12:58,916 - INFO - ⏩ [SKIP] daun02 exists.
+2026-01-26 19:12:58,945 - INFO - ⏩ [SKIP] (s)-seco-duocarmycin-sa exists.
+2026-01-26 19:12:58,980 - INFO - ⏩ [SKIP] 1023758-14-6 exists.
+2026-01-26 19:12:59,010 - INFO - ⏩ [SKIP] exatecan exists.
+2026-01-26 19:12:59,041 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:12:59,072 - INFO - ⏩ [SKIP] Duostatin-5 exists.
+2026-01-26 19:12:59,102 - INFO - ⏩ [SKIP] auristatin-e exists.
+2026-01-26 19:12:59,134 - INFO - ⏩ [SKIP] fmoc-mmae exists.
+2026-01-26 19:12:59,175 - INFO - ⏩ [SKIP] ac-exatecan exists.
+2026-01-26 19:12:59,204 - INFO - ⏩ [SKIP] 182182-31-6 exists.
+2026-01-26 19:12:59,234 - INFO - ⏩ [SKIP] 17-aep-ga exists.
+2026-01-26 19:12:59,292 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:12:59,322 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:12:59,362 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 19:12:59,398 - INFO - ⏩ [SKIP] drf-1042 exists.
+2026-01-26 19:12:59,429 - INFO - ⏩ [SKIP] calicheamicin exists.
+2026-01-26 19:12:59,446 - INFO - 🎯 [ADC Toxins] Fetching Page 1...
+2026-01-26 19:12:59,456 - INFO - ⏩ [SKIP] eribulin exists.
+2026-01-26 19:12:59,487 - INFO - ⏩ [SKIP] sg3199 exists.
+2026-01-26 19:12:59,521 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 19:13:02,897 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-26 19:13:06,493 - INFO - ⏩ [SKIP] 7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 19:13:06,536 - INFO - ⏩ [SKIP] daun02 exists.
+2026-01-26 19:13:06,575 - INFO - ⏩ [SKIP] (s)-seco-duocarmycin-sa exists.
+2026-01-26 19:13:06,615 - INFO - ⏩ [SKIP] 1023758-14-6 exists.
+2026-01-26 19:13:06,651 - INFO - ⏩ [SKIP] exatecan exists.
+2026-01-26 19:13:06,689 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:13:06,724 - INFO - ⏩ [SKIP] Duostatin-5 exists.
+2026-01-26 19:13:06,763 - INFO - ⏩ [SKIP] auristatin-e exists.
+2026-01-26 19:13:06,799 - INFO - ⏩ [SKIP] fmoc-mmae exists.
+2026-01-26 19:13:06,845 - INFO - ⏩ [SKIP] ac-exatecan exists.
+2026-01-26 19:13:06,886 - INFO - ⏩ [SKIP] 182182-31-6 exists.
+2026-01-26 19:13:06,950 - INFO - ⏩ [SKIP] 17-aep-ga exists.
+2026-01-26 19:13:06,997 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:13:07,037 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:13:07,077 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 19:13:07,117 - INFO - ⏩ [SKIP] drf-1042 exists.
+2026-01-26 19:13:07,247 - INFO - ⏩ [SKIP] calicheamicin exists.
+2026-01-26 19:13:07,291 - INFO - ⏩ [SKIP] eribulin exists.
+2026-01-26 19:13:07,336 - INFO - ⏩ [SKIP] sg3199 exists.
+2026-01-26 19:13:07,375 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 19:13:08,844 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 1...
+2026-01-26 19:13:11,374 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=1
+2026-01-26 19:13:13,980 - INFO - ⏩ [SKIP] mc-mmad exists.
+2026-01-26 19:13:14,027 - INFO - ⏩ [SKIP] psma-alb-56 exists.
+2026-01-26 19:13:14,067 - INFO - ⏩ [SKIP] 1473403-87-0 exists.
+2026-01-26 19:13:14,103 - INFO - ⏩ [SKIP] 2680543-57-9 exists.
+2026-01-26 19:13:14,148 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:13:14,187 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Exatecan exists.
+2026-01-26 19:13:14,235 - INFO - ⏩ [SKIP] 1620837-70-8 exists.
+2026-01-26 19:13:14,269 - INFO - ⏩ [SKIP] 1810001-93-4 exists.
+2026-01-26 19:13:14,301 - INFO - ⏩ [SKIP] 2129164-91-4 exists.
+2026-01-26 19:13:14,337 - INFO - ⏩ [SKIP] 1895916-24-1 exists.
+2026-01-26 19:13:14,379 - INFO - ⏩ [SKIP] 1228105-51-8 exists.
+2026-01-26 19:13:14,412 - INFO - ⏩ [SKIP] 1912408-92-4 exists.
+2026-01-26 19:13:14,446 - INFO - ⏩ [SKIP] fl118 exists.
+2026-01-26 19:13:14,492 - INFO - ⏩ [SKIP] 1600418-29-8 exists.
+2026-01-26 19:13:14,536 - INFO - ⏩ [SKIP] mal-c2-gly3-eda-pnu-159682 exists.
+2026-01-26 19:13:14,570 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Auristatin-E exists.
+2026-01-26 19:13:14,602 - INFO - ⏩ [SKIP] mmae-smcc exists.
+2026-01-26 19:13:14,642 - INFO - ⏩ [SKIP] 1801838-28-7 exists.
+2026-01-26 19:13:14,677 - INFO - ⏩ [SKIP] 2353409-69-3 exists.
+2026-01-26 19:13:14,724 - INFO - ⏩ [SKIP] mal-phe-c4-vc-pab-mmae exists.
+2026-01-26 19:13:15,112 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 1...
+2026-01-26 19:13:18,377 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=1
+2026-01-26 19:13:20,886 - INFO - ⏩ [SKIP] mc-mmad exists.
+2026-01-26 19:13:20,921 - INFO - ⏩ [SKIP] psma-alb-56 exists.
+2026-01-26 19:13:20,954 - INFO - ⏩ [SKIP] 1473403-87-0 exists.
+2026-01-26 19:13:21,000 - INFO - ⏩ [SKIP] 2680543-57-9 exists.
+2026-01-26 19:13:21,036 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:13:21,075 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Exatecan exists.
+2026-01-26 19:13:21,110 - INFO - ⏩ [SKIP] 1620837-70-8 exists.
+2026-01-26 19:13:21,146 - INFO - ⏩ [SKIP] 1810001-93-4 exists.
+2026-01-26 19:13:21,175 - INFO - ⏩ [SKIP] 2129164-91-4 exists.
+2026-01-26 19:13:21,218 - INFO - ⏩ [SKIP] 1895916-24-1 exists.
+2026-01-26 19:13:21,252 - INFO - ⏩ [SKIP] 1228105-51-8 exists.
+2026-01-26 19:13:21,293 - INFO - ⏩ [SKIP] 1912408-92-4 exists.
+2026-01-26 19:13:21,330 - INFO - ⏩ [SKIP] fl118 exists.
+2026-01-26 19:13:21,368 - INFO - ⏩ [SKIP] 1600418-29-8 exists.
+2026-01-26 19:13:21,406 - INFO - ⏩ [SKIP] mal-c2-gly3-eda-pnu-159682 exists.
+2026-01-26 19:13:21,448 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Auristatin-E exists.
+2026-01-26 19:13:21,484 - INFO - ⏩ [SKIP] mmae-smcc exists.
+2026-01-26 19:13:21,514 - INFO - ⏩ [SKIP] 1801838-28-7 exists.
+2026-01-26 19:13:21,545 - INFO - ⏩ [SKIP] 2353409-69-3 exists.
+2026-01-26 19:13:21,578 - INFO - ⏩ [SKIP] mal-phe-c4-vc-pab-mmae exists.
+2026-01-26 19:13:21,814 - INFO - 💤 Resting between rounds...
+2026-01-26 19:13:28,475 - INFO - 💤 Resting between rounds...
+2026-01-26 19:13:31,830 - INFO - === 🔄 Starting Round 2 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:13:31,831 - INFO - 🎯 [ADC Linker] Fetching Page 2...
+2026-01-26 19:13:35,786 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=2
+2026-01-26 19:13:38,401 - WARNING - ⚠️ ADC Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:13:38,483 - INFO - === 🔄 Starting Round 2 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:13:38,484 - INFO - 🎯 [ADC Linker] Fetching Page 2...
+2026-01-26 19:13:41,210 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=2
+2026-01-26 19:13:43,558 - WARNING - ⚠️ ADC Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:13:46,274 - INFO - 🎯 [ADC Toxins] Fetching Page 2...
+2026-01-26 19:13:48,972 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2
+2026-01-26 19:13:51,421 - INFO - ⏩ [SKIP] exatecan-mesylate-dihydrate exists.
+2026-01-26 19:13:51,452 - INFO - ⏩ [SKIP] 10-methoxycamptothecin exists.
+2026-01-26 19:13:51,486 - INFO - ⏩ [SKIP] mmaf-ome exists.
+2026-01-26 19:13:51,523 - INFO - ⏩ [SKIP] ansamitocin-p-3 exists.
+2026-01-26 19:13:51,556 - INFO - ⏩ [SKIP] dm4-sme exists.
+2026-01-26 19:13:51,590 - INFO - ⏩ [SKIP] Tomaymycin-DM exists.
+2026-01-26 19:13:51,641 - INFO - ⏩ [SKIP] dm1 exists.
+2026-01-26 19:13:51,678 - INFO - ⏩ [SKIP] monomethyl-auristatin-e exists.
+2026-01-26 19:13:51,719 - INFO - ⏩ [SKIP] dolastatin-10 exists.
+2026-01-26 19:13:51,754 - INFO - ⏩ [SKIP] dm1-sme exists.
+2026-01-26 19:13:51,787 - INFO - ⏩ [SKIP] hemiasterlin exists.
+2026-01-26 19:13:51,818 - INFO - ⏩ [SKIP] c-11 exists.
+2026-01-26 19:13:51,852 - INFO - ⏩ [SKIP] duocarmycin-mb exists.
+2026-01-26 19:13:51,888 - INFO - ⏩ [SKIP] azonafide-peaba exists.
+2026-01-26 19:13:51,923 - INFO - ⏩ [SKIP] dc10sme exists.
+2026-01-26 19:13:51,962 - INFO - ⏩ [SKIP] sc209 exists.
+2026-01-26 19:13:51,995 - INFO - ⏩ [SKIP] corixetan exists.
+2026-01-26 19:13:52,051 - INFO - ⏩ [SKIP] tubulysin-im-2 exists.
+2026-01-26 19:13:52,090 - INFO - ⏩ [SKIP] 2',3'-cgamp-c2-sh exists.
+2026-01-26 19:13:52,124 - INFO - ⏩ [SKIP] fmoc-mmaf-ome exists.
+2026-01-26 19:13:52,127 - WARNING - ⚠️ ADC Toxins Page 2 returned no items. Assuming end.
+2026-01-26 19:13:53,539 - INFO - 🎯 [ADC Toxins] Fetching Page 2...
+2026-01-26 19:13:55,799 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2
+2026-01-26 19:13:59,323 - INFO - ⏩ [SKIP] exatecan-mesylate-dihydrate exists.
+2026-01-26 19:13:59,357 - INFO - ⏩ [SKIP] 10-methoxycamptothecin exists.
+2026-01-26 19:13:59,390 - INFO - ⏩ [SKIP] mmaf-ome exists.
+2026-01-26 19:13:59,422 - INFO - ⏩ [SKIP] ansamitocin-p-3 exists.
+2026-01-26 19:13:59,455 - INFO - ⏩ [SKIP] dm4-sme exists.
+2026-01-26 19:13:59,490 - INFO - ⏩ [SKIP] Tomaymycin-DM exists.
+2026-01-26 19:13:59,520 - INFO - ⏩ [SKIP] dm1 exists.
+2026-01-26 19:13:59,556 - INFO - ⏩ [SKIP] monomethyl-auristatin-e exists.
+2026-01-26 19:13:59,585 - INFO - ⏩ [SKIP] dolastatin-10 exists.
+2026-01-26 19:13:59,629 - INFO - ⏩ [SKIP] dm1-sme exists.
+2026-01-26 19:13:59,660 - INFO - ⏩ [SKIP] hemiasterlin exists.
+2026-01-26 19:13:59,695 - INFO - ⏩ [SKIP] c-11 exists.
+2026-01-26 19:13:59,726 - INFO - ⏩ [SKIP] duocarmycin-mb exists.
+2026-01-26 19:13:59,758 - INFO - ⏩ [SKIP] azonafide-peaba exists.
+2026-01-26 19:13:59,785 - INFO - ⏩ [SKIP] dc10sme exists.
+2026-01-26 19:13:59,817 - INFO - ⏩ [SKIP] sc209 exists.
+2026-01-26 19:13:59,861 - INFO - ⏩ [SKIP] corixetan exists.
+2026-01-26 19:13:59,900 - INFO - ⏩ [SKIP] tubulysin-im-2 exists.
+2026-01-26 19:13:59,931 - INFO - ⏩ [SKIP] 2',3'-cgamp-c2-sh exists.
+2026-01-26 19:13:59,970 - INFO - ⏩ [SKIP] fmoc-mmaf-ome exists.
+2026-01-26 19:13:59,974 - WARNING - ⚠️ ADC Toxins Page 2 returned no items. Assuming end.
+2026-01-26 19:14:00,011 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 2...
+2026-01-26 19:14:03,939 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=2
+2026-01-26 19:14:05,073 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 2...
+2026-01-26 19:14:06,939 - INFO - ⏩ [SKIP] sc-vc-pab-mmae exists.
+2026-01-26 19:14:06,972 - INFO - ⏩ [SKIP] doxorubicin-smcc exists.
+2026-01-26 19:14:07,006 - INFO - ⏩ [SKIP] 2845164-91-0 exists.
+2026-01-26 19:14:07,036 - INFO - ⏩ [SKIP] 2866301-18-8 exists.
+2026-01-26 19:14:07,068 - INFO - ⏩ [SKIP] cb07-exatecan exists.
+2026-01-26 19:14:07,098 - INFO - ⏩ [SKIP] 2170118-23-5 exists.
+2026-01-26 19:14:07,129 - INFO - ⏩ [SKIP] br-val-ala-nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt exists.
+2026-01-26 19:14:07,161 - INFO - ⏩ [SKIP] mc-gly-gly-phe-gly-(r)-cyclopropane-exatecan exists.
+2026-01-26 19:14:07,211 - INFO - ⏩ [SKIP] glucocorticoid-receptor-agonist-1-ala-ala-mal exists.
+2026-01-26 19:14:07,248 - INFO - ⏩ [SKIP] dbco-peg4-ggfg-exatecan exists.
+2026-01-26 19:14:07,300 - INFO - ⏩ [SKIP] topotecan exists.
+2026-01-26 19:14:07,330 - INFO - ⏩ [SKIP] (s)-10-hydroxycamptothecin exists.
+2026-01-26 19:14:07,362 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:14:07,415 - INFO - ⏩ [SKIP] 2758671-45-1 exists.
+2026-01-26 19:14:07,452 - INFO - ⏩ [SKIP] deruxtecan-analog-2 exists.
+2026-01-26 19:14:07,480 - INFO - ⏩ [SKIP] 2414393-22-7 exists.
+2026-01-26 19:14:07,512 - INFO - ⏩ [SKIP] 1818864-51-5 exists.
+2026-01-26 19:14:07,549 - INFO - ⏩ [SKIP] 1650569-89-3 exists.
+2026-01-26 19:14:07,582 - INFO - ⏩ [SKIP] 9-aminocamptothecin exists.
+2026-01-26 19:14:07,614 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:14:07,618 - WARNING - ⚠️ ADC Payload-Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:14:08,543 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=2
+2026-01-26 19:14:11,288 - INFO - ⏩ [SKIP] sc-vc-pab-mmae exists.
+2026-01-26 19:14:11,318 - INFO - ⏩ [SKIP] doxorubicin-smcc exists.
+2026-01-26 19:14:11,349 - INFO - ⏩ [SKIP] 2845164-91-0 exists.
+2026-01-26 19:14:11,379 - INFO - ⏩ [SKIP] 2866301-18-8 exists.
+2026-01-26 19:14:11,411 - INFO - ⏩ [SKIP] cb07-exatecan exists.
+2026-01-26 19:14:11,444 - INFO - ⏩ [SKIP] 2170118-23-5 exists.
+2026-01-26 19:14:11,480 - INFO - ⏩ [SKIP] br-val-ala-nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt exists.
+2026-01-26 19:14:11,510 - INFO - ⏩ [SKIP] mc-gly-gly-phe-gly-(r)-cyclopropane-exatecan exists.
+2026-01-26 19:14:11,539 - INFO - ⏩ [SKIP] glucocorticoid-receptor-agonist-1-ala-ala-mal exists.
+2026-01-26 19:14:11,574 - INFO - ⏩ [SKIP] dbco-peg4-ggfg-exatecan exists.
+2026-01-26 19:14:11,605 - INFO - ⏩ [SKIP] topotecan exists.
+2026-01-26 19:14:11,638 - INFO - ⏩ [SKIP] (s)-10-hydroxycamptothecin exists.
+2026-01-26 19:14:11,676 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:14:11,714 - INFO - ⏩ [SKIP] 2758671-45-1 exists.
+2026-01-26 19:14:11,742 - INFO - ⏩ [SKIP] deruxtecan-analog-2 exists.
+2026-01-26 19:14:11,779 - INFO - ⏩ [SKIP] 2414393-22-7 exists.
+2026-01-26 19:14:11,813 - INFO - ⏩ [SKIP] 1818864-51-5 exists.
+2026-01-26 19:14:11,856 - INFO - ⏩ [SKIP] 1650569-89-3 exists.
+2026-01-26 19:14:11,886 - INFO - ⏩ [SKIP] 9-aminocamptothecin exists.
+2026-01-26 19:14:11,916 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:14:11,919 - WARNING - ⚠️ ADC Payload-Linker Page 2 returned no items. Assuming end.
+2026-01-26 19:14:14,631 - INFO - 💤 Resting between rounds...
+2026-01-26 19:14:19,004 - INFO - 💤 Resting between rounds...
+2026-01-26 19:14:24,636 - INFO - 🎉 All categories completed!
+2026-01-26 19:14:29,010 - INFO - 🎉 All categories completed!
+2026-01-26 19:18:15,081 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-26 19:18:18,122 - INFO - === 🔄 Starting Round 1 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:18:18,123 - INFO - 🎯 [ADC Linker] Fetching Page 1...
+2026-01-26 19:18:20,601 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=1
+2026-01-26 19:18:31,276 - INFO - 🎯 [ADC Toxins] Fetching Page 1...
+2026-01-26 19:18:34,669 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-26 19:18:37,769 - INFO - ⏩ [SKIP] 7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 19:18:37,800 - INFO - ⏩ [SKIP] daun02 exists.
+2026-01-26 19:18:37,829 - INFO - ⏩ [SKIP] (s)-seco-duocarmycin-sa exists.
+2026-01-26 19:18:37,863 - INFO - ⏩ [SKIP] 1023758-14-6 exists.
+2026-01-26 19:18:37,912 - INFO - ⏩ [SKIP] exatecan exists.
+2026-01-26 19:18:37,944 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:18:37,980 - INFO - ⏩ [SKIP] Duostatin-5 exists.
+2026-01-26 19:18:38,011 - INFO - ⏩ [SKIP] auristatin-e exists.
+2026-01-26 19:18:38,053 - INFO - ⏩ [SKIP] fmoc-mmae exists.
+2026-01-26 19:18:38,086 - INFO - ⏩ [SKIP] ac-exatecan exists.
+2026-01-26 19:18:38,119 - INFO - ⏩ [SKIP] 182182-31-6 exists.
+2026-01-26 19:18:38,168 - INFO - ⏩ [SKIP] 17-aep-ga exists.
+2026-01-26 19:18:38,216 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:18:38,246 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:18:38,278 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 19:18:38,314 - INFO - ⏩ [SKIP] drf-1042 exists.
+2026-01-26 19:18:38,347 - INFO - ⏩ [SKIP] calicheamicin exists.
+2026-01-26 19:18:38,385 - INFO - ⏩ [SKIP] eribulin exists.
+2026-01-26 19:18:38,438 - INFO - ⏩ [SKIP] sg3199 exists.
+2026-01-26 19:18:38,476 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 19:18:38,479 - INFO - ⏭️ ADC Toxins Page 1: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:18:46,472 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 1...
+2026-01-26 19:18:48,792 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=1
+2026-01-26 19:18:51,341 - INFO - ⏩ [SKIP] mc-mmad exists.
+2026-01-26 19:18:51,381 - INFO - ⏩ [SKIP] psma-alb-56 exists.
+2026-01-26 19:18:51,412 - INFO - ⏩ [SKIP] 1473403-87-0 exists.
+2026-01-26 19:18:51,444 - INFO - ⏩ [SKIP] 2680543-57-9 exists.
+2026-01-26 19:18:51,477 - INFO - ⏩ [SKIP] auristatin-f exists.
+2026-01-26 19:18:51,511 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Exatecan exists.
+2026-01-26 19:18:51,545 - INFO - ⏩ [SKIP] 1620837-70-8 exists.
+2026-01-26 19:18:51,576 - INFO - ⏩ [SKIP] 1810001-93-4 exists.
+2026-01-26 19:18:51,605 - INFO - ⏩ [SKIP] 2129164-91-4 exists.
+2026-01-26 19:18:51,639 - INFO - ⏩ [SKIP] 1895916-24-1 exists.
+2026-01-26 19:18:51,679 - INFO - ⏩ [SKIP] 1228105-51-8 exists.
+2026-01-26 19:18:51,709 - INFO - ⏩ [SKIP] 1912408-92-4 exists.
+2026-01-26 19:18:51,750 - INFO - ⏩ [SKIP] fl118 exists.
+2026-01-26 19:18:51,786 - INFO - ⏩ [SKIP] 1600418-29-8 exists.
+2026-01-26 19:18:51,828 - INFO - ⏩ [SKIP] mal-c2-gly3-eda-pnu-159682 exists.
+2026-01-26 19:18:51,858 - INFO - ⏩ [SKIP] MC-Val-Cit-PAB-Auristatin-E exists.
+2026-01-26 19:18:51,889 - INFO - ⏩ [SKIP] mmae-smcc exists.
+2026-01-26 19:18:51,923 - INFO - ⏩ [SKIP] 1801838-28-7 exists.
+2026-01-26 19:18:51,962 - INFO - ⏩ [SKIP] 2353409-69-3 exists.
+2026-01-26 19:18:51,999 - INFO - ⏩ [SKIP] mal-phe-c4-vc-pab-mmae exists.
+2026-01-26 19:18:52,002 - INFO - ⏭️ ADC Payload-Linker Page 1: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:18:57,854 - INFO - 💤 Resting between rounds...
+2026-01-26 19:19:07,865 - INFO - === 🔄 Starting Round 2 (Active: ['ADC Linker', 'ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:19:07,866 - INFO - 🎯 [ADC Linker] Fetching Page 2...
+2026-01-26 19:19:10,206 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-linkers.html?pagesize=20&pageindex=2
+2026-01-26 19:19:13,025 - WARNING - 🛑 ADC Linker Page 2 has NO products. Marking done.
+2026-01-26 19:19:22,484 - INFO - 🎯 [ADC Toxins] Fetching Page 2...
+2026-01-26 19:19:24,722 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2
+2026-01-26 19:19:27,331 - INFO - ⏩ [SKIP] exatecan-mesylate-dihydrate exists.
+2026-01-26 19:19:27,361 - INFO - ⏩ [SKIP] 10-methoxycamptothecin exists.
+2026-01-26 19:19:27,399 - INFO - ⏩ [SKIP] mmaf-ome exists.
+2026-01-26 19:19:27,437 - INFO - ⏩ [SKIP] ansamitocin-p-3 exists.
+2026-01-26 19:19:27,466 - INFO - ⏩ [SKIP] dm4-sme exists.
+2026-01-26 19:19:27,498 - INFO - ⏩ [SKIP] Tomaymycin-DM exists.
+2026-01-26 19:19:27,528 - INFO - ⏩ [SKIP] dm1 exists.
+2026-01-26 19:19:27,558 - INFO - ⏩ [SKIP] monomethyl-auristatin-e exists.
+2026-01-26 19:19:27,591 - INFO - ⏩ [SKIP] dolastatin-10 exists.
+2026-01-26 19:19:27,627 - INFO - ⏩ [SKIP] dm1-sme exists.
+2026-01-26 19:19:27,659 - INFO - ⏩ [SKIP] hemiasterlin exists.
+2026-01-26 19:19:27,694 - INFO - ⏩ [SKIP] c-11 exists.
+2026-01-26 19:19:27,727 - INFO - ⏩ [SKIP] duocarmycin-mb exists.
+2026-01-26 19:19:27,755 - INFO - ⏩ [SKIP] azonafide-peaba exists.
+2026-01-26 19:19:27,783 - INFO - ⏩ [SKIP] dc10sme exists.
+2026-01-26 19:19:27,814 - INFO - ⏩ [SKIP] sc209 exists.
+2026-01-26 19:19:27,842 - INFO - ⏩ [SKIP] corixetan exists.
+2026-01-26 19:19:27,870 - INFO - ⏩ [SKIP] tubulysin-im-2 exists.
+2026-01-26 19:19:27,900 - INFO - ⏩ [SKIP] 2',3'-cgamp-c2-sh exists.
+2026-01-26 19:19:27,933 - INFO - ⏩ [SKIP] fmoc-mmaf-ome exists.
+2026-01-26 19:19:27,938 - INFO - ⏭️ ADC Toxins Page 2: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:19:36,478 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 2...
+2026-01-26 19:19:40,469 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=2
+2026-01-26 19:19:43,130 - INFO - ⏩ [SKIP] sc-vc-pab-mmae exists.
+2026-01-26 19:19:43,165 - INFO - ⏩ [SKIP] doxorubicin-smcc exists.
+2026-01-26 19:19:43,199 - INFO - ⏩ [SKIP] 2845164-91-0 exists.
+2026-01-26 19:19:43,228 - INFO - ⏩ [SKIP] 2866301-18-8 exists.
+2026-01-26 19:19:43,259 - INFO - ⏩ [SKIP] cb07-exatecan exists.
+2026-01-26 19:19:43,290 - INFO - ⏩ [SKIP] 2170118-23-5 exists.
+2026-01-26 19:19:43,323 - INFO - ⏩ [SKIP] br-val-ala-nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt exists.
+2026-01-26 19:19:43,362 - INFO - ⏩ [SKIP] mc-gly-gly-phe-gly-(r)-cyclopropane-exatecan exists.
+2026-01-26 19:19:43,392 - INFO - ⏩ [SKIP] glucocorticoid-receptor-agonist-1-ala-ala-mal exists.
+2026-01-26 19:19:43,434 - INFO - ⏩ [SKIP] dbco-peg4-ggfg-exatecan exists.
+2026-01-26 19:19:43,464 - INFO - ⏩ [SKIP] topotecan exists.
+2026-01-26 19:19:43,498 - INFO - ⏩ [SKIP] (s)-10-hydroxycamptothecin exists.
+2026-01-26 19:19:43,528 - INFO - ⏩ [SKIP] monomethyl-auristatin-f exists.
+2026-01-26 19:19:43,575 - INFO - ⏩ [SKIP] 2758671-45-1 exists.
+2026-01-26 19:19:43,611 - INFO - ⏩ [SKIP] deruxtecan-analog-2 exists.
+2026-01-26 19:19:43,669 - INFO - ⏩ [SKIP] 2414393-22-7 exists.
+2026-01-26 19:19:43,721 - INFO - ⏩ [SKIP] 1818864-51-5 exists.
+2026-01-26 19:19:43,755 - INFO - ⏩ [SKIP] 1650569-89-3 exists.
+2026-01-26 19:19:43,807 - INFO - ⏩ [SKIP] 9-aminocamptothecin exists.
+2026-01-26 19:19:43,839 - INFO - ⏩ [SKIP] maytansinol exists.
+2026-01-26 19:19:43,843 - INFO - ⏭️ ADC Payload-Linker Page 2: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:19:52,159 - INFO - 💤 Resting between rounds...
+2026-01-26 19:20:02,168 - INFO - === 🔄 Starting Round 3 (Active: ['ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:20:02,170 - INFO - 🎯 [ADC Toxins] Fetching Page 3...
+2026-01-26 19:20:06,037 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=3
+2026-01-26 19:20:08,503 - INFO - ⏩ [SKIP] hemiasterlin-derivative-1 exists.
+2026-01-26 19:20:08,554 - INFO - ⏩ [SKIP] aniline-mpb-amino-c3-pbd exists.
+2026-01-26 19:20:08,592 - INFO - ⏩ [SKIP] py-mpb-amino-c3-pbd exists.
+2026-01-26 19:20:08,632 - INFO - ⏩ [SKIP] tubulysin-im-1 exists.
+2026-01-26 19:20:08,676 - INFO - ⏩ [SKIP] exatecan-methylacetamide-oh exists.
+2026-01-26 19:20:08,707 - INFO - ⏩ [SKIP] 7-hydroxyethyl-carbamate-(10me-11f-camptothecin) exists.
+2026-01-26 19:20:08,741 - INFO - ⏩ [SKIP] duocarmycin-ma exists.
+2026-01-26 19:20:08,783 - INFO - ⏩ [SKIP] seco-duocarmycin-tm exists.
+2026-01-26 19:20:08,819 - INFO - ⏩ [SKIP] dc1sme exists.
+2026-01-26 19:20:08,860 - INFO - ⏩ [SKIP] nh2-methylpropanamide-exatecan-tfa exists.
+2026-01-26 19:20:08,898 - INFO - ⏩ [SKIP] seco-duocarmycin-sa exists.
+2026-01-26 19:20:08,936 - INFO - ⏩ [SKIP] nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt-hcl exists.
+2026-01-26 19:20:08,975 - INFO - ⏩ [SKIP] pds-mmae exists.
+2026-01-26 19:20:09,020 - INFO - ⏩ [SKIP] tubulysin-m exists.
+2026-01-26 19:20:09,054 - INFO - ⏩ [SKIP] dc41sme exists.
+2026-01-26 19:20:09,086 - INFO - ⏩ [SKIP] aminohexylgeldanamycin exists.
+2026-01-26 19:20:09,117 - INFO - ⏩ [SKIP] tubulysin-e exists.
+2026-01-26 19:20:09,146 - INFO - ⏩ [SKIP] dc41 exists.
+2026-01-26 19:20:09,177 - INFO - ⏩ [SKIP] dc4sme exists.
+2026-01-26 19:20:09,207 - INFO - ⏩ [SKIP] dc44sme exists.
+2026-01-26 19:20:09,211 - INFO - ⏭️ ADC Toxins Page 3: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:20:17,300 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 3...
+2026-01-26 19:20:20,560 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=3
+2026-01-26 19:20:23,038 - INFO - ⏩ [SKIP] exatecan-mesylate exists.
+2026-01-26 19:20:23,072 - INFO - ⏩ [SKIP] rubitecan exists.
+2026-01-26 19:20:23,108 - INFO - ⏩ [SKIP] dm4 exists.
+2026-01-26 19:20:23,138 - INFO - ⏩ [SKIP] 1491152-26-1 exists.
+2026-01-26 19:20:23,171 - INFO - ⏩ [SKIP] 1375089-56-7 exists.
+2026-01-26 19:20:23,217 - INFO - ⏩ [SKIP] 756487-18-0 exists.
+2026-01-26 19:20:23,255 - INFO - ⏩ [SKIP] 1415329-13-3 exists.
+2026-01-26 19:20:23,329 - INFO - ⏩ [SKIP] vipivotide-tetraxetan exists.
+2026-01-26 19:20:23,367 - INFO - ⏩ [SKIP] monomethyl-auristatin-d exists.
+2026-01-26 19:20:23,401 - INFO - ⏩ [SKIP] 1401963-17-4 exists.
+2026-01-26 19:20:23,435 - INFO - ⏩ [SKIP] sn-38 exists.
+2026-01-26 19:20:23,471 - INFO - ⏩ [SKIP] mmaf-ome exists.
+2026-01-26 19:20:23,503 - INFO - ⏩ [SKIP] mc-mmae exists.
+2026-01-26 19:20:23,552 - INFO - ⏩ [SKIP] Vc-seco-DUBA exists.
+2026-01-26 19:20:23,586 - INFO - ⏩ [SKIP] dm1 exists.
+2026-01-26 19:20:23,620 - INFO - ⏩ [SKIP] monomethyl-auristatin-e exists.
+2026-01-26 19:20:23,655 - INFO - ⏩ [SKIP] dm1-sme exists.
+2026-01-26 19:20:23,694 - INFO - ⏩ [SKIP] gly3-vc-pab-mmae exists.
+2026-01-26 19:20:23,741 - INFO - ⏩ [SKIP] val-cit-pab-mmaf exists.
+2026-01-26 19:20:23,782 - INFO - ⏩ [SKIP] mal-di-eg-val-cit-pab-mmae exists.
+2026-01-26 19:20:23,786 - INFO - ⏭️ ADC Payload-Linker Page 3: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:20:30,784 - INFO - 💤 Resting between rounds...
+2026-01-26 19:20:40,792 - INFO - === 🔄 Starting Round 4 (Active: ['ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:20:40,793 - INFO - 🎯 [ADC Toxins] Fetching Page 4...
+2026-01-26 19:20:43,424 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=4
+2026-01-26 19:20:46,119 - INFO - ⏩ [SKIP] 17-gmb-apa-ga exists.
+2026-01-26 19:20:46,159 - INFO - ⏩ [SKIP] tubulysin-h exists.
+2026-01-26 19:20:46,198 - INFO - ⏩ [SKIP] aeruginosin-865 exists.
+2026-01-26 19:20:46,240 - INFO - ⏩ [SKIP] diacetyl-agrochelin exists.
+2026-01-26 19:20:46,287 - INFO - ⏩ [SKIP] agrochelin exists.
+2026-01-26 19:20:46,347 - INFO - ⏩ [SKIP] (-)-cbi-cdpi1 exists.
+2026-01-26 19:20:46,380 - INFO - ⏩ [SKIP] muscotoxin-a exists.
+2026-01-26 19:20:46,415 - INFO - ⏩ [SKIP] luisol-a exists.
+2026-01-26 19:20:46,451 - INFO - ⏩ [SKIP] tubulysin-d exists.
+2026-01-26 19:20:46,495 - INFO - ⏩ [SKIP] tubulysin-i exists.
+2026-01-26 19:20:46,531 - INFO - ⏩ [SKIP] mensacarcin exists.
+2026-01-26 19:20:46,578 - INFO - ⏩ [SKIP] clezutoclax exists.
+2026-01-26 19:20:46,613 - INFO - ⏩ [SKIP] eg5-in-2 exists.
+2026-01-26 19:20:46,660 - INFO - ⏩ [SKIP] e104 exists.
+2026-01-26 19:20:46,698 - INFO - ⏩ [SKIP] (-)-cbi-cdpi2 exists.
+2026-01-26 19:20:46,738 - INFO - ⏩ [SKIP] duocarmycin exists.
+2026-01-26 19:20:46,776 - INFO - ⏩ [SKIP] dc4 exists.
+2026-01-26 19:20:46,814 - INFO - ⏩ [SKIP] isofistularin-3 exists.
+2026-01-26 19:20:46,866 - INFO - ⏩ [SKIP] nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt exists.
+2026-01-26 19:20:46,904 - INFO - ⏩ [SKIP] maytansinoid-b exists.
+2026-01-26 19:20:46,908 - INFO - ⏭️ ADC Toxins Page 4: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:20:52,013 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 4...
+2026-01-26 19:20:55,204 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=4
+2026-01-26 19:20:58,000 - INFO - ⏩ [SKIP] azido-peg4-val-cit-pab-mmae exists.
+2026-01-26 19:20:58,027 - INFO - ⏩ [SKIP] pnu-eda-gly5 exists.
+2026-01-26 19:20:58,054 - INFO - ⏩ [SKIP] psma-val-cit-pab-mmae exists.
+2026-01-26 19:20:58,085 - INFO - ⏩ [SKIP] osu-glu-vc-pab-mmad exists.
+2026-01-26 19:20:58,115 - INFO - ⏩ [SKIP] mc-vc-pab-mmad exists.
+2026-01-26 19:20:58,147 - INFO - ⏩ [SKIP] lys-nepsilon-spdb-dm4 exists.
+2026-01-26 19:20:58,175 - INFO - ⏩ [SKIP] 2',3'-cgamp-c2-ppa exists.
+2026-01-26 19:20:58,203 - INFO - ⏩ [SKIP] mcc-dm1 exists.
+2026-01-26 19:20:58,230 - INFO - ⏩ [SKIP] dm21 exists.
+2026-01-26 19:20:58,257 - INFO - ⏩ [SKIP] modified-mmaf-c5-cooh exists.
+2026-01-26 19:20:58,287 - INFO - ⏩ [SKIP] mc-betaglucuronide-mmae-1 exists.
+2026-01-26 19:20:58,320 - INFO - ⏩ [SKIP] mal-(ch2)5-val-cit-pab-eribulin exists.
+2026-01-26 19:20:58,353 - INFO - ⏩ [SKIP] mc-aaa-nhch2och2coo-7-aminomethyl-10-methyl-11-fluoro-camptothecin exists.
+2026-01-26 19:20:58,387 - INFO - ⏩ [SKIP] cys-mcmmad exists.
+2026-01-26 19:20:58,415 - INFO - ⏩ [SKIP] dgn549-l exists.
+2026-01-26 19:20:58,447 - INFO - ⏩ [SKIP] dm4-smcc exists.
+2026-01-26 19:20:58,474 - INFO - ⏩ [SKIP] mipsagargin exists.
+2026-01-26 19:20:58,502 - INFO - ⏩ [SKIP] barzuxetan exists.
+2026-01-26 19:20:58,542 - INFO - ⏩ [SKIP] hs-(ch2)3co-l-ala-d-ala-l-ala-nh-ch2-s-(ch2)5-co-dm exists.
+2026-01-26 19:20:58,576 - INFO - ⏩ [SKIP] cl2e-sn38 exists.
+2026-01-26 19:20:58,579 - INFO - ⏭️ ADC Payload-Linker Page 4: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:21:05,723 - INFO - 💤 Resting between rounds...
+2026-01-26 19:21:15,731 - INFO - === 🔄 Starting Round 5 (Active: ['ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:21:15,732 - INFO - 🎯 [ADC Toxins] Fetching Page 5...
+2026-01-26 19:21:18,318 - INFO - 📄 Visiting List: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=5
+2026-01-26 19:21:21,235 - INFO - ⏩ [SKIP] s-me-dm4 exists.
+2026-01-26 19:21:21,272 - INFO - ⏩ [SKIP] gly-cyclopropane-exatecan exists.
+2026-01-26 19:21:21,308 - INFO - ⏩ [SKIP] anticancer-agent-81 exists.
+2026-01-26 19:21:21,345 - INFO - ⏩ [SKIP] s-methyl-dm1 exists.
+2026-01-26 19:21:21,388 - INFO - ⏩ [SKIP] dc0-nh2 exists.
+2026-01-26 19:21:21,423 - INFO - ⏩ [SKIP] mmaf-sodium exists.
+2026-01-26 19:21:21,464 - INFO - ⏩ [SKIP] sg2057 exists.
+2026-01-26 19:21:21,507 - INFO - ⏩ [SKIP] pbd-dimer-2 exists.
+2026-01-26 19:21:21,541 - INFO - ⏩ [SKIP] cyclopropaneacetamide-exatecan exists.
+2026-01-26 19:21:21,574 - INFO - ⏩ [SKIP] tubulin-polymerization-in-38 exists.
+2026-01-26 19:21:21,610 - INFO - ⏩ [SKIP] taltobulin-hcl exists.
+2026-01-26 19:21:21,644 - INFO - ⏩ [SKIP] tam470 exists.
+2026-01-26 19:21:21,681 - INFO - ⏩ [SKIP] inx-sm-6 exists.
+2026-01-26 19:21:21,716 - INFO - ⏩ [SKIP] inx-sm-56 exists.
+2026-01-26 19:21:21,755 - INFO - ⏩ [SKIP] aminohexylgeldanamycin-hcl exists.
+2026-01-26 19:21:21,792 - INFO - ⏩ [SKIP] methotrexate-monohydrate exists.
+2026-01-26 19:21:21,829 - INFO - ⏩ [SKIP] daunorubicin exists.
+2026-01-26 19:21:21,864 - INFO - ⏩ [SKIP] duocarmycin-a exists.
+2026-01-26 19:21:21,898 - INFO - ⏩ [SKIP] duocarmycin-ga exists.
+2026-01-26 19:21:21,932 - INFO - ⏩ [SKIP] sandramycin exists.
+2026-01-26 19:21:21,935 - INFO - ⏭️ ADC Toxins Page 5: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:21:28,674 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 5...
+2026-01-26 19:21:31,853 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=5
+2026-01-26 19:21:34,680 - INFO - ⏩ [SKIP] cl2e-sn38-tfa exists.
+2026-01-26 19:21:34,710 - INFO - ⏩ [SKIP] aminooxy-catb-lxr exists.
+2026-01-26 19:21:34,745 - INFO - ⏩ [SKIP] (rac)-lys-smcc-dm1 exists.
+2026-01-26 19:21:34,777 - INFO - ⏩ [SKIP] he-s2 exists.
+2026-01-26 19:21:34,806 - INFO - ⏩ [SKIP] aminobenzenesulfonic-auristatin-e exists.
+2026-01-26 19:21:34,838 - INFO - ⏩ [SKIP] sgd-1910 exists.
+2026-01-26 19:21:34,872 - INFO - ⏩ [SKIP] mc-vc-pab-tubulysin-m exists.
+2026-01-26 19:21:34,915 - INFO - ⏩ [SKIP] mb-vc-mgba exists.
+2026-01-26 19:21:34,948 - INFO - ⏩ [SKIP] dgn549-c exists.
+2026-01-26 19:21:34,982 - INFO - ⏩ [SKIP] mc-betaglucuronide-mmae-2 exists.
+2026-01-26 19:21:35,030 - INFO - ⏩ [SKIP] nampt-inhibitor-linker-2 exists.
+2026-01-26 19:21:35,084 - INFO - ⏩ [SKIP] ggfg-eribulin exists.
+2026-01-26 19:21:35,117 - INFO - ⏩ [SKIP] dl-01 exists.
+2026-01-26 19:21:35,145 - INFO - ⏩ [SKIP] pb089 exists.
+2026-01-26 19:21:35,178 - INFO - ⏩ [SKIP] tlr7-8-agonist-4-hydroxy-peg6-acid exists.
+2026-01-26 19:21:35,212 - INFO - ⏩ [SKIP] nitro-pds-tubulysin-m exists.
+2026-01-26 19:21:35,247 - INFO - ⏩ [SKIP] mc-val-cit-pab-retapamulin exists.
+2026-01-26 19:21:35,275 - INFO - ⏩ [SKIP] mac-glucuronide-alpha-hydroxy-lactone-linked-sn-38 exists.
+2026-01-26 19:21:35,312 - INFO - ⏩ [SKIP] vcp-eribulin exists.
+2026-01-26 19:21:35,365 - INFO - ⏩ [SKIP] dba-dm4 exists.
+2026-01-26 19:21:35,369 - INFO - ⏭️ ADC Payload-Linker Page 5: All 20 items exist in DB. Moving to next page.
+2026-01-26 19:21:41,919 - INFO - 💤 Resting between rounds...
+2026-01-26 19:21:51,934 - INFO - === 🔄 Starting Round 6 (Active: ['ADC Toxins', 'ADC Payload-Linker']) ===
+2026-01-26 19:21:51,935 - INFO - 🛑 ADC Toxins reached max page limit (5). Marking done.
+2026-01-26 19:21:51,935 - INFO - 🎯 [ADC Payload-Linker] Fetching Page 6...
+2026-01-26 19:21:55,616 - INFO - 📄 Visiting List: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=6
+2026-01-26 19:21:57,600 - WARNING - 🛑 ADC Payload-Linker Page 6 has NO products. Marking done.
+2026-01-26 19:22:02,613 - INFO - 💤 Resting between rounds...
+2026-01-26 19:22:12,629 - INFO - 🎉 All categories completed!
