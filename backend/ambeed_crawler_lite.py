@@ -131,19 +131,63 @@ class AmbeedCrawlerLite:
 
     async def _init_browser(self, p) -> BrowserContext:
         try:
+            # Launch with more realistic flags
             browser = await p.chromium.launch(
-                headless=True,
-                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+                headless=True, # Keep headless for CLI, but we will patch it
+                args=[
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox', 
+                    '--disable-dev-shm-usage', 
+                    '--disable-gpu',
+                    '--disable-blink-features=AutomationControlled', # Key for stealth
+                    '--window-size=1920,1080'
+                ]
             )
-            context = await browser.new_context(user_agent=self.ua.random)
             
-            async def route_intercept(route):
-                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                    await route.abort()
-                else:
-                    await route.continue_()
+            # Create context with realistic locale and permissions
+            context = await browser.new_context(
+                user_agent=self.ua.random,
+                viewport={'width': 1920, 'height': 1080},
+                locale='en-US',
+                timezone_id='America/New_York',
+                permissions=['geolocation']
+            )
+            
+            # Inject Stealth Scripts (Manual Evasion)
+            await context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+                
+                // Overwrite navigator.plugins to look like Chrome
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5] 
+                });
 
-            await context.route("**/*", route_intercept)
+                // Mock window.chrome
+                window.chrome = {
+                    runtime: {}
+                };
+
+                // Pass WebGL checks
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    // UNMASKED_VENDOR_WEBGL
+                    if (parameter === 37445) {
+                        return 'Intel Inc.';
+                    }
+                    // UNMASKED_RENDERER_WEBGL
+                    if (parameter === 37446) {
+                        return 'Intel Iris OpenGL Engine';
+                    }
+                    return getParameter(parameter);
+                };
+            """)
+
+            # REMOVED AGGRESSIVE RESOURCE BLOCKING
+            # Blocking CSS/Fonts/Images often triggers anti-bot systems.
+            # We allow everything to look like a real user.
+            
             return context
         except Exception as e:
             logger.error(f"Browser Launch Failed: {e}")
@@ -173,11 +217,23 @@ class AmbeedCrawlerLite:
         items = []
         try:
             # Random delay before page load
-            await asyncio.sleep(random.uniform(2, 4))
+            await asyncio.sleep(random.uniform(3, 7))
             
             logger.info(f"📄 Visiting List: {page_url}")
             await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
-            await asyncio.sleep(1) # Render wait
+            
+            # Simulate Human Behavior: Mouse Move & Scroll
+            await page.mouse.move(random.randint(100, 500), random.randint(100, 500))
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+            await asyncio.sleep(random.uniform(1, 2))
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(random.uniform(1, 2))
+            
+            # Wait for meaningful content (or timeout)
+            try:
+                await page.wait_for_selector('a[href*="/products/"]', timeout=10000)
+            except:
+                logger.warning(f"⚠️ Timeout waiting for product links on {page_url}")
 
             # Extract Product Links
             products = await page.evaluate("""
@@ -189,6 +245,15 @@ class AmbeedCrawlerLite:
                 }
             """)
             
+            # Check for block if no products found
+            if not products:
+                title = await page.title()
+                content = await page.content()
+                if "Access Denied" in title or "Cloudflare" in content:
+                    logger.error(f"🛑 BLOCKED: {title}")
+                else:
+                    logger.info(f"ℹ️ Page loaded but no products found. Title: {title}")
+
             # Deduplicate by URL
             unique_products = {p['href']: p for p in products}.values()
             
@@ -199,7 +264,7 @@ class AmbeedCrawlerLite:
                 
                 # DB Check
                 if await self._exists_in_db(cat_no_candidate):
-                    logger.info(f"⏩ [SKIP] {cat_no_candidate} exists.")
+                    # logger.info(f"⏩ [SKIP] {cat_no_candidate} exists.") # Reduce log noise
                     continue
                 
                 # Detail Page Processing
@@ -207,7 +272,7 @@ class AmbeedCrawlerLite:
                 if details:
                     items.append(details)
                     # Short sleep between items to be polite
-                    await asyncio.sleep(random.uniform(1, 2))
+                    await asyncio.sleep(random.uniform(2, 5))
                     
         except Exception as e:
             logger.error(f"❌ Error processing list page {page_url}: {e}")
@@ -325,6 +390,8 @@ class AmbeedCrawlerLite:
             context = await self._init_browser(p)
             
             round_num = 1
+            consecutive_failures_global = 0
+
             while True:
                 active_cats = [n for n, s in category_states.items() if not s["done"]]
                 if not active_cats:
@@ -341,13 +408,22 @@ class AmbeedCrawlerLite:
                         logger.info(f"🛑 {cat_name} reached max page limit ({state['max']}). Marking done.")
                         state["done"] = True
                         continue
+
+                    # CHECK RETRY & RESTART CONTEXT
+                    if state["retry_count"] >= 2:
+                        logger.warning(f"🔄 {cat_name} has high retries. Restarting Browser Context to clear session...")
+                        await context.close()
+                        await asyncio.sleep(5)
+                        context = await self._init_browser(p)
+                        state["retry_count"] = 0 # Reset to give it a fresh chance
+                        consecutive_failures_global = 0
                         
                     # Construct URL
                     base_url = state["url"]
                     separator = "&" if "?" in base_url else "?"
                     page_url = f"{base_url}{separator}pagesize=20&pageindex={current_page}"
                     
-                    logger.info(f"🎯 [{cat_name}] Fetching Page {current_page} (Attempt {state['retry_count'] + 1}/3)...")
+                    logger.info(f"🎯 [{cat_name}] Fetching Page {current_page} (Attempt {state['retry_count'] + 1})...")
                     
                     # Fetch Items (Modified to unpack tuple)
                     items, raw_count = await self.process_page_items(context, page_url, cat_name)
@@ -355,34 +431,34 @@ class AmbeedCrawlerLite:
                     if raw_count == 0:
                         # Possible block or temporary empty page
                         state["retry_count"] += 1
-                        logger.warning(f"⚠️ {cat_name} Page {current_page} returned 0 items. Retry count: {state['retry_count']}/3")
+                        consecutive_failures_global += 1
+                        logger.warning(f"⚠️ {cat_name} Page {current_page} returned 0 items. Retry count: {state['retry_count']}")
                         
-                        if state["retry_count"] >= 3:
-                            logger.warning(f"🛑 {cat_name} failed 3 times consecutively. Skipping Page {current_page} and moving to next.")
+                        if state["retry_count"] >= 4: # Increased limit before skipping
+                            logger.warning(f"🛑 {cat_name} failed 4 times. Skipping Page {current_page}.")
                             state["page"] += 1
                             state["retry_count"] = 0
-                        else:
-                            logger.info(f"⏳ Keeping {cat_name} active to retry Page {current_page} in next round.")
-                            # Do NOT increment page, so we retry same page next time
                     
                     elif not items and raw_count > 0:
                         # Found items but all were duplicates
                         logger.info(f"⏭️ {cat_name} Page {current_page}: All {raw_count} items exist in DB. Moving to next page.")
                         state["page"] += 1
-                        state["retry_count"] = 0 # Reset retry on valid page load
+                        state["retry_count"] = 0 
+                        consecutive_failures_global = 0
                     else:
                         # Found new items
                         await self._save_batch(items)
                         state["page"] += 1
-                        state["retry_count"] = 0 # Reset retry on success
+                        state["retry_count"] = 0 
+                        consecutive_failures_global = 0
                     
                     # Inter-category delay to avoid blocking
-                    await asyncio.sleep(random.uniform(5, 10))
+                    await asyncio.sleep(random.uniform(8, 15))
                 
                 round_num += 1
                 # Inter-round delay
                 logger.info("💤 Resting between rounds...")
-                await asyncio.sleep(10)
+                await asyncio.sleep(15)
 
 if __name__ == "__main__":
     crawler = AmbeedCrawlerLite()

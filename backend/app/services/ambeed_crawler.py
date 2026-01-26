@@ -54,20 +54,45 @@ class AmbeedCrawler:
 
     async def _init_browser(self, p) -> BrowserContext:
         try:
+            # Launch with more realistic flags
             browser = await p.chromium.launch(
                 headless=True,
-                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+                args=[
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox', 
+                    '--disable-dev-shm-usage', 
+                    '--disable-gpu',
+                    '--disable-blink-features=AutomationControlled',
+                    '--window-size=1920,1080'
+                ]
             )
-            context = await browser.new_context(user_agent=self.ua.random)
+            context = await browser.new_context(
+                user_agent=self.ua.random,
+                viewport={'width': 1920, 'height': 1080},
+                locale='en-US',
+                timezone_id='America/New_York',
+                permissions=['geolocation']
+            )
             
-            # --- RESOURCE BLOCKING (Critical for Speed) ---
-            async def route_intercept(route):
-                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-                    await route.abort()
-                else:
-                    await route.continue_()
-
-            await context.route("**/*", route_intercept)
+            # Inject Stealth Scripts
+            await context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                window.chrome = { runtime: {} };
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    if (parameter === 37445) return 'Intel Inc.';
+                    if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+                    return getParameter(parameter);
+                };
+            """)
+            
+            # REMOVED AGGRESSIVE RESOURCE BLOCKING to look like a real user
+            
             return context
         except Exception as e:
             logger.error(f"🔥 Ambeed Browser Launch Failed: {e}")

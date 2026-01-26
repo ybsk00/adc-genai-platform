@@ -107,18 +107,18 @@ export function AdminOverview() {
                         <CardContent>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-2xl font-bold text-white">{stats?.design_stats.processing || 0}</span>
+                                    <span className="text-2xl font-bold text-white">{stats?.design_stats?.processing || 0}</span>
                                     <Badge variant="outline" className="text-yellow-400 border-yellow-500/30 bg-yellow-500/10 animate-pulse">
                                         Running
                                     </Badge>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
                                     <div className="bg-slate-950 p-2 rounded border border-slate-800">
-                                        <div className="font-semibold text-slate-300">{stats?.design_stats.pending || 0}</div>
+                                        <div className="font-semibold text-slate-300">{stats?.design_stats?.pending || 0}</div>
                                         <div>Pending</div>
                                     </div>
                                     <div className="bg-slate-950 p-2 rounded border border-slate-800">
-                                        <div className="font-semibold text-green-400">{stats?.design_stats.completed || 0}</div>
+                                        <div className="font-semibold text-green-400">{stats?.design_stats?.completed || 0}</div>
                                         <div>Done</div>
                                     </div>
                                 </div>
@@ -139,11 +139,11 @@ export function AdminOverview() {
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <div className="text-2xl font-bold text-white">{stats?.data_stats.golden_set_approved || 0}</div>
+                                        <div className="text-2xl font-bold text-white">{stats?.data_stats?.golden_set_approved || 0}</div>
                                         <div className="text-xs text-slate-500">Golden Sets</div>
                                     </div>
                                     <div className="text-right cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/admin/staging')}>
-                                        <div className="text-xl font-bold text-blue-400">{stats?.data_stats.golden_set_candidates || 0}</div>
+                                        <div className="text-xl font-bold text-blue-400">{stats?.data_stats?.golden_set_candidates || 0}</div>
                                         <div className="text-xs text-blue-500 flex items-center justify-end gap-1">
                                             Candidates <ArrowRight className="w-3 h-3" />
                                         </div>
@@ -152,12 +152,12 @@ export function AdminOverview() {
                                 <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500"
-                                        style={{ width: `${Math.min(((stats?.data_stats.kb_completed || 0) / (stats?.data_stats.kb_total || 1)) * 100, 100)}%` }}
+                                        style={{ width: `${Math.min(((stats?.data_stats?.kb_completed || 0) / (stats?.data_stats?.kb_total || 1)) * 100, 100)}%` }}
                                     />
                                 </div>
                                 <div className="text-xs text-slate-500 flex justify-between">
                                     <span>KB Indexed</span>
-                                    <span>{stats?.data_stats.kb_completed}/{stats?.data_stats.kb_total}</span>
+                                    <span>{stats?.data_stats?.kb_completed || 0}/{stats?.data_stats?.kb_total || 0}</span>
                                 </div>
                             </div>
                         </CardContent>
@@ -177,26 +177,26 @@ export function AdminOverview() {
                                 <div>
                                     <div className="flex justify-between text-xs mb-1">
                                         <span className="text-slate-300">Antibodies</span>
-                                        <span className="text-purple-400">{((stats?.inventory_stats.antibodies || 0) / 10000 * 100).toFixed(1)}%</span>
+                                        <span className="text-purple-400">{((stats?.inventory_stats?.antibodies || 0) / 10000 * 100).toFixed(1)}%</span>
                                     </div>
                                     <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-purple-500 transition-all duration-500"
-                                            style={{ width: `${Math.min(((stats?.inventory_stats.antibodies || 0) / 10000 * 100), 100)}%` }}
+                                            style={{ width: `${Math.min(((stats?.inventory_stats?.antibodies || 0) / 10000 * 100), 100)}%` }}
                                         />
                                     </div>
                                     <div className="text-xs text-slate-500 mt-1 text-right">
-                                        {stats?.inventory_stats.antibodies.toLocaleString()} / 10,000 Goal
+                                        {(stats?.inventory_stats?.antibodies || 0).toLocaleString()} / 10,000 Goal
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                     <div className="flex justify-between p-2 bg-slate-950 rounded border border-slate-800">
                                         <span className="text-slate-500">Reagents</span>
-                                        <span className="text-white font-mono">{stats?.inventory_stats.reagents}</span>
+                                        <span className="text-white font-mono">{stats?.inventory_stats?.reagents || 0}</span>
                                     </div>
                                     <div className="flex justify-between p-2 bg-slate-950 rounded border border-slate-800">
                                         <span className="text-slate-500">Targets</span>
-                                        <span className="text-white font-mono">{stats?.inventory_stats.targets}</span>
+                                        <span className="text-white font-mono">{stats?.inventory_stats?.targets || 0}</span>
                                     </div>
                                 </div>
                             </div>
@@ -216,11 +216,11 @@ export function AdminOverview() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-slate-800">
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${(stats?.system_stats.ai_cost_month || 0) > 100 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                                        <div className={`w-2 h-2 rounded-full ${(stats?.system_stats?.ai_cost_month || 0) > 100 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
                                         <span className="text-xs text-slate-400">AI Cost (Mo)</span>
                                     </div>
                                     <span className={`font-mono font-bold ${(stats?.system_stats.ai_cost_month || 0) > 100 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                                        ${stats?.system_stats.ai_cost_month}
+                                        ${stats?.system_stats?.ai_cost_month || 0}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-slate-800">
@@ -229,7 +229,7 @@ export function AdminOverview() {
                                         <span className="text-xs text-slate-400">Data Velocity (24h)</span>
                                     </div>
                                     <span className="font-mono font-bold text-white">
-                                        +{stats?.system_stats.data_velocity_24h} items
+                                        +{stats?.system_stats?.data_velocity_24h || 0} items
                                     </span>
                                 </div>
                             </div>
@@ -248,7 +248,7 @@ export function AdminOverview() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-800">
-                            {stats?.recent_activity.map((item, i) => (
+                            {stats?.recent_activity?.map((item, i) => (
                                 <div
                                     key={i}
                                     className="p-4 hover:bg-slate-800/50 transition-colors cursor-pointer flex items-center gap-4 group"

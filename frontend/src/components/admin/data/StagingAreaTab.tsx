@@ -240,7 +240,7 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
         }
     })
 
-    const selectedDraft = draftsResponse?.data.find(d => d.id === selectedDraftId)
+    const selectedDraft = draftsResponse?.data?.find(d => d.id === selectedDraftId)
 
     useEffect(() => {
         if (selectedDraft) {
@@ -376,7 +376,7 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
                         <div className="flex justify-center p-8"><Loader2 className="animate-spin text-purple-500" /></div>
                     ) : (
                         <div className="divide-y divide-slate-800">
-                            {draftsResponse?.data.map(draft => (
+                            {draftsResponse?.data?.map(draft => (
                                 <div
                                     key={draft.id}
                                     onClick={() => setSelectedDraftId(draft.id)}
@@ -411,7 +411,7 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKn
                 <div className="p-2 border-t border-slate-800 bg-slate-950 flex justify-center gap-2">
                     <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>&lt;</Button>
                     <span className="text-xs text-slate-500 self-center">Page {page}</span>
-                    <Button variant="ghost" size="sm" disabled={!draftsResponse || draftsResponse.data.length < 20} onClick={() => setPage(p => p + 1)}>&gt;</Button>
+                    <Button variant="ghost" size="sm" disabled={!draftsResponse || (draftsResponse.data?.length || 0) < 20} onClick={() => setPage(p => p + 1)}>&gt;</Button>
                 </div>
             </div>
 
