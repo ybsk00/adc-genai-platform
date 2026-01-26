@@ -120,9 +120,9 @@ class AmbeedCrawlerLite:
     
     # Categories with Max Pages (Approximation or safe high number)
     CATEGORIES = {
-        "ADC Linker": {"url": "https://www.ambeed.com/adc-linkers.html", "max_page": 20},
-        "ADC Toxins": {"url": "https://www.ambeed.com/adc-toxins.html", "max_page": 5},
-        "ADC Payload-Linker": {"url": "https://www.ambeed.com/payload-linker-conjugate.html", "max_page": 10}
+        "ADC Linker": {"url": "https://www.ambeed.com/adc-linkers.html", "max_page": 25},
+        "ADC Toxins": {"url": "https://www.ambeed.com/adc-toxins.html", "max_page": 15},
+        "ADC Payload-Linker": {"url": "https://www.ambeed.com/payload-linker-conjugate.html", "max_page": 20}
     }
     
     def __init__(self):
@@ -358,8 +358,9 @@ class AmbeedCrawlerLite:
                         logger.warning(f"⚠️ {cat_name} Page {current_page} returned 0 items. Retry count: {state['retry_count']}/3")
                         
                         if state["retry_count"] >= 3:
-                            logger.warning(f"🛑 {cat_name} failed 3 times consecutively. Marking done.")
-                            state["done"] = True
+                            logger.warning(f"🛑 {cat_name} failed 3 times consecutively. Skipping Page {current_page} and moving to next.")
+                            state["page"] += 1
+                            state["retry_count"] = 0
                         else:
                             logger.info(f"⏳ Keeping {cat_name} active to retry Page {current_page} in next round.")
                             # Do NOT increment page, so we retry same page next time
