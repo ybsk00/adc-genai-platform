@@ -35,6 +35,22 @@ class AIRefiner:
         "copd", "depression", "anxiety", "schizophrenia"
     ]
     
+    # Target Normalization Cache (Local Cache)
+    TARGET_MAPPING = {
+        "HER2": "ERBB2", "HER-2": "ERBB2",
+        "TROP2": "TACSTD2", "TROP-2": "TACSTD2",
+        "NECTIN4": "NECTIN4", "NECTIN-4": "NECTIN4",
+        "FOLR1": "FOLR1", "FRALPHA": "FOLR1", "FR-ALPHA": "FOLR1", "FOLATE RECEPTOR ALPHA": "FOLR1",
+        "CD19": "CD19",
+        "CD22": "CD22",
+        "CD33": "CD33",
+        "BCMA": "TNFRSF17",
+        "EGFR": "EGFR",
+        "PSMA": "FOLH1",
+        "DLL3": "DLL3",
+        "CLDN18.2": "CLDN18", "CLAUDIN 18.2": "CLDN18"
+    }
+    
     # Gemini Safety Settings (의학 용어 차단 해제)
     SAFETY_SETTINGS = [
         {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -44,11 +60,24 @@ class AIRefiner:
     ]
     
     def __init__(self):
-        logger.info("🔥 [AI Refiner] Service Initialized (Version: 2026-01-24-1750)")
+        logger.info("🔥 [AI Refiner] Service Initialized (Version: 2026-01-26-Enriched)")
         self.batch_size = 10  # 한 번에 처리할 레코드 수
         self.processed_count = 0
         self.error_count = 0
         self.semaphore = asyncio.Semaphore(10) # 동시성 제어 (최대 10개)
+
+    def _normalize_target(self, target_name: str) -> Optional[str]:
+        """타겟 명칭 표준화 (Cache -> AI)"""
+        if not target_name: return None
+        upper_name = target_name.upper().strip()
+        # 1. 캐시 조회
+        if upper_name in self.TARGET_MAPPING:
+            return self.TARGET_MAPPING[upper_name]
+        # 2. 부분 일치 (예: Anti-HER2 -> ERBB2)
+        for key, val in self.TARGET_MAPPING.items():
+            if key in upper_name:
+                return val
+        return target_name # 매핑 없으면 그대로 반환
     
     def is_adc_relevant(self, record: Dict[str, Any]) -> bool:
         """ADC 관련 데이터인지 Pre-filter 체크"""
@@ -191,9 +220,9 @@ Output ONLY valid JSON:
     "binding_affinity": "extracted Kd value (e.g. 1.2 nM) or null",
     "isotype": "extracted isotype (e.g. IgG1) or null",
     "host_species": "extracted host (e.g. Human) or null",
-    "orr_pct": "ORR percentage value (number only) or null",
-    "os_months": "OS in months (number only) or null",
-    "pfs_months": "PFS in months (number only) or null",
+    "orr_pct": "ORR percentage value (number only, e.g., 45.5) or null",
+    "os_months": "OS in months (number only, e.g., 12.4) or null",
+    "pfs_months": "PFS in months (number only, e.g., 8.2) or null",
     "relevance_score": 0.0-1.0,
     "confidence": 0.0-1.0
 }
@@ -233,30 +262,45 @@ CAS: {record.get('cas_number')}
 Summary: {description}
 """
             else:
-                # 기존 Clinical Trials 프롬프트
+                # 기존 Clinical Trials 프롬프트 (ADC 고도화 적용)
                 system_prompt = """You are a Clinical Trial Analyst specializing in ADC (Antibody-Drug Conjugate) research.
 Analyze the clinical trial data and extract structured information.
 
 Output ONLY valid JSON in this exact format:
 {
     "drug_name": "extracted drug/compound name or null",
-    "target": "molecular target (e.g., HER2, TROP2) or null",
+    "target_1": "primary molecular target (e.g., HER2) or null",
+    "target_2": "secondary target (for bispecifics) or null",
+    "target_symbol": "Standard Gene Symbol (e.g., ERBB2 for HER2, TACSTD2 for TROP2)",
+    "gene_id": "NCBI Gene ID (e.g., 2064) or null",
+    "uniprot_id": "UniProt ID if available or null",
+    "antibody_format": "format (e.g., IgG1, scFv, Bispecific) or null",
     "outcome_type": "Success|Failure|Ongoing|Unknown",
     "failure_reason": "reason if failed, null otherwise",
+    "dar": "Drug-to-Antibody Ratio (number only, e.g., 3.8) or null",
     "binding_affinity": "extracted Kd value or null",
     "isotype": "extracted isotype or null",
     "host_species": "extracted host or null",
-    "orr_pct": "ORR percentage or null",
-    "os_months": "OS in months or null",
-    "pfs_months": "PFS in months or null",
+    "molecular_weight": "Molecular Weight (number only) or null",
+    "orr_pct": "ORR percentage (number only, e.g., 52.0) or null",
+    "os_months": "OS in months (number only, e.g., 24.5) or null",
+    "pfs_months": "PFS in months (number only, e.g., 11.2) or null",
+    "dor_months": "Duration of Response in months (number only) or null",
+    "patient_count": "Total number of patients (N) or null",
+    "adverse_events_grade3_pct": "Percentage of Grade 3+ AEs (number only, e.g., 15.0) or null",
     "relevance_score": 0.0-1.0 (relevance to ADC research),
-    "confidence": 0.0-1.0
+    "confidence_score": 0.0-1.0 (Level A: 0.95+ if from results table, Level B: 0.60+ if inferred),
+    "review_required": boolean (true if data is ambiguous or contradictory)
 }
 
 Rules:
+- **NUMBER HUNTER MODE**: Prioritize extracting numerical values with units (%, months, nM).
+- **TARGET NORMALIZATION**: Map common names to standard Gene Symbols (e.g., HER2 -> ERBB2, TROP2 -> TACSTD2).
 - outcome_type: "Success" if completed with positive results, "Failure" if terminated/withdrawn/negative, "Ongoing" if active, "Unknown" if unclear
-- failure_reason: Only fill if outcome_type is "Failure"
-- Be concise and accurate
+- dar: Look for "drug-to-antibody ratio" or "DAR"
+- adverse_events_grade3_pct: Look for "Grade 3" or "severe adverse events"
+- patient_count: Extract the total number of participants (N).
+- Be concise and accurate.
 
 IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting like ```json ... ```.
 """
@@ -267,7 +311,7 @@ Title: {title}
 Phase: {phase}
 Status: {overall_status}
 Why Stopped: {why_stopped}
-Description: {description[:1000] if description else 'N/A'}"""
+Description: {description[:1500] if description else 'N/A'}"""
 
             logger.info(f"🚀 Requesting Gemini (Direct SDK) for record {record.get('id')} ({source})...")
             
@@ -280,8 +324,7 @@ Description: {description[:1000] if description else 'N/A'}"""
             
             content = response.text.strip()
             
-            # 비용 추적 (Gemini 2.0 Flash 대략적 토큰 계산 - SDK에서 직접 가져오기 어려울 경우 대비)
-            # 실제로는 response.usage_metadata에 있음
+            # 비용 추적
             usage = response.usage_metadata
             await cost_tracker.track_usage(
                 "gemini-2.0-flash",
@@ -289,7 +332,7 @@ Description: {description[:1000] if description else 'N/A'}"""
                 usage.candidates_token_count
             )
             
-            # JSON 파싱 (json-repair 도입으로 백틱 공격 및 깨진 형식 방어)
+            # JSON 파싱
             try:
                 repaired_content = repair_json(content)
                 analysis = json.loads(repaired_content)
@@ -301,22 +344,54 @@ Description: {description[:1000] if description else 'N/A'}"""
                     content = content.split("```")[1].split("```")[0]
                 analysis = json.loads(content.strip())
             
+            # Target Normalization (Cache + AI)
+            target_1 = analysis.get("target_1") or analysis.get("target")
+            target_symbol = analysis.get("target_symbol")
+            
+            # AI가 심볼을 못 찾았거나, 찾았어도 캐시로 표준화 (e.g. HER2 -> ERBB2)
+            if target_1 and not target_symbol:
+                target_symbol = self._normalize_target(target_1)
+            elif target_symbol:
+                target_symbol = self._normalize_target(target_symbol)
+
+            # Confidence Score Logic
+            # Level A (0.95+): API 직접 파싱 (bulk_importer에서 처리됨, 여기서는 AI 추론이므로 기본 Level B)
+            # Level B (0.60+): AI 추론
+            # Level C (Manual): review_required=True
+            
+            confidence_score = analysis.get("confidence_score", 0.6)
+            if analysis.get("review_required"):
+                # 리뷰가 필요하면 점수를 낮추거나 그대로 두고 플래그만 사용
+                # 사용자 요청: "Level C (Manual): 불확실한 데이터는 review_required 마킹"
+                pass 
+
             return {
                 "drug_name": analysis.get("drug_name"),
-                "target": analysis.get("target"),
+                "target_1": target_1,
+                "target_2": analysis.get("target_2"),
+                "target_symbol": target_symbol,
+                "gene_id": analysis.get("gene_id"),
+                "uniprot_id": analysis.get("uniprot_id"),
+                "antibody_format": analysis.get("antibody_format"),
                 "outcome_type": analysis.get("outcome_type", "Unknown"),
                 "failure_reason": analysis.get("failure_reason"),
+                "dar": analysis.get("dar"),
                 "binding_affinity": analysis.get("binding_affinity"),
                 "isotype": analysis.get("isotype"),
                 "host_species": analysis.get("host_species"),
+                "molecular_weight": analysis.get("molecular_weight"),
                 "orr_pct": analysis.get("orr_pct"),
                 "os_months": analysis.get("os_months"),
                 "pfs_months": analysis.get("pfs_months"),
-                "ai_confidence": analysis.get("confidence", 0.5),
+                "dor_months": analysis.get("dor_months"),
+                "patient_count": analysis.get("patient_count"),
+                "adverse_events_grade3_pct": analysis.get("adverse_events_grade3_pct"),
+                "confidence_score": confidence_score,
                 "relevance_score": analysis.get("relevance_score", 0.0),
-                "boxed_warning": analysis.get("boxed_warning"), # OpenFDA specific
-                "indication": analysis.get("indication"), # OpenFDA specific
-                "generic_name": generic_name # Pass generic name back
+                "review_required": analysis.get("review_required", False),
+                "boxed_warning": analysis.get("boxed_warning"),
+                "indication": analysis.get("indication"),
+                "generic_name": generic_name
             }
         
         except Exception as e:
@@ -507,30 +582,39 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
                             relevance_score = analysis.get("relevance_score", 0.0)
                             generic_name = analysis.get("generic_name") or item.get("properties", {}).get("generic_name")
                             
-                            # 2️⃣ 화학 구조 매핑 (관련성 점수와 무관하게 이름이 있으면 시도)
+                            # 2️⃣ 화학 구조 매핑 (지능형 매퍼 사용)
                             # 사용자 요청: "브랜드명으로 SMILES 못 찾으면 성분명으로 끝까지 찾아내는 로직이 핵심"
-                            pubchem_data = None
+                            # + "지능형 매퍼: 약물명 매칭 안 될 때 Payload 별칭(DXd 등)으로 SMILES 자동 매핑"
+                            
+                            from app.services.chemical_mapper import chemical_mapper
+                            
+                            structure_data = None
                             processing_error = None
                             
                             # SMILES 조회 조건 완화: 이름만 있으면 무조건 시도
                             if drug_name or generic_name:
                                 if existing_smiles:
-                                    logger.info(f"⏩ PubChem Skip: {drug_name[:30]} (SMILES exists)")
-                                    pubchem_data = {"smiles_code": existing_smiles, "enrichment_source": "Existing"}
+                                    logger.info(f"⏩ Structure Skip: {drug_name[:30]} (SMILES exists)")
+                                    structure_data = {"smiles_code": existing_smiles, "enrichment_source": "Existing"}
                                 else:
-                                    # 2-1. PubChem Lookup (with Generic Fallback)
-                                    logger.info(f"🔬 PubChem lookup: {drug_name} (Generic: {generic_name})")
-                                    pubchem_data = await self.enrich_with_pubchem(drug_name, generic_name)
+                                    # 2-1. Intelligent Mapper (DB + CAS + Inference)
+                                    logger.info(f"🔬 Mapper lookup: {drug_name} (Generic: {generic_name})")
+                                    structure_data = await chemical_mapper.enrich_with_commercial_data(drug_name, generic_name)
                                     
-                                    # 2-2. Fallback to AI (Only if PubChem failed completely)
-                                    if not pubchem_data or "error" in pubchem_data:
-                                        target_name = drug_name or generic_name
-                                        logger.info(f"🧪 AI Fallback: Generating SMILES for {target_name}")
-                                        pubchem_data = await self.generate_smiles_with_ai(target_name)
+                                    # 2-2. Fallback to PubChem (if Mapper failed)
+                                    if not structure_data:
+                                        logger.info(f"🧪 PubChem Fallback: {drug_name}")
+                                        structure_data = await self.enrich_with_pubchem(drug_name, generic_name)
                                         
-                                        if not pubchem_data or "error" in pubchem_data:
-                                            processing_error = "SMILES Not Found (PubChem & AI Failed)"
-                                            logger.warning(f"⚠️ All methods failed for: {target_name}")
+                                        # 2-3. Fallback to AI Generation (Last Resort)
+                                        if not structure_data or "error" in structure_data:
+                                            target_name = drug_name or generic_name
+                                            logger.info(f"🤖 AI Gen Fallback: Generating SMILES for {target_name}")
+                                            structure_data = await self.generate_smiles_with_ai(target_name)
+                                            
+                                            if not structure_data or "error" in structure_data:
+                                                processing_error = "SMILES Not Found (All methods failed)"
+                                                logger.warning(f"⚠️ All methods failed for: {target_name}")
                             else:
                                 logger.warning(f"⚠️ No drug name found for SMILES lookup: {item.get('id')}")
                             
@@ -549,12 +633,32 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
                                 "ai_refined": True,
                                 "rag_status": "processed", 
                                 "processing_error": processing_error,
-                                "properties": updated_properties
+                                "properties": updated_properties,
+                                # New Columns
+                                "target_1": analysis.get("target_1"),
+                                "target_2": analysis.get("target_2"),
+                                "target_symbol": analysis.get("target_symbol"),
+                                "gene_id": analysis.get("gene_id"),
+                                "uniprot_id": analysis.get("uniprot_id"),
+                                "antibody_format": analysis.get("antibody_format"),
+                                "dar": analysis.get("dar"),
+                                "binding_affinity": analysis.get("binding_affinity"),
+                                "isotype": analysis.get("isotype"),
+                                "host_species": analysis.get("host_species"),
+                                "molecular_weight": analysis.get("molecular_weight"),
+                                "orr_pct": analysis.get("orr_pct"),
+                                "os_months": analysis.get("os_months"),
+                                "pfs_months": analysis.get("pfs_months"),
+                                "dor_months": analysis.get("dor_months"),
+                                "patient_count": analysis.get("patient_count"),
+                                "adverse_events_grade3_pct": analysis.get("adverse_events_grade3_pct"),
+                                "confidence_score": analysis.get("confidence_score"),
+                                "review_required": analysis.get("review_required")
                             }
                             
-                            # PubChem/AI 데이터 병합
-                            if pubchem_data and "error" not in pubchem_data:
-                                update_payload.update(pubchem_data)
+                            # 구조 데이터 병합
+                            if structure_data and "error" not in structure_data:
+                                update_payload.update(structure_data)
                             
                             supabase.table("golden_set_library")\
                                 .update(update_payload)\
@@ -562,7 +666,7 @@ Output ONLY the SMILES string. Do not include any explanation or markdown."""
                                 .execute()
                             
                             refined_count += 1
-                            source = pubchem_data.get("enrichment_source", "None") if pubchem_data else "None"
+                            source = structure_data.get("enrichment_source", "None") if structure_data else "None"
                             logger.info(f"✅ Refined: {drug_name[:30]} (Score: {relevance_score}, Source: {source})")
                         else:
                             # 분석 실패 시 상세 에러 기록

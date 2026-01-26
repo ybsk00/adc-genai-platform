@@ -34,6 +34,7 @@ async def get_library_stats():
 async def search_golden_set(
     target: Optional[str] = None,
     category: Optional[str] = None,
+    review_required: Optional[bool] = None,
     page: int = 1,
     limit: int = 20
 ):
@@ -43,6 +44,11 @@ async def search_golden_set(
         
         if target:
             query = query.ilike("properties->>target", f"%{target}%")
+            
+        if review_required is not None:
+            query = query.eq("review_required", review_required)
+            
+        # Pagination
             
         # Pagination
         start = (page - 1) * limit

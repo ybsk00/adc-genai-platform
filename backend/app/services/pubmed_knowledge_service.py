@@ -16,6 +16,8 @@ from json_repair import repair_json
 from app.core.config import settings
 from app.core.supabase import supabase
 from app.services.cost_tracker import cost_tracker
+from app.services.chemical_mapper import chemical_mapper
+from app.services.rag_service import rag_service
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +34,8 @@ class PubMedKnowledgeService:
     # API Key 있으면 10 req/sec, 없으면 3 req/sec
     REQUESTS_PER_SECOND = 10 if settings.NCBI_API_KEY else 3
     REQUEST_DELAY = 1.0 / REQUESTS_PER_SECOND
-    MAX_PAPERS_PER_DRUG = 5
-    YEARS_BACK = 5  # 최근 5년 논문만
+    MAX_PAPERS_PER_DRUG = 10  # 골든셋 전수 수집을 위해 상향 조정
+    YEARS_BACK = 10 # 최근 10년으로 확장
     
     # Gemini Safety Settings (의학 용어 차단 해제)
     SAFETY_SETTINGS = [
@@ -84,41 +86,201 @@ class PubMedKnowledgeService:
     
     def build_search_query(self, drug_name: str, generic_name: str = None) -> str:
         """
-        PubMed 검색 쿼리 생성
-        형식: "{Drug Name}" AND ("antibody-drug conjugate" OR "ADC")
+        PubMed 검색 쿼리 생성 - MeSH Term 활용 고도화
+        형식: "{Drug Name}" AND (MeSH Terms OR "ADC")
         """
         # 약물명 정리 (특수문자 제거)
         clean_name = drug_name.replace('"', '').strip()
         
-        # 기본 쿼리
+        # 기본 쿼리 (제목/초록)
         base_query = f'("{clean_name}"[Title/Abstract])'
         
-        # ADC 컨텍스트 추가
-        adc_context = '("antibody-drug conjugate"[Title/Abstract] OR "ADC"[Title/Abstract] OR "immunoconjugate"[Title/Abstract])'
+        # MeSH Terms 및 동의어 활용 (수집 범위 확장 - Mega-Net Strategy)
+        # ADC, 항체, 이중항체, 접합체, 그리고 주요 접미사 패턴까지 모두 포함
+        adc_context = (
+            '('
+            # 1. MeSH & General Terms
+            '"Antibody-Drug Conjugates"[MeSH] OR "Antibody-Drug Conjugate" OR "ADC" OR '
+            '"Immunoconjugates"[MeSH] OR "Immunoconjugate" OR '
+            '"Antibodies, Monoclonal"[MeSH] OR "Monoclonal Antibody" OR '
+            '"Bispecific Antibodies"[MeSH] OR "Bispecific Antibody" OR "bsAb" OR '
+            '"Antibodies, Monoclonal, Conjugated"[MeSH] OR '
+            '"Checkpoint Inhibitor" OR '
+            
+            # 2. Suffix Patterns (Wildcards)
+            '*-mab OR *-vedotin OR *-deruxtecan OR *-emtansine OR '
+            '*-ozogamicin OR *-mafodotin OR *-tesirine OR *-voralatide OR *-stansine'
+            ')'
+        )
         
         # 최종 쿼리
         query = f'{base_query} AND {adc_context}'
         
         return query
     
+    async def search_general_discovery(self, max_results: int = 10000) -> List[Dict]:
+        """
+        [전수 수집용] Yearly Chunking Strategy + Mega-Net Query
+        2010년부터 2026년까지 연도별로 분할하여 대량 수집 (목표: 1만 건)
+        """
+        loop = asyncio.get_event_loop()
+        
+        # 1. Mega-Net Query Expansion
+        # *-mab, *-tin, *-can 등 포괄적 접미사 및 ADC 관련 키워드 대폭 확장
+        query_terms = [
+            # Core ADC Terms
+            '"Antibody-Drug Conjugates"[MeSH]', '"Antibody-Drug Conjugate"', '"ADC"',
+            '"Immunoconjugates"[MeSH]', '"Immunoconjugate"',
+            '"Antibodies, Monoclonal, Conjugated"[MeSH]',
+            
+            # Antibody Terms
+            '"Antibodies, Monoclonal"[MeSH]', '"Monoclonal Antibody"',
+            '"Bispecific Antibodies"[MeSH]', '"Bispecific Antibody"', '"bsAb"',
+            '"Checkpoint Inhibitor"',
+            
+            # Suffix Wildcards (Text Word) - 검색 범위 5배 확장
+            '*-mab', '*-tin', '*-can', '*-tecan', '*-tansine', 
+            '*-vedotin', '*-deruxtecan', '*-emtansine', 
+            '*-ozogamicin', '*-mafodotin', '*-tesirine', 
+            '*-voralatide', '*-stansine'
+        ]
+        
+        # Combine with OR
+        main_query = " OR ".join(query_terms)
+        
+        # Filter (Clinical Focus but inclusive enough)
+        # 단순히 Clinical Trial만 찾지 않고, 새로운 전임상/연구 결과도 포함하도록 필터 완화
+        # 다만 너무 noise가 많으면 조정 필요. 현재는 Discovery 모드이므로 넓게 잡음.
+        full_query = f'({main_query})' 
+        
+        logger.info(f"📡 Mega-Net Query Strategy Activated")
+        logger.info(f"   Query: {full_query[:200]}...")
+
+        all_articles = []
+        current_year = datetime.now().year
+        start_year = 2010
+        
+        # 2. Yearly Chunking Loop
+        try:
+            for year in range(current_year, start_year - 1, -1):
+                if len(all_articles) >= max_results:
+                    break
+                
+                logger.info(f"   📅 Fetching Year: {year}...")
+                
+                def do_search_year(target_year):
+                    handle = Entrez.esearch(
+                        db="pubmed",
+                        term=full_query,
+                        retmax=5000, # 연도별 최대치 (넉넉하게)
+                        sort="relevance",
+                        datetype="pdat",
+                        mindate=f"{target_year}/01/01",
+                        maxdate=f"{target_year}/12/31"
+                    )
+                    record = Entrez.read(handle)
+                    handle.close()
+                    return record.get("IdList", [])
+                
+                id_list = await loop.run_in_executor(None, lambda: do_search_year(year))
+                logger.info(f"      -> Found {len(id_list)} IDs in {year}")
+                
+                if not id_list:
+                    continue
+                
+                # Fetch details in sub-batches (Entrez limit handling)
+                chunk_size = 50 # 200 -> 50으로 축소 (반응성 향상)
+                for i in range(0, len(id_list), chunk_size):
+                    if len(all_articles) >= max_results:
+                        break
+                        
+                    chunk_ids = id_list[i : i + chunk_size]
+                    
+                    # 통신 시작 전 로그
+                    logger.info(f"      ⏳ Fetching details for {len(chunk_ids)} papers (Batch {i // chunk_size + 1})...")
+                    
+                    articles = await self._fetch_details(chunk_ids)
+                    
+                    # Add processing context
+                    for a in articles:
+                        a["drug_name"] = "Discovery" # Placeholder
+                    
+                    all_articles.extend(articles)
+                    logger.info(f"      ✅ Fetched {len(articles)} details (Total: {len(all_articles)})")
+                    
+                    await asyncio.sleep(self.REQUEST_DELAY) # Rate limit compliance
+                
+            return all_articles[:max_results]
+            
+        except Exception as e:
+            logger.error(f"General discovery search error: {e}")
+            return all_articles # Return what we have so far
+
+    async def _fetch_details(self, id_list: List[str]) -> List[Dict]:
+        """PMID 리스트로 상세 정보 조회 (공통 함수)"""
+        loop = asyncio.get_event_loop()
+        if not id_list: return []
+        
+        try:
+            await asyncio.sleep(self.REQUEST_DELAY)
+            def fetch_details():
+                handle = Entrez.efetch(
+                    db="pubmed",
+                    id=",".join(id_list),
+                    retmode="xml"
+                )
+                records = Entrez.read(handle)
+                handle.close()
+                return records
+            
+            records = await loop.run_in_executor(None, fetch_details)
+            
+            articles = []
+            for article in records.get("PubmedArticle", []):
+                try:
+                    medline = article["MedlineCitation"]
+                    article_data = medline["Article"]
+                    
+                    title = str(article_data.get("ArticleTitle", "No Title"))
+                    abstract_texts = article_data.get("Abstract", {}).get("AbstractText", [])
+                    if isinstance(abstract_texts, list):
+                        abstract = " ".join([str(t) for t in abstract_texts])
+                    else:
+                        abstract = str(abstract_texts) if abstract_texts else ""
+                    
+                    pmid = str(medline.get("PMID", ""))
+                    journal = article_data.get("Journal", {}).get("Title", "")
+                    pub_date = article_data.get("Journal", {}).get("JournalIssue", {}).get("PubDate", {})
+                    year = pub_date.get("Year", "")
+                    
+                    articles.append({
+                        "pmid": pmid,
+                        "title": title,
+                        "abstract": abstract,
+                        "journal": journal,
+                        "year": year,
+                        "drug_name": "Discovery" # Placeholder
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to parse article: {e}")
+            return articles
+        except Exception as e:
+            logger.error(f"Fetch details error: {e}")
+            return []
+
     async def search_pubmed_for_drug(
         self, 
         drug_name: str, 
         generic_name: str = None,
         max_results: int = 5
     ) -> List[Dict]:
-        """
-        약물별 PubMed 논문 검색
-        필터: 최근 5년, English, Has Abstract
-        Fallback: 브랜드명 실패 시 generic_name으로 재검색
-        """
+        """약물별 PubMed 논문 검색"""
         loop = asyncio.get_event_loop()
         
-        # 1차 검색: 브랜드명
+        # 1차 검색
         query = self.build_search_query(drug_name)
         
         try:
-            # 날짜 범위 설정 (최근 5년)
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365 * self.YEARS_BACK)
             
@@ -138,7 +300,7 @@ class PubMedKnowledgeService:
             
             id_list = await loop.run_in_executor(None, do_search)
             
-            # Fallback: 결과 없으면 generic_name으로 재검색
+            # Fallback
             if not id_list and generic_name and generic_name != drug_name:
                 logger.info(f"🔄 Fallback: Searching with generic name '{generic_name}'")
                 query = self.build_search_query(generic_name)
@@ -147,59 +309,8 @@ class PubMedKnowledgeService:
             if not id_list:
                 return []
             
-            # Rate limiting
-            await asyncio.sleep(self.REQUEST_DELAY)
-            
-            # 상세 정보 조회
-            def fetch_details():
-                handle = Entrez.efetch(
-                    db="pubmed",
-                    id=",".join(id_list),
-                    retmode="xml"
-                )
-                records = Entrez.read(handle)
-                handle.close()
-                return records
-            
-            records = await loop.run_in_executor(None, fetch_details)
-            
-            articles = []
-            for article in records.get("PubmedArticle", []):
-                try:
-                    medline = article["MedlineCitation"]
-                    article_data = medline["Article"]
-                    
-                    # 제목 추출
-                    title = str(article_data.get("ArticleTitle", "No Title"))
-                    
-                    # 초록 추출
-                    abstract_texts = article_data.get("Abstract", {}).get("AbstractText", [])
-                    if isinstance(abstract_texts, list):
-                        abstract = " ".join([str(t) for t in abstract_texts])
-                    else:
-                        abstract = str(abstract_texts) if abstract_texts else ""
-                    
-                    # PMID 추출
-                    pmid = str(medline.get("PMID", ""))
-                    
-                    # 저널 정보
-                    journal = article_data.get("Journal", {}).get("Title", "")
-                    
-                    # 발행일
-                    pub_date = article_data.get("Journal", {}).get("JournalIssue", {}).get("PubDate", {})
-                    year = pub_date.get("Year", "")
-                    
-                    articles.append({
-                        "pmid": pmid,
-                        "title": title,
-                        "abstract": abstract,
-                        "journal": journal,
-                        "year": year,
-                        "drug_name": drug_name
-                    })
-                except Exception as e:
-                    logger.warning(f"Failed to parse article: {e}")
-            
+            articles = await self._fetch_details(id_list)
+            for a in articles: a["drug_name"] = drug_name # Restore specific drug name context
             return articles
             
         except Exception as e:
@@ -208,38 +319,67 @@ class PubMedKnowledgeService:
     
     async def analyze_with_gemini(self, abstract: str, title: str, drug_name: str) -> Dict[str, Any]:
         """
-        Gemini 1.5 Flash로 논문 분석
-        - Target 추출 (HER2, TROP2, CD19 등)
-        - Indication 추출 (암종)
-        - Summary (3문장 이내)
-        - Relevance Score (0.0~1.0)
-        - AI Reasoning (판단 근거)
+        Gemini 2.0 Flash 분석 - 고도화 (Structured Output for ADC Platform)
+        4단 분리 추출 (Target / Antibody / Linker / Payload) 및 임상 수치 정형화 강화
         """
-        system_prompt = """You are an expert ADC (Antibody-Drug Conjugate) researcher analyzing scientific publications.
+        # 1. Regex Extraction (Safety Net)
+        import re
+        
+        # Extract NCT IDs (NCT + 8 digits)
+        nct_ids = re.findall(r"NCT\d{8}", abstract + " " + title)
+        nct_id_val = nct_ids[0] if nct_ids else None
+        
+        system_prompt = """You are an expert ADC (Antibody-Drug Conjugate) researcher.
+Analyze the abstract and extract structured data into a specific JSON format.
 
-Analyze the provided scientific abstract and extract structured information.
+CRITICAL INSTRUCTIONS:
+1. **4-Part Decomposition**: You MUST attempt to separate the ADC into:
+   - Target Antigen (e.g., HER2, TROP2, CD19)
+   - Antibody (e.g., Trastuzumab, Sacituzumab)
+   - Linker (e.g., GGFG peptide, hydrazone, mc-vc)
+   - Payload (e.g., DXd, SN-38, MMAE)
+   *If a specific part is not mentioned, use null.*
 
-Output MUST be a JSON object with these exact fields:
-1. "target": Molecular target(s) mentioned (e.g., "HER2", "TROP2", "CD19", "Nectin-4"). Return null if not found.
-2. "indication": Cancer type or disease indication (e.g., "breast cancer", "acute lymphoblastic leukemia"). Return null if not found.
-3. "summary": A concise 3-sentence summary focusing on:
-   - Clinical stage (Phase 1, 2, 3 if mentioned)
-   - Key efficacy results (ORR, PFS, OS if available)
-   - Main conclusions
-4. "relevance_score": Float between 0.0 and 1.0 for ADC design relevance:
-   - 1.0: Directly about ADC clinical trials, efficacy, or safety
-   - 0.7-0.9: ADC mechanism, linker, or payload studies
-   - 0.4-0.6: General antibody or conjugate research
-   - 0.1-0.3: Tangentially related
-5. "ai_reasoning": One sentence explaining why this paper is important for ADC research.
+2. **Clinical Metrics**: Extract explicit numbers for:
+   - ORR (Objective Response Rate) in %
+   - PFS (Progression-Free Survival) in months
+   - OS (Overall Survival) in months
+   - DoR (Duration of Response) in months
 
-IMPORTANT: Return ONLY raw JSON. Do not use markdown formatting."""
+3. **Drug Name**: Identify the MAIN ADC/Drug code name (e.g., DS-8201, ABBV-400).
+
+Output MUST be a JSON object with this EXACT structure:
+{
+  "drug_structure": {
+    "drug_name": "Main drug name",
+    "target": "Target Antigen or null",
+    "antibody": "Antibody part or null",
+    "linker": "Linker part or null",
+    "payload": "Payload part or null"
+  },
+  "clinical_metrics": {
+    "nct_id": "Clinical Trial ID (e.g., NCT03529110) or null",
+    "orr_pct": Float or null,
+    "pfs_months": Float or null,
+    "os_months": Float or null,
+    "dor_months": Float or null
+  },
+  "analysis": {
+    "outcome_type": "Success", "Failure", "Ongoing", or "Unknown",
+    "reasoning": "Brief explanation of the trial result or study conclusion",
+    "is_golden_set_candidate": boolean (true if it contains significant clinical data),
+    "ai_confidence_score": Float (0.0-1.0),
+    "summary": "Concise 3-sentence summary highlighting efficacy and safety"
+  }
+}
+
+IMPORTANT: Return ONLY raw JSON. No markdown."""
 
         full_prompt = f"""{system_prompt}
 
-Drug of Interest: {drug_name}
+Drug of Interest Context: {drug_name}
 Title: {title}
-Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제한
+Abstract: {abstract[:3500]}"""
 
         try:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -256,46 +396,68 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
             )
             
             content = response.text.strip()
-            
-            # 비용 추적
             usage = response.usage_metadata
-            await cost_tracker.track_usage(
-                model_id,
-                usage.prompt_token_count,
-                usage.candidates_token_count
-            )
+            await cost_tracker.track_usage(model_id, usage.prompt_token_count, usage.candidates_token_count)
             
-            # JSON 파싱
             try:
                 repaired = repair_json(content)
-                return json.loads(repaired)
+                result = json.loads(repaired)
             except:
                 if "```json" in content:
                     content = content.split("```json")[1].split("```")[0]
                 elif "```" in content:
                     content = content.split("```")[1].split("```")[0]
-                return json.loads(content.strip())
+                result = json.loads(content.strip())
+            
+            # --- Post-Processing & Validation ---
+            
+            # 1. Force Inject Regex NCT ID (Priority: Regex > AI)
+            if nct_id_val:
+                if "clinical_metrics" not in result: result["clinical_metrics"] = {}
+                result["clinical_metrics"]["nct_id"] = nct_id_val
+                
+            # 2. Chemical Mapper Integration
+            extracted_drug_name = result.get("drug_structure", {}).get("drug_name")
+            payload_name = result.get("drug_structure", {}).get("payload")
+            
+            # Only run mapper if we actually found a payload name
+            if payload_name and payload_name.lower() not in ["null", "none"]:
+                try:
+                    mapped_data = await chemical_mapper.enrich_with_commercial_data(payload_name)
+                    if mapped_data.get("payload_smiles"):
+                        result["drug_structure"]["payload_smiles"] = mapped_data["payload_smiles"]
+                except Exception as map_err:
+                    logger.warning(f"Mapper failed for payload '{payload_name}': {map_err}")
+
+            return result
                 
         except Exception as e:
             logger.error(f"Gemini analysis error: {e}")
             return {
-                "target": None,
-                "indication": None,
-                "summary": "Analysis failed",
-                "relevance_score": 0.0,
-                "ai_reasoning": f"Error: {str(e)}"
+                "analysis": {
+                    "summary": "Analysis failed",
+                    "ai_confidence_score": 0.0,
+                    "reasoning": f"Error: {str(e)}"
+                }
             }
     
-    async def is_duplicate(self, title: str) -> bool:
-        """knowledge_base에 이미 존재하는 논문인지 확인 (제목 기준)"""
+    async def is_pmid_duplicate(self, pmid: str) -> Optional[str]:
+        """PMID 기준 중복 검사 - ID 반환"""
+        if not pmid: return None
         try:
+            # 2. Summary text search for "PMID: {pmid}"
+            # Note: A separate 'pmid' column would be better, but sticking to current schema
             existing = supabase.table("knowledge_base")\
                 .select("id")\
-                .eq("title", title[:500])\
+                .ilike("summary", f"%PMID: {pmid}%")\
+                .limit(1)\
                 .execute()
-            return bool(existing.data)
+            
+            if existing.data:
+                return existing.data[0]["id"]
+            return None
         except:
-            return False
+            return None
     
     async def save_to_knowledge_base(
         self, 
@@ -304,46 +466,101 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
         drug_id: Optional[str] = None
     ) -> bool:
         """
-        knowledge_base 스키마에 맞게 저장
-        - source_type: 'PubMed'
-        - title: 논문 제목
-        - content: 초록 전문
-        - summary: AI 요약
-        - relevance_score: ADC 관련성
-        - ai_reasoning: 중요성 판단 근거
-        - rag_status: 'completed'
+        1. PMID Check (Dedup & Upsert)
+        2. Generate Embedding
+        3. Save (Insert or Update) to knowledge_base
+        4. Update golden_set_library (if linked)
         """
         try:
-            # AI 분석 결과로 요약 구성
-            summary_parts = []
-            if analysis.get("target"):
-                summary_parts.append(f"Target: {analysis['target']}")
-            if analysis.get("indication"):
-                summary_parts.append(f"Indication: {analysis['indication']}")
-            summary_parts.append(f"PMID: {article.get('pmid', 'N/A')}")
+            # Extract fields from nested structure
+            an = analysis.get("analysis", {})
+            ds = analysis.get("drug_structure", {})
+            cm = analysis.get("clinical_metrics", {})
             
-            summary_text = " | ".join(summary_parts)
-            if analysis.get("summary"):
-                summary_text += f"\n{analysis['summary']}"
+            pmid = article.get("pmid")
+            summary_text = f"PMID: {pmid} | " + an.get("summary", "No summary provided.")
+            reasoning = an.get("reasoning", "No reasoning provided.")
             
+            # 1. Dedup / Upsert Check
+            existing_id = await self.is_pmid_duplicate(pmid)
+            
+            if existing_id:
+                logger.info(f"🔄 Duplicate PMID found ({pmid}). Updating properties (Upsert)...")
+                
+                # Upsert Logic: Only update analysis/properties
+                update_data = {
+                    "properties": analysis,
+                    "ai_reasoning": reasoning[:2000],
+                    "relevance_score": an.get("ai_confidence_score", 0.0),
+                    # Optionally update summary if needed, but keeping it stable might be better
+                }
+                supabase.table("knowledge_base").update(update_data).eq("id", existing_id).execute()
+                return True
+
+            # 3. Generate Embedding (Gemini 768) - Only for new records
+            embedding_text = f"{article['title']} {summary_text} {reasoning}"
+            embedding = await rag_service.generate_embedding(embedding_text)
+
             new_kb = {
                 "source_type": "PubMed",
                 "title": article["title"][:500],
                 "content": article.get("abstract", "No abstract available."),
                 "summary": summary_text[:1000],
-                "relevance_score": analysis.get("relevance_score", 0.0),
-                "source_tier": 1,  # PubMed = Tier 1 (학술 논문)
-                "ai_reasoning": analysis.get("ai_reasoning", ""),
-                "rag_status": "completed"  # AI 분석 완료
+                "relevance_score": an.get("ai_confidence_score", 0.0),
+                "source_tier": 1,
+                "ai_reasoning": reasoning[:2000],
+                "rag_status": "completed",
+                "embedding": embedding,
+                "properties": analysis # Save the FULL nested JSON structure here
             }
             
             supabase.table("knowledge_base").insert(new_kb).execute()
+            
+            # 4. Update Golden Set Library (Linkage)
+            if drug_id and an.get("ai_confidence_score", 0) >= 0.7:
+                await self._update_golden_set(drug_id, analysis)
+            
             return True
             
         except Exception as e:
             logger.error(f"Failed to save to knowledge_base: {e}")
             return False
-    
+
+    async def _update_golden_set(self, drug_id: str, analysis: Dict):
+        """골든셋 라이브러리 업데이트 (별도 함수 분리)"""
+        try:
+            curr_res = supabase.table("golden_set_library").select("properties, outcome_type, failure_reason").eq("id", drug_id).single().execute()
+            current_props = curr_res.data.get("properties", {}) or {}
+            
+            # Extract flat fields for backward compatibility in golden_set_library, or store nested?
+            # Storing nested is cleaner, but let's flatten key metrics to top level of properties for easy UI access if needed
+            ds = analysis.get("drug_structure", {})
+            cm = analysis.get("clinical_metrics", {})
+            an = analysis.get("analysis", {})
+            
+            updates = {}
+            
+            # Update specific fields if they exist
+            if cm.get("orr_pct"): current_props["orr"] = f"{cm['orr_pct']}%"
+            if cm.get("pfs_months"): current_props["pfs"] = f"{cm['pfs_months']} mo"
+            if cm.get("os_months"): current_props["os"] = f"{cm['os_months']} mo"
+            
+            if ds.get("linker"): current_props["linker_type"] = ds["linker"]
+            if ds.get("payload"): current_props["payload_name"] = ds["payload"]
+            if ds.get("target"): current_props["target_antigen"] = ds["target"]
+            
+            if an.get("outcome_type"): updates["outcome_type"] = an["outcome_type"]
+            if an.get("reasoning"): updates["failure_reason"] = an["reasoning"]
+            
+            updates["properties"] = current_props
+            updates["updated_at"] = datetime.utcnow().isoformat()
+            
+            supabase.table("golden_set_library").update(updates).eq("id", drug_id).execute()
+            logger.info(f"✨ Updated Golden Set properties for drug {drug_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update golden_set_library: {e}")
+
     async def process_single_drug(self, drug: Dict, job_id: Optional[str] = None) -> int:
         """단일 약물에 대한 PubMed 논문 수집 및 분석"""
         drug_name = drug["name"]
@@ -366,10 +583,7 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
             
             # 2. 각 논문 처리
             for article in articles:
-                # 중복 체크
-                if await self.is_duplicate(article["title"]):
-                    self.skipped_count += 1
-                    continue
+                # 중복 체크 (PMID) - 상위 레벨에서 한 번 더 체크해도 좋지만 save_to_knowledge_base 내부에서 처리
                 
                 # 초록이 없으면 스킵
                 if not article.get("abstract"):
@@ -407,7 +621,7 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
     ) -> Dict[str, Any]:
         """
         배치 실행
-        mode: 'incremental' (신규만) 또는 'full' (전체)
+        mode: 'incremental' (신규만), 'full' (전체), 'discovery' (광범위 검색)
         """
         from app.api.scheduler import update_job_status, is_cancelled
         
@@ -417,51 +631,70 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
         logger.info(f"🚀 [PubMed Knowledge] Starting batch (size: {batch_size}, mode: {mode})")
         
         try:
-            # 1. 대상 약물 가져오기
+            # Mode: Discovery (일반 검색)
+            if mode == "discovery":
+                logger.info(f"📥 Fetching details for found IDs...")
+                articles = await self.search_general_discovery(max_results=batch_size)
+                
+                if not articles:
+                    logger.info("ℹ️ No articles found to process.")
+                    return {"status": "completed", "processed": 0}
+                
+                total_articles = len(articles)
+                logger.info(f"⚡ Starting AI Analysis for {total_articles} articles...")
+                
+                for idx, article in enumerate(articles):
+                    if job_id and await is_cancelled(job_id): 
+                        logger.warning("🛑 Job cancelled by user.")
+                        break
+                    
+                    # 진행 상황 로그 (CLI용)
+                    if (idx + 1) % 10 == 0 or idx == 0:
+                        logger.info(f"🔍 Analyzing {idx + 1}/{total_articles} ({(idx + 1)/total_articles*100:.1f}%)...")
+
+                    analysis = await self.analyze_with_gemini(article["abstract"], article["title"], "General Discovery")
+                    
+                    if await self.save_to_knowledge_base(article, analysis):
+                        self.processed_count += 1
+                        logger.info(f"   ✅ Saved: {article['title'][:60]}... (Score: {analysis.get('analysis', {}).get('ai_confidence_score', 0):.2f})")
+                    
+                    await asyncio.sleep(0.3)
+                    
+                    if job_id and (idx + 1) % 5 == 0:
+                        await update_job_status(job_id, records_drafted=self.processed_count)
+                
+                return {"status": "completed", "papers_saved": self.processed_count}
+
+            # Mode: Standard (Drug list based)
             limit = batch_size if mode == "incremental" else None
             drugs = await self.get_target_drugs(limit)
             
             if not drugs:
-                logger.info("No target drugs found.")
-                if job_id:
-                    await update_job_status(job_id, status="completed", message="No drugs to process")
+                if job_id: await update_job_status(job_id, status="completed", message="No drugs")
                 return {"status": "completed", "processed": 0}
             
-            if job_id:
-                await update_job_status(job_id, records_found=len(drugs))
+            if job_id: await update_job_status(job_id, records_found=len(drugs))
             
-            # 2. 각 약물 처리
             total_saved = 0
             for idx, drug in enumerate(drugs):
-                # 중단 체크
-                if job_id and await is_cancelled(job_id):
-                    logger.info("Job cancelled by user")
-                    await update_job_status(job_id, status="stopped")
-                    break
+                if job_id and await is_cancelled(job_id): break
                 
                 saved = await self.process_single_drug(drug, job_id)
                 total_saved += saved
                 
-                # 진행률 업데이트 (10개마다)
                 if job_id and (idx + 1) % 10 == 0:
                     await update_job_status(
                         job_id, 
                         records_drafted=self.processed_count,
                         message=f"Processing {idx + 1}/{len(drugs)} drugs..."
                     )
-                    logger.info(f"📊 Progress: {idx + 1}/{len(drugs)} drugs, {self.processed_count} papers saved")
-                
-                # Rate limiting between drugs
                 await asyncio.sleep(self.REQUEST_DELAY)
             
-            # 3. 완료
             result = {
                 "status": "completed",
                 "total_drugs": len(drugs),
                 "papers_saved": self.processed_count,
-                "skipped_duplicates": self.skipped_count,
-                "errors": self.error_count,
-                "failed_drugs": self.failed_drugs[:50]  # 최대 50개만 저장
+                "errors": self.error_count
             }
             
             if job_id:
@@ -469,18 +702,14 @@ Abstract: {abstract[:3000]}"""  # 토큰 제한을 위해 초록 3000자로 제�
                     job_id,
                     status="completed",
                     records_drafted=self.processed_count,
-                    completed_at=datetime.utcnow().isoformat(),
-                    errors=self.failed_drugs[:20] if self.failed_drugs else [],
-                    message=f"Saved {self.processed_count} papers from {len(drugs)} drugs"
+                    message=f"Saved {self.processed_count} papers"
                 )
             
-            logger.info(f"🎉 [PubMed Knowledge] Complete! Saved: {self.processed_count}, Errors: {self.error_count}")
             return result
             
         except Exception as e:
             logger.error(f"Batch processing error: {e}")
-            if job_id:
-                await update_job_status(job_id, status="failed", errors=[str(e)])
+            if job_id: await update_job_status(job_id, status="failed", errors=[str(e)])
             return {"status": "failed", "error": str(e)}
 
 

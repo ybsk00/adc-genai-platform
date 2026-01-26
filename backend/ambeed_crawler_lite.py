@@ -143,7 +143,7 @@ class AmbeedCrawlerLite:
     
     def __init__(self):
         self.ua = ua
-        self.global_semaphore = asyncio.Semaphore(1)
+        self.global_semaphore = asyncio.Semaphore(10) # Increased from 1 to 10
         self.model = None
 
     def _get_model(self):
@@ -185,6 +185,14 @@ class AmbeedCrawlerLite:
             except: 
                 return False
         return len(smiles) > 5 # Simple length check if RDKit missing
+
+    async def _exists_in_db(self, cat_no: str) -> bool:
+        """Check if catalog number already exists in DB"""
+        try:
+            res = supabase.table("commercial_reagents").select("id").eq("ambeed_cat_no", cat_no).limit(1).execute()
+            return bool(res.data)
+        except:
+            return False
 
     async def crawl_category(self, category_name: str, base_url: str, limit: int = 10, job_id: str = None, start_page: int = 1, batch_size: int = 2) -> int:
         logger.info(f"🚀 [AMBEED LITE] {category_name} (Start Page: {start_page}, Limit: {limit})")
@@ -267,6 +275,11 @@ class AmbeedCrawlerLite:
                             cat_no = prod["cat_no"] or link.split('/')[-1].replace('.html', '')
                             
                             logger.info(f"🔨 Refining record: [Cat No.{cat_no}] (AI Enriching...)")
+                            
+                            # Incremental Check
+                            if await self._exists_in_db(cat_no):
+                                logger.info(f"⏩ [SKIP] {cat_no} already exists in DB.")
+                                continue
 
                             res = await self._process_single_product(context, link, category_name)
                             if res:
@@ -290,13 +303,6 @@ class AmbeedCrawlerLite:
                         page_num += 1
                         await page.close()
                         await asyncio.sleep(2)
-                
-                if batch_data:
-                    await self._save_batch(batch_data)
-            
-            finally: 
-                await context.close()
-        return count
                 
                 if batch_data:
                     await self._save_batch(batch_data)

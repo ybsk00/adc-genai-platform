@@ -8,6 +8,7 @@ import logging
 import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+import os
 
 from app.core.supabase import supabase
 
@@ -55,8 +56,10 @@ class BulkImporter:
         self.errors = []
 
     def extract_study_info(self, study: dict) -> Dict[str, Any]:
-        """임상시험 데이터에서 필요한 정보 추출"""
+        """임상시험 데이터에서 필요한 정보 추출 (ResultsSection 포함)"""
         protocol = study.get("protocolSection", {})
+        results = study.get("resultsSection", {})
+        
         id_module = protocol.get("identificationModule", {})
         status_module = protocol.get("statusModule", {})
         description_module = protocol.get("descriptionModule", {})
@@ -65,11 +68,15 @@ class BulkImporter:
         nct_id = id_module.get("nctId", "")
         title = id_module.get("officialTitle") or id_module.get("briefTitle", "No Title")
         
-        # 약물 정보 추출 (DRUG + BIOLOGICAL 타입 포함 - ADC는 종종 Biological로 등록됨)
+        # 약물 정보 추출
         interventions = arms_module.get("interventions", [])
         drug_names = [i.get("name", "") for i in interventions if i.get("type") in ["DRUG", "BIOLOGICAL"]]
         
-        return {
+        # --- 정량적 데이터 추출 (ResultsSection) ---
+        outcome_data = self._parse_results_section(results)
+        
+        # 기본 정보 구성
+        info = {
             "name": title[:200] if title else "Unknown",
             "category": "clinical_trial",
             "description": title,
@@ -86,8 +93,96 @@ class BulkImporter:
             "status": "draft",
             "outcome_type": self._determine_outcome(status_module),
             "ai_refined": False,
-            "enrichment_source": "clinical_trials_api_v2"
+            "enrichment_source": "clinical_trials_api_v2",
+            "confidence_score": 0.95 if outcome_data.get("has_results") else 0.5
         }
+        
+        # 정량 데이터 병합 (orr_pct, os_months, pfs_months, patient_count 등)
+        info.update(outcome_data.get("metrics", {}))
+        
+        return info
+
+    def _parse_results_section(self, results: dict) -> Dict[str, Any]:
+        """ResultsSection에서 ORR, OS, PFS, Patient Count 등 추출"""
+        metrics = {
+            "orr_pct": None,
+            "os_months": None,
+            "pfs_months": None,
+            "dor_months": None,
+            "patient_count": None,
+            "adverse_events_grade3_pct": None
+        }
+        
+        if not results:
+            return {"has_results": False, "metrics": metrics}
+            
+        # 1. 환자 수 (Participant Flow)
+        participant_flow = results.get("participantFlowModule", {})
+        groups = participant_flow.get("groups", [])
+        if groups:
+            try:
+                # 'Total' 그룹이 명시적으로 있는지 확인 (중복 합산 방지)
+                total_group = next((g for g in groups if "total" in g.get("title", "").lower()), None)
+                if total_group:
+                    metrics["patient_count"] = int(total_group.get("count", 0))
+                else:
+                    # Arms 합산
+                    metrics["patient_count"] = sum(int(g.get("count", 0)) for g in groups if g.get("count"))
+            except:
+                pass
+
+        # 2. 효능 지표 (Outcome Measures)
+        outcome_measures = results.get("outcomeMeasuresModule", {}).get("outcomeMeasures", [])
+        for measure in outcome_measures:
+            title = measure.get("title", "").lower()
+            unit = measure.get("unitOfMeasure", "").lower()
+            classes = measure.get("classes", [])
+            if not classes: continue
+            
+            # 첫 번째 클래스의 첫 번째 카테고리 데이터 사용 (단순화)
+            categories = classes[0].get("categories", [])
+            if not categories: continue
+            
+            measurements = categories[0].get("measurements", [])
+            if not measurements: continue
+            
+            value_str = measurements[0].get("value")
+            if not value_str: continue
+            
+            try:
+                value = float(value_str)
+                
+                # 키워드 및 단위 검증 (AI 2차 검증 로직)
+                if any(kw in title for kw in ["objective response rate", "orr", "overall response rate"]):
+                    if self._verify_unit(unit, "percentage"):
+                        metrics["orr_pct"] = value
+                elif any(kw in title for kw in ["overall survival", "os"]) and "month" in title:
+                    if self._verify_unit(unit, "months"):
+                        metrics["os_months"] = value
+                elif any(kw in title for kw in ["progression-free survival", "pfs"]) and "month" in title:
+                    if self._verify_unit(unit, "months"):
+                        metrics["pfs_months"] = value
+                elif any(kw in title for kw in ["duration of response", "dor"]) and "month" in title:
+                    if self._verify_unit(unit, "months"):
+                        metrics["dor_months"] = value
+            except ValueError:
+                continue
+
+        return {"has_results": True, "metrics": metrics}
+
+    def _verify_unit(self, unit_str: str, expected_type: str) -> bool:
+        """단위 검증: percentage vs months"""
+        if not unit_str:
+            return True # 단위가 없으면 일단 허용 (보수적 접근)
+            
+        unit_str = unit_str.lower()
+        if expected_type == "percentage":
+            # % 단위 확인 (percent, %, percentage)
+            return any(u in unit_str for u in ["%", "percent"])
+        elif expected_type == "months":
+            # 시간 단위 확인 (month, week, year, day)
+            return any(u in unit_str for u in ["month", "week", "year", "day"])
+        return True
 
     def _determine_outcome(self, status_module: dict) -> str:
         """상태를 기반으로 outcome_type 결정"""
@@ -163,10 +258,30 @@ class BulkImporter:
             last_update_date = yesterday.strftime("%Y-%m-%d")
             logger.info(f"📅 Daily Sync Mode: Fetching updates since {last_update_date}")
         
+        # 프록시 설정
+        proxy_url = None
+        if os.getenv("PROXY_ENABLED", "").lower() == "true":
+            host = os.getenv("PROXY_HOST")
+            port = os.getenv("PROXY_PORT")
+            user = os.getenv("PROXY_USERNAME")
+            password = os.getenv("PROXY_PASSWORD")
+            
+            if host and port:
+                if user and password:
+                    proxy_url = f"http://{user}:{password}@{host}:{port}"
+                else:
+                    proxy_url = f"http://{host}:{port}"
+                logger.info(f"🌐 Using proxy: {host}:{port}")
+
         async with aiohttp.ClientSession() as session:
             while page < max_pages:
+                # API v2 syntax for date filtering
+                query_term = search_term
+                if last_update_date:
+                    query_term = f"{search_term} AND AREA[LastUpdatePostDate]RANGE[{last_update_date},MAX]"
+                
                 params = {
-                    "query.term": search_term,
+                    "query.term": query_term,
                     "filter.overallStatus": ",".join(status_filter) if isinstance(status_filter, list) else status_filter,
                     "pageSize": page_size,
                     "format": "json"
@@ -175,11 +290,18 @@ class BulkImporter:
                 if next_page_token:
                     params["pageToken"] = next_page_token
                 
-                if last_update_date:
-                    params["filter.lastUpdatePostDate"] = last_update_date
+                # if last_update_date:
+                #     params["filter.lastUpdatePostDate"] = last_update_date
                 
                 try:
-                    async with session.get(API_BASE_URL, params=params, timeout=aiohttp.ClientTimeout(total=120)) as response:
+                    request_kwargs = {
+                        "params": params,
+                        "timeout": aiohttp.ClientTimeout(total=120)
+                    }
+                    if proxy_url:
+                        request_kwargs["proxy"] = proxy_url
+                        
+                    async with session.get(API_BASE_URL, **request_kwargs) as response:
                         if response.status != 200:
                             logger.error(f"API Error: HTTP {response.status}")
                             break

@@ -1,0 +1,838 @@
+2026-01-26 11:41:17,022 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 11:41:21,647 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 11:41:22,843 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 11:41:25,383 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm: Page.goto: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm", waiting until "load"
+
+2026-01-26 11:41:35,389 - INFO - 💓 [HEARTBEAT] Scanning Target: her2.htm
+2026-01-26 11:41:36,917 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-her2.htm: Page.goto: Target page, context or browser has been closed
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-her2.htm", waiting until "load"
+
+2026-01-26 11:41:46,931 - INFO - 💓 [HEARTBEAT] Scanning Target: cd19.htm
+2026-01-26 11:41:51,185 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd19.htm: Page.goto: Target page, context or browser has been closed
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd19.htm", waiting until "load"
+
+2026-01-26 11:42:01,192 - INFO - 💓 [HEARTBEAT] Scanning Target: egfr.htm
+2026-01-26 11:42:14,216 - INFO - 🔎 Found 118 product links.
+2026-01-26 11:42:26,719 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-egfr-her2-tandem-scfv-154.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:42:26,734 - INFO - 💤 Sleeping 11.5s...
+2026-01-26 11:42:47,044 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-egfr-tandem-fab-265.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:42:47,061 - INFO - 💤 Sleeping 8.4s...
+2026-01-26 11:43:02,674 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd16-egfr-igg-scfv-797.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:43:02,694 - INFO - 💤 Sleeping 6.3s...
+2026-01-26 11:43:16,390 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd133-egfr-tandem-fab-219.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:43:16,408 - INFO - 💤 Sleeping 11.7s...
+2026-01-26 11:43:35,500 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd16-egfr-fab-igg-1563.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:43:35,519 - INFO - 💤 Sleeping 7.1s...
+2026-01-26 11:44:43,938 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 11:44:44,527 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 11:44:44,818 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 11:45:00,392 - INFO - 🔎 Found 118 product links.
+2026-01-26 11:45:00,408 - INFO - 🚀 Processing batch 1 (10 items)...
+2026-01-26 11:45:12,275 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-scfv-84.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:12,338 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-fragments.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:12,345 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-sclc1-tandem-scfv-103.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:12,652 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd79b-tandem-scfv-70.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:12,693 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-muc1-tandem-scfv-95.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:12,909 - ERROR - Error processing https://www.creative-biolabs.com/bsab/webinar-harnessing-the-power-of-bispecific-antibodies.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:13,973 - ERROR - Error processing https://www.creative-biolabs.com/bsab/cell-free-bispecific-antibody-expression.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:14,046 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-fab-272.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:14,303 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gpc3-tandem-scfv-87.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:14,651 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ca19-9-cd3-tandem-scfv-26.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:45:14,671 - INFO - 📦 Progress: 0/1
+2026-01-26 11:47:56,039 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 11:47:56,700 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 11:47:56,992 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 11:48:11,128 - INFO - 🔎 Found 118 product links.
+2026-01-26 11:48:22,516 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-b7h3-tandem-fab-252.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:48:22,536 - INFO - 💤 Sleeping 8.6s...
+2026-01-26 11:48:41,060 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp41-tandem-scfv-85.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:48:41,076 - INFO - 💤 Sleeping 11.1s...
+2026-01-26 11:48:58,509 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-epcam-tandem-scfv-79.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:48:58,527 - INFO - 💤 Sleeping 8.9s...
+2026-01-26 11:49:14,657 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-met-tandem-fab-262.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:49:14,677 - INFO - 💤 Sleeping 7.1s...
+2026-01-26 11:49:27,971 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-fcrh5-tandem-fab-269.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:49:27,987 - INFO - 💤 Sleeping 8.5s...
+2026-01-26 11:52:02,492 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 11:52:03,049 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 11:52:03,326 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 11:52:33,877 - INFO - 🔎 Found 118 product links.
+2026-01-26 11:52:54,655 - ERROR - Error processing https://www.creative-biolabs.com/bsab/category/bispecific-immunotoxin-85.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:52:54,666 - INFO - 💤 Sleeping 7.9s...
+2026-01-26 11:53:23,947 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-bcl1-idiotype-cd3-tandem-scfv-16.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:53:23,966 - INFO - 💤 Sleeping 7.4s...
+2026-01-26 11:53:51,738 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-igf1r-tandem-fab-280.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:53:51,758 - INFO - 💤 Sleeping 6.1s...
+2026-01-26 11:54:12,944 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd74-tandem-scfv-69.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 11:54:12,965 - INFO - 💤 Sleeping 10.4s...
+2026-01-26 12:01:39,565 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:01:40,071 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 12:01:40,320 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:02:01,495 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:02:18,283 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-met-tandem-fab-262.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:02:18,301 - INFO - 💤 Sleeping 10.0s...
+2026-01-26 12:02:43,588 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd4-tandem-fab-255.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:02:43,604 - INFO - 💤 Sleeping 9.8s...
+2026-01-26 12:03:04,990 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hn-tandem-fab-279.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:03:05,009 - INFO - 💤 Sleeping 8.5s...
+2026-01-26 12:03:25,259 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-vegfr2-tandem-scfv-109.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:03:25,280 - INFO - 💤 Sleeping 6.7s...
+2026-01-26 12:03:41,951 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp41-tandem-scfv-85.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:03:41,975 - INFO - 💤 Sleeping 5.9s...
+2026-01-26 12:06:02,293 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:06:02,793 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 12:06:03,033 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:06:28,835 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:06:54,240 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-bcl1-idiotype-cd3-tandem-scfv-16.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:06:54,257 - INFO - 💤 Sleeping 7.2s...
+2026-01-26 12:07:04,874 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ca19-9-cd3-tandem-fab-214.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/bispecific-ca19-9-cd3-tandem-fab-214.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-ca19-9-cd3-tandem-fab-214.htm", waiting until "load"
+
+2026-01-26 12:07:04,887 - INFO - 💤 Sleeping 9.0s...
+2026-01-26 12:07:17,305 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-aptamer-development.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/bispecific-aptamer-development.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-aptamer-development.htm", waiting until "load"
+
+2026-01-26 12:07:17,321 - INFO - 💤 Sleeping 8.7s...
+2026-01-26 12:08:26,255 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-clec12a-tandem-fab-261.htm: Page.goto: Timeout 60000ms exceeded.
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-cd3-clec12a-tandem-fab-261.htm", waiting until "load"
+
+2026-01-26 12:08:26,263 - INFO - 💤 Sleeping 10.7s...
+2026-01-26 12:08:40,581 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp41-tandem-scfv-85.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp41-tandem-scfv-85.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp41-tandem-scfv-85.htm", waiting until "load"
+
+2026-01-26 12:08:40,594 - INFO - 💤 Sleeping 7.1s...
+2026-01-26 12:08:51,086 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd248-tandem-scfv-78.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/bispecific-cd3-cd248-tandem-scfv-78.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-cd3-cd248-tandem-scfv-78.htm", waiting until "load"
+
+2026-01-26 12:08:51,098 - INFO - 💤 Sleeping 8.5s...
+2026-01-26 12:09:02,964 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-bcma-cd3-tandem-fab-208.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/bispecific-bcma-cd3-tandem-fab-208.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/bispecific-bcma-cd3-tandem-fab-208.htm", waiting until "load"
+
+2026-01-26 12:09:02,975 - INFO - 💤 Sleeping 9.6s...
+2026-01-26 12:09:35,445 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd33-tandem-scfv-66.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:09:35,465 - INFO - 💤 Sleeping 11.7s...
+2026-01-26 12:09:55,596 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-sclc1-tandem-scfv-103.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:09:55,623 - INFO - 💤 Sleeping 10.1s...
+2026-01-26 12:10:16,490 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-29.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:10:16,508 - INFO - 💤 Sleeping 8.6s...
+2026-01-26 12:10:36,089 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-aptamer-drug-conjugates.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:10:36,109 - INFO - 💤 Sleeping 6.6s...
+2026-01-26 12:10:51,339 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gd2-tandem-fab-271.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:10:51,357 - INFO - 💤 Sleeping 10.8s...
+2026-01-26 12:13:30,579 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:13:31,090 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 12:13:31,334 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:13:34,815 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm", waiting until "load"
+
+2026-01-26 12:13:34,838 - INFO - 💓 [HEARTBEAT] Scanning Target: her2.htm
+2026-01-26 12:13:55,212 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:14:08,555 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd16-her2-igg-igg-1181.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:14:08,572 - INFO - 💤 Sleeping 11.4s...
+2026-01-26 12:14:33,317 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-her2-vegf-fab-scfv-scfv-1502.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:14:33,338 - INFO - 💤 Sleeping 11.4s...
+2026-01-26 12:14:54,270 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd16-her2-tandem-fab-226.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:14:54,287 - INFO - 💤 Sleeping 6.8s...
+2026-01-26 12:15:08,612 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-her2-tandem-scfv-2278.htm: Page.evaluate: SyntaxError: Invalid regular expression: missing /
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:290:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-01-26 12:15:08,632 - INFO - 💤 Sleeping 7.3s...
+2026-01-26 12:22:56,158 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:22:56,676 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 12:22:56,934 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:22:57,392 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd3.htm", waiting until "load"
+
+2026-01-26 12:22:57,403 - INFO - 💓 [HEARTBEAT] Scanning Target: her2.htm
+2026-01-26 12:22:57,703 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-her2.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-her2.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-her2.htm", waiting until "load"
+
+2026-01-26 12:22:57,714 - INFO - 💓 [HEARTBEAT] Scanning Target: cd19.htm
+2026-01-26 12:22:58,013 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd19.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-cd19.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd19.htm", waiting until "load"
+
+2026-01-26 12:22:58,025 - INFO - 💓 [HEARTBEAT] Scanning Target: egfr.htm
+2026-01-26 12:22:58,375 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-egfr.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-egfr.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-egfr.htm", waiting until "load"
+
+2026-01-26 12:22:58,386 - INFO - 💓 [HEARTBEAT] Scanning Target: l1.htm
+2026-01-26 12:22:58,679 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-pd-l1.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-pd-l1.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-pd-l1.htm", waiting until "load"
+
+2026-01-26 12:22:58,691 - INFO - 💓 [HEARTBEAT] Scanning Target: cd20.htm
+2026-01-26 12:22:58,985 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-cd20.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-cd20.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-cd20.htm", waiting until "load"
+
+2026-01-26 12:22:58,997 - INFO - 💓 [HEARTBEAT] Scanning Target: epcam.htm
+2026-01-26 12:22:59,296 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-epcam.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-epcam.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-epcam.htm", waiting until "load"
+
+2026-01-26 12:22:59,311 - INFO - 💓 [HEARTBEAT] Scanning Target: bcma.htm
+2026-01-26 12:22:59,615 - ERROR - Error scanning target https://www.creative-biolabs.com/bsab/symbolsearch-bcma.htm: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/symbolsearch-bcma.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/symbolsearch-bcma.htm", waiting until "load"
+
+2026-01-26 12:26:00,152 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:26:00,702 - INFO - 🌐 Launching Browser with Local IP (Proxy Disabled)
+2026-01-26 12:26:00,966 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:26:10,171 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:26:15,619 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-folr1-tandem-fab-270.htm:
+2026-01-26 12:26:15,619 - INFO -    Name: Recombinant Anti-CD3 x Anti-FOLR1 Bispecific Antibody (Tandem Fab) (BSFAB-082) - Creative Biolabs
+2026-01-26 12:26:15,619 - INFO -    CatNo: CB-270
+2026-01-26 12:26:15,619 - INFO -    Summary: Recombinant Anti-CD3 x Anti-FOLR1 Bispecific Antib...
+2026-01-26 12:26:15,619 - INFO -    Specs Count: 12
+2026-01-26 12:26:15,619 - INFO -    Targets Found: 2
+2026-01-26 12:26:15,619 - INFO -    Specs Preview: [('Targets', 'CD3 & FOLR1'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:26:16,037 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-folr1-tandem-fab-270.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:26:16,057 - INFO - 💤 Sleeping 6.5s...
+2026-01-26 12:26:26,845 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-il2r-tandem-scfv-93.htm:
+2026-01-26 12:26:26,845 - INFO -    Name: Recombinant Anti-CD3 x Anti-IL2R Bispecific Antibody (Tandem scFv) (BSFV-093) - Creative Biolabs
+2026-01-26 12:26:26,845 - INFO -    CatNo: CB-93
+2026-01-26 12:26:26,846 - INFO -    Summary: Recombinant Anti-CD3 x Anti-IL2R Bispecific Antibo...
+2026-01-26 12:26:26,846 - INFO -    Specs Count: 12
+2026-01-26 12:26:26,846 - INFO -    Targets Found: 2
+2026-01-26 12:26:26,846 - INFO -    Specs Preview: [('Targets', 'CD3 & IL2R'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:26:27,121 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-il2r-tandem-scfv-93.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:26:27,138 - INFO - 💤 Sleeping 7.9s...
+2026-01-26 12:26:40,488 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-gd2-tandem-scfv-83.htm:
+2026-01-26 12:26:40,488 - INFO -    Name: Recombinant Anti-CD3 x Anti-GD2 Bispecific Antibody (Tandem scFv) (BSFV-083) - Creative Biolabs
+2026-01-26 12:26:40,488 - INFO -    CatNo: CB-83
+2026-01-26 12:26:40,488 - INFO -    Summary: Recombinant Anti-CD3 x Anti-GD2 Bispecific Antibod...
+2026-01-26 12:26:40,489 - INFO -    Specs Count: 12
+2026-01-26 12:26:40,489 - INFO -    Targets Found: 2
+2026-01-26 12:26:40,489 - INFO -    Specs Preview: [('Targets', 'CD3 & GD2'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:26:40,769 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gd2-tandem-scfv-83.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:26:40,786 - INFO - 💤 Sleeping 5.5s...
+2026-01-26 12:26:52,549 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cea-tandem-fab-260.htm:
+2026-01-26 12:26:52,550 - INFO -    Name: Recombinant Anti-CD3 x Anti-CEA Bispecific Antibody (Tandem Fab) (BSFAB-072) - Creative Biolabs
+2026-01-26 12:26:52,550 - INFO -    CatNo: CB-260
+2026-01-26 12:26:52,550 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CEA Bispecific Antibod...
+2026-01-26 12:26:52,550 - INFO -    Specs Count: 12
+2026-01-26 12:26:52,550 - INFO -    Targets Found: 2
+2026-01-26 12:26:52,551 - INFO -    Specs Preview: [('Targets', 'CD3 & CEA'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:26:52,833 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cea-tandem-fab-260.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:26:52,851 - INFO - 💤 Sleeping 11.6s...
+2026-01-26 12:28:36,581 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:28:37,101 - INFO - 🌐 Launching Browser with Local IP (Proxy Disabled)
+2026-01-26 12:28:37,341 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:28:45,540 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:28:50,313 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-hbvgp3-tandem-fab-277.htm:
+2026-01-26 12:28:50,313 - INFO -    Name: Recombinant Anti-CD3 x Anti-HBVgp3 Bispecific Antibody (Tandem Fab) (BSFAB-089) - Creative Biolabs
+2026-01-26 12:28:50,313 - INFO -    CatNo: CB-277
+2026-01-26 12:28:50,314 - INFO -    Summary: Recombinant Anti-CD3 x Anti-HBVgp3 Bispecific Anti...
+2026-01-26 12:28:50,314 - INFO -    Specs Count: 12
+2026-01-26 12:28:50,314 - INFO -    Targets Found: 2
+2026-01-26 12:28:50,314 - INFO -    Specs Preview: [('Targets', 'CD3 & HBVgp3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:28:50,737 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hbvgp3-tandem-fab-277.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:28:50,755 - INFO - 💤 Sleeping 6.3s...
+2026-01-26 12:29:02,914 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd28-cd3-tandem-scfv-54.htm:
+2026-01-26 12:29:02,914 - INFO -    Name: Recombinant Anti-CD28 x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-054) - Creative Biolabs
+2026-01-26 12:29:02,914 - INFO -    CatNo: CB-54
+2026-01-26 12:29:02,914 - INFO -    Summary: Recombinant Anti-CD28 x Anti-CD3 Bispecific Antibo...
+2026-01-26 12:29:02,915 - INFO -    Specs Count: 12
+2026-01-26 12:29:02,915 - INFO -    Targets Found: 2
+2026-01-26 12:29:02,915 - INFO -    Specs Preview: [('Targets', 'CD28 & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:29:03,186 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd28-cd3-tandem-scfv-54.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:29:03,203 - INFO - 💤 Sleeping 6.0s...
+2026-01-26 12:29:12,662 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-gpnmb-tandem-fab-276.htm:
+2026-01-26 12:29:12,662 - INFO -    Name: Recombinant Anti-CD3 x Anti-GPNMB Bispecific Antibody (Tandem Fab) (BSFAB-088) - Creative Biolabs
+2026-01-26 12:29:12,662 - INFO -    CatNo: CB-276
+2026-01-26 12:29:12,663 - INFO -    Summary: Recombinant Anti-CD3 x Anti-GPNMB Bispecific Antib...
+2026-01-26 12:29:12,663 - INFO -    Specs Count: 12
+2026-01-26 12:29:12,663 - INFO -    Targets Found: 2
+2026-01-26 12:29:12,663 - INFO -    Specs Preview: [('Targets', 'CD3 & GPNMB'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:29:12,934 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gpnmb-tandem-fab-276.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:29:12,951 - INFO - 💤 Sleeping 10.5s...
+2026-01-26 12:29:27,792 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cd30-tandem-fab-253.htm:
+2026-01-26 12:29:27,792 - INFO -    Name: Recombinant Anti-CD3 x Anti-CD30 Bispecific Antibody (Tandem Fab) (BSFAB-065) - Creative Biolabs
+2026-01-26 12:29:27,792 - INFO -    CatNo: CB-253
+2026-01-26 12:29:27,792 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CD30 Bispecific Antibo...
+2026-01-26 12:29:27,792 - INFO -    Specs Count: 12
+2026-01-26 12:29:27,793 - INFO -    Targets Found: 2
+2026-01-26 12:29:27,793 - INFO -    Specs Preview: [('Targets', 'CD3 & CD30'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:29:28,066 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd30-tandem-fab-253.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:29:28,084 - INFO - 💤 Sleeping 8.5s...
+2026-01-26 12:29:41,105 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cd30-tandem-scfv-65.htm:
+2026-01-26 12:29:41,106 - INFO -    Name: Recombinant Anti-CD3 x Anti-CD30 Bispecific Antibody (Tandem scFv) (BSFV-065) - Creative Biolabs
+2026-01-26 12:29:41,106 - INFO -    CatNo: CB-65
+2026-01-26 12:29:41,106 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CD30 Bispecific Antibo...
+2026-01-26 12:29:41,106 - INFO -    Specs Count: 12
+2026-01-26 12:29:41,106 - INFO -    Targets Found: 2
+2026-01-26 12:29:41,107 - INFO -    Specs Preview: [('Targets', 'CD3 & CD30'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:29:41,376 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd30-tandem-scfv-65.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:29:41,393 - INFO - 💤 Sleeping 6.1s...
+2026-01-26 12:29:52,520 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-pd1-tandem-scfv-98.htm:
+2026-01-26 12:29:52,521 - INFO -    Name: Recombinant Anti-CD3 x Anti-PD1 Bispecific Antibody (Tandem scFv) (BSFV-098) - Creative Biolabs
+2026-01-26 12:29:52,521 - INFO -    CatNo: CB-98
+2026-01-26 12:29:52,521 - INFO -    Summary: Recombinant Anti-CD3 x Anti-PD1 Bispecific Antibod...
+2026-01-26 12:29:52,521 - INFO -    Specs Count: 12
+2026-01-26 12:29:52,521 - INFO -    Targets Found: 2
+2026-01-26 12:29:52,521 - INFO -    Specs Preview: [('Targets', 'CD3 & PD1'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:29:52,786 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-pd1-tandem-scfv-98.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:29:52,803 - INFO - 💤 Sleeping 6.6s...
+2026-01-26 12:30:03,752 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-b7h6-cd3-tandem-scfv-17.htm:
+2026-01-26 12:30:03,752 - INFO -    Name: Recombinant Anti-B7H6 x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-017) - Creative Biolabs
+2026-01-26 12:30:03,752 - INFO -    CatNo: CB-17
+2026-01-26 12:30:03,752 - INFO -    Summary: Recombinant Anti-B7H6 x Anti-CD3 Bispecific Antibo...
+2026-01-26 12:30:03,752 - INFO -    Specs Count: 12
+2026-01-26 12:30:03,752 - INFO -    Targets Found: 2
+2026-01-26 12:30:03,753 - INFO -    Specs Preview: [('Targets', 'B7H6 & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:30:04,028 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-b7h6-cd3-tandem-scfv-17.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:30:04,045 - INFO - 💤 Sleeping 10.4s...
+2026-01-26 12:30:19,457 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-plap-tandem-scfv-99.htm:
+2026-01-26 12:30:19,458 - INFO -    Name: Recombinant Anti-CD3 x Anti-PLAP Bispecific Antibody (Tandem scFv) (BSFV-099) - Creative Biolabs
+2026-01-26 12:30:19,458 - INFO -    CatNo: CB-99
+2026-01-26 12:30:19,458 - INFO -    Summary: Recombinant Anti-CD3 x Anti-PLAP Bispecific Antibo...
+2026-01-26 12:30:19,458 - INFO -    Specs Count: 12
+2026-01-26 12:30:19,458 - INFO -    Targets Found: 2
+2026-01-26 12:30:19,458 - INFO -    Specs Preview: [('Targets', 'CD3 & PLAP'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:30:19,727 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-plap-tandem-scfv-99.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:30:19,746 - INFO - 💤 Sleeping 8.4s...
+2026-01-26 12:30:34,162 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/webinar-harnessing-the-power-of-bispecific-antibodies.htm:
+2026-01-26 12:30:34,162 - INFO -    Name: Webinar: Harnessing the Power of Bispecific Antibodies - Creative Biolabs
+2026-01-26 12:30:34,162 - INFO -    CatNo: CB-antibodies
+2026-01-26 12:30:34,162 - INFO -    Summary: ...
+2026-01-26 12:30:34,162 - INFO -    Specs Count: 0
+2026-01-26 12:30:34,163 - INFO -    Targets Found: 0
+2026-01-26 12:30:34,163 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:30:34,424 - ERROR - Error processing https://www.creative-biolabs.com/bsab/webinar-harnessing-the-power-of-bispecific-antibodies.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:30:34,441 - INFO - 💤 Sleeping 6.0s...
+2026-01-26 12:30:47,152 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-a20-hl-idiotype-cd3-tandem-scfv-15.htm:
+2026-01-26 12:30:47,153 - INFO -    Name: Recombinant Anti-B Cell Lymphoma A20-HL Idiotype x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-015) - Creative Biolabs
+2026-01-26 12:30:47,153 - INFO -    CatNo: CB-15
+2026-01-26 12:30:47,153 - INFO -    Summary: Recombinant Anti-B cell lymphoma A20-HL Idiotype x...
+2026-01-26 12:30:47,154 - INFO -    Specs Count: 12
+2026-01-26 12:30:47,154 - INFO -    Targets Found: 2
+2026-01-26 12:30:47,154 - INFO -    Specs Preview: [('Targets', 'B Cell Lymphoma A20-HL Idiotype & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Mouse')]...
+2026-01-26 12:30:47,432 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-a20-hl-idiotype-cd3-tandem-scfv-15.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:30:47,449 - INFO - 💤 Sleeping 6.2s...
+2026-01-26 12:30:57,706 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-fragments.htm:
+2026-01-26 12:30:57,706 - INFO -    Name: Bispecific Antibody (BsAb) Fragments Generation Service - Creative Biolabs
+2026-01-26 12:30:57,707 - INFO -    CatNo: CB-fragments
+2026-01-26 12:30:57,707 - INFO -    Summary: ...
+2026-01-26 12:30:57,707 - INFO -    Specs Count: 0
+2026-01-26 12:30:57,707 - INFO -    Targets Found: 0
+2026-01-26 12:30:57,707 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:30:57,993 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-fragments.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:30:58,007 - INFO - 💤 Sleeping 6.7s...
+2026-01-26 12:31:10,125 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-trop2-tandem-scfv-107.htm:
+2026-01-26 12:31:10,125 - INFO -    Name: Recombinant Anti-CD3 x Anti-TROP2 Bispecific Antibody (Tandem scFv) (BSFV-107) - Creative Biolabs
+2026-01-26 12:31:10,125 - INFO -    CatNo: CB-107
+2026-01-26 12:31:10,125 - INFO -    Summary: Recombinant Anti-CD3 x Anti-TROP2 Bispecific Antib...
+2026-01-26 12:31:10,126 - INFO -    Specs Count: 12
+2026-01-26 12:31:10,126 - INFO -    Targets Found: 2
+2026-01-26 12:31:10,126 - INFO -    Specs Preview: [('Targets', 'CD3 & TROP2'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:31:10,422 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-trop2-tandem-scfv-107.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:31:10,438 - INFO - 💤 Sleeping 10.1s...
+2026-01-26 12:31:26,680 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-dll3-tandem-scfv-76.htm:
+2026-01-26 12:31:26,680 - INFO -    Name: Recombinant Anti-CD3 x Anti-DLL3 Bispecific Antibody (Tandem scFv) (BSFV-076) - Creative Biolabs
+2026-01-26 12:31:26,681 - INFO -    CatNo: CB-76
+2026-01-26 12:31:26,681 - INFO -    Summary: Recombinant Anti-CD3 x Anti-DLL3 Bispecific Antibo...
+2026-01-26 12:31:26,681 - INFO -    Specs Count: 12
+2026-01-26 12:31:26,681 - INFO -    Targets Found: 2
+2026-01-26 12:31:26,681 - INFO -    Specs Preview: [('Targets', 'CD3 & DLL3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:31:26,959 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-dll3-tandem-scfv-76.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:31:26,977 - INFO - 💤 Sleeping 8.3s...
+2026-01-26 12:31:39,012 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-aptamer-drug-conjugates.htm:
+2026-01-26 12:31:39,012 - INFO -    Name: Bispecific Aptamer-Drug Conjugates - Creative Biolabs
+2026-01-26 12:31:39,013 - INFO -    CatNo: CB-conjugates
+2026-01-26 12:31:39,013 - INFO -    Summary: ...
+2026-01-26 12:31:39,013 - INFO -    Specs Count: 0
+2026-01-26 12:31:39,013 - INFO -    Targets Found: 0
+2026-01-26 12:31:39,013 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:31:39,281 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-aptamer-drug-conjugates.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:31:39,298 - INFO - 💤 Sleeping 9.6s...
+2026-01-26 12:31:54,583 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-fab-272.htm:
+2026-01-26 12:31:54,584 - INFO -    Name: Recombinant Anti-CD3 x Anti-HIV-1 gp120 Bispecific Antibody (Tandem Fab) (BSFAB-084) - Creative Biolabs
+2026-01-26 12:31:54,584 - INFO -    CatNo: CB-272
+2026-01-26 12:31:54,584 - INFO -    Summary: Recombinant Anti-CD3 x Anti-HIV-1 gp120 Bispecific...
+2026-01-26 12:31:54,584 - INFO -    Specs Count: 12
+2026-01-26 12:31:54,584 - INFO -    Targets Found: 2
+2026-01-26 12:31:54,585 - INFO -    Specs Preview: [('Targets', 'CD3 & HIV-1 gp120'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:31:54,875 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-fab-272.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:31:54,892 - INFO - 💤 Sleeping 11.2s...
+2026-01-26 12:32:10,520 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-29.htm:
+2026-01-26 12:32:10,521 - INFO -    Name: Recombinant Anti-CCR5 x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-029) - Creative Biolabs
+2026-01-26 12:32:10,521 - INFO -    CatNo: CB-29
+2026-01-26 12:32:10,521 - INFO -    Summary: Recombinant Anti-CCR5 x Anti-CD3 Bispecific Antibo...
+2026-01-26 12:32:10,521 - INFO -    Specs Count: 12
+2026-01-26 12:32:10,521 - INFO -    Targets Found: 2
+2026-01-26 12:32:10,521 - INFO -    Specs Preview: [('Targets', 'CCR5 & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:32:10,789 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-29.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:32:10,807 - INFO - 💤 Sleeping 6.8s...
+2026-01-26 12:32:23,662 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-gpc3-tandem-fab-275.htm:
+2026-01-26 12:32:23,663 - INFO -    Name: Recombinant Anti-CD3 x Anti-GPC3 Bispecific Antibody (Tandem Fab) (BSFAB-087) - Creative Biolabs
+2026-01-26 12:32:23,663 - INFO -    CatNo: CB-275
+2026-01-26 12:32:23,663 - INFO -    Summary: Recombinant Anti-CD3 x Anti-GPC3 Bispecific Antibo...
+2026-01-26 12:32:23,663 - INFO -    Specs Count: 12
+2026-01-26 12:32:23,663 - INFO -    Targets Found: 2
+2026-01-26 12:32:23,664 - INFO -    Specs Preview: [('Targets', 'CD3 & GPC3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:32:23,930 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gpc3-tandem-fab-275.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:32:23,948 - INFO - 💤 Sleeping 6.3s...
+2026-01-26 12:34:45,185 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:34:45,708 - INFO - 🌐 Launching Browser with Local IP (Proxy Disabled)
+2026-01-26 12:34:45,959 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:34:53,852 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:34:58,792 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-sequencing.htm:
+2026-01-26 12:34:58,793 - INFO -    Name: Bispecific Antibody (BsAb) Sequencing - Creative Biolabs
+2026-01-26 12:34:58,793 - INFO -    CatNo: CB-sequencing
+2026-01-26 12:34:58,793 - INFO -    Summary: ...
+2026-01-26 12:34:58,793 - INFO -    Specs Count: 0
+2026-01-26 12:34:58,793 - INFO -    Targets Found: 0
+2026-01-26 12:34:58,793 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:34:59,207 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-sequencing.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:34:59,222 - INFO - 💤 Sleeping 9.3s...
+2026-01-26 12:35:12,732 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-met-tandem-fab-262.htm:
+2026-01-26 12:35:12,733 - INFO -    Name: Recombinant Anti-CD3 x Anti-MET Bispecific Antibody (Tandem Fab) (BSFAB-074) - Creative Biolabs
+2026-01-26 12:35:12,733 - INFO -    CatNo: CB-262
+2026-01-26 12:35:12,733 - INFO -    Summary: Recombinant Anti-CD3 x Anti-MET Bispecific Antibod...
+2026-01-26 12:35:12,733 - INFO -    Specs Count: 12
+2026-01-26 12:35:12,733 - INFO -    Targets Found: 2
+2026-01-26 12:35:12,733 - INFO -    Specs Preview: [('Targets', 'CD3 & MET'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:35:13,011 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-met-tandem-fab-262.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:35:13,029 - INFO - 💤 Sleeping 6.3s...
+2026-01-26 12:35:22,866 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-pd1-tandem-scfv-98.htm:
+2026-01-26 12:35:22,866 - INFO -    Name: Recombinant Anti-CD3 x Anti-PD1 Bispecific Antibody (Tandem scFv) (BSFV-098) - Creative Biolabs
+2026-01-26 12:35:22,866 - INFO -    CatNo: CB-98
+2026-01-26 12:35:22,866 - INFO -    Summary: Recombinant Anti-CD3 x Anti-PD1 Bispecific Antibod...
+2026-01-26 12:35:22,867 - INFO -    Specs Count: 12
+2026-01-26 12:35:22,867 - INFO -    Targets Found: 2
+2026-01-26 12:35:22,867 - INFO -    Specs Preview: [('Targets', 'CD3 & PD1'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:35:23,125 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-pd1-tandem-scfv-98.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:35:23,141 - INFO - 💤 Sleeping 5.2s...
+2026-01-26 12:35:32,281 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-scfv-84.htm:
+2026-01-26 12:35:32,281 - INFO -    Name: Recombinant Anti-CD3 x Anti-HIV-1 gp120 Bispecific Antibody (Tandem scFv) (BSFV-084) - Creative Biolabs
+2026-01-26 12:35:32,281 - INFO -    CatNo: CB-84
+2026-01-26 12:35:32,281 - INFO -    Summary: Recombinant Anti-CD3 x Anti-HIV-1 gp120 Bispecific...
+2026-01-26 12:35:32,281 - INFO -    Specs Count: 12
+2026-01-26 12:35:32,282 - INFO -    Targets Found: 2
+2026-01-26 12:35:32,282 - INFO -    Specs Preview: [('Targets', 'CD3 & HIV-1 gp120'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:35:32,600 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hiv-1-gp120-tandem-scfv-84.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:35:32,617 - INFO - 💤 Sleeping 7.3s...
+2026-01-26 12:35:45,579 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cd74-tandem-fab-257.htm:
+2026-01-26 12:35:45,579 - INFO -    Name: Recombinant Anti-CD3 x Anti-CD74 Bispecific Antibody (Tandem Fab) (BSFAB-069) - Creative Biolabs
+2026-01-26 12:35:45,580 - INFO -    CatNo: CB-257
+2026-01-26 12:35:45,580 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CD74 Bispecific Antibo...
+2026-01-26 12:35:45,580 - INFO -    Specs Count: 12
+2026-01-26 12:35:45,580 - INFO -    Targets Found: 2
+2026-01-26 12:35:45,580 - INFO -    Specs Preview: [('Targets', 'CD3 & CD74'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:35:45,841 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd74-tandem-fab-257.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:35:45,857 - INFO - 💤 Sleeping 10.9s...
+2026-01-26 12:36:02,309 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-fusion-proteins.htm:
+2026-01-26 12:36:02,310 - INFO -    Name: Bispecific Fusion Proteins Generation Service for Bispecific Antibody - Creative Biolabs
+2026-01-26 12:36:02,310 - INFO -    CatNo: CB-proteins
+2026-01-26 12:36:02,310 - INFO -    Summary: ...
+2026-01-26 12:36:02,310 - INFO -    Specs Count: 0
+2026-01-26 12:36:02,310 - INFO -    Targets Found: 0
+2026-01-26 12:36:02,310 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:36:02,580 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-fusion-proteins.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:36:02,594 - INFO - 💤 Sleeping 9.8s...
+2026-01-26 12:36:17,760 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cd8-tandem-scfv-71.htm:
+2026-01-26 12:36:17,761 - INFO -    Name: Recombinant Anti-CD3 x Anti-CD8 Bispecific Antibody (Tandem scFv) (BSFV-071) - Creative Biolabs
+2026-01-26 12:36:17,761 - INFO -    CatNo: CB-71
+2026-01-26 12:36:17,761 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CD8 Bispecific Antibod...
+2026-01-26 12:36:17,761 - INFO -    Specs Count: 12
+2026-01-26 12:36:17,761 - INFO -    Targets Found: 2
+2026-01-26 12:36:17,761 - INFO -    Specs Preview: [('Targets', 'CD3 & CD8'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:36:18,030 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd8-tandem-scfv-71.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:36:18,050 - INFO - 💤 Sleeping 7.7s...
+2026-01-26 12:36:31,783 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-mimetics-development.htm:
+2026-01-26 12:36:31,784 - INFO -    Name: Bispecific Antibody Mimetics Development - Creative Biolabs
+2026-01-26 12:36:31,784 - INFO -    CatNo: CB-development
+2026-01-26 12:36:31,784 - INFO -    Summary: ...
+2026-01-26 12:36:31,784 - INFO -    Specs Count: 0
+2026-01-26 12:36:31,784 - INFO -    Targets Found: 0
+2026-01-26 12:36:31,784 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:36:32,067 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-mimetics-development.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:36:32,081 - INFO - 💤 Sleeping 8.8s...
+2026-01-26 12:36:46,284 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/category/bispecific-immunotoxin-85.htm:
+2026-01-26 12:36:46,285 - INFO -    Name: Bispecific immunotoxin - Creative Biolabs
+2026-01-26 12:36:46,285 - INFO -    CatNo: CB-85
+2026-01-26 12:36:46,285 - INFO -    Summary: ...
+2026-01-26 12:36:46,285 - INFO -    Specs Count: 0
+2026-01-26 12:36:46,285 - INFO -    Targets Found: 0
+2026-01-26 12:36:46,286 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:36:46,608 - ERROR - Error processing https://www.creative-biolabs.com/bsab/category/bispecific-immunotoxin-85.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:36:46,621 - INFO - 💤 Sleeping 7.5s...
+2026-01-26 12:37:00,376 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cd74-tandem-scfv-69.htm:
+2026-01-26 12:37:00,376 - INFO -    Name: Recombinant Anti-CD3 x Anti-CD74 Bispecific Antibody (Tandem scFv) (BSFV-069) - Creative Biolabs
+2026-01-26 12:37:00,376 - INFO -    CatNo: CB-69
+2026-01-26 12:37:00,377 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CD74 Bispecific Antibo...
+2026-01-26 12:37:00,377 - INFO -    Specs Count: 12
+2026-01-26 12:37:00,377 - INFO -    Targets Found: 2
+2026-01-26 12:37:00,377 - INFO -    Specs Preview: [('Targets', 'CD3 & CD74'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:37:00,721 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cd74-tandem-scfv-69.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:37:00,737 - INFO - 💤 Sleeping 5.2s...
+2026-01-26 12:37:11,056 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-gpc3-tandem-fab-275.htm:
+2026-01-26 12:37:11,056 - INFO -    Name: Recombinant Anti-CD3 x Anti-GPC3 Bispecific Antibody (Tandem Fab) (BSFAB-087) - Creative Biolabs
+2026-01-26 12:37:11,056 - INFO -    CatNo: CB-275
+2026-01-26 12:37:11,056 - INFO -    Summary: Recombinant Anti-CD3 x Anti-GPC3 Bispecific Antibo...
+2026-01-26 12:37:11,056 - INFO -    Specs Count: 12
+2026-01-26 12:37:11,057 - INFO -    Targets Found: 2
+2026-01-26 12:37:11,057 - INFO -    Specs Preview: [('Targets', 'CD3 & GPC3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:37:11,309 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gpc3-tandem-fab-275.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:37:11,324 - INFO - 💤 Sleeping 7.5s...
+2026-01-26 12:37:24,031 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-29.htm:
+2026-01-26 12:37:24,031 - INFO -    Name: Recombinant Anti-CCR5 x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-029) - Creative Biolabs
+2026-01-26 12:37:24,032 - INFO -    CatNo: CB-29
+2026-01-26 12:37:24,032 - INFO -    Summary: Recombinant Anti-CCR5 x Anti-CD3 Bispecific Antibo...
+2026-01-26 12:37:24,032 - INFO -    Specs Count: 12
+2026-01-26 12:37:24,032 - INFO -    Targets Found: 2
+2026-01-26 12:37:24,032 - INFO -    Specs Preview: [('Targets', 'CCR5 & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:37:24,292 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-29.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:37:24,306 - INFO - 💤 Sleeping 6.6s...
+2026-01-26 12:37:34,289 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-aptamer-development.htm:
+2026-01-26 12:37:34,289 - INFO -    Name: Bispecific Aptamer Development - Creative Biolabs
+2026-01-26 12:37:34,290 - INFO -    CatNo: CB-development
+2026-01-26 12:37:34,290 - INFO -    Summary: ...
+2026-01-26 12:37:34,290 - INFO -    Specs Count: 0
+2026-01-26 12:37:34,290 - INFO -    Targets Found: 0
+2026-01-26 12:37:34,290 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:37:34,550 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-aptamer-development.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:37:34,562 - INFO - 💤 Sleeping 8.2s...
+2026-01-26 12:37:47,761 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-vegfr1-tandem-scfv-108.htm:
+2026-01-26 12:37:47,761 - INFO -    Name: Recombinant Anti-CD3 x Anti-VEGFR1 Bispecific Antibody (Tandem scFv) (BSFV-108) - Creative Biolabs
+2026-01-26 12:37:47,761 - INFO -    CatNo: CB-108
+2026-01-26 12:37:47,761 - INFO -    Summary: Recombinant Anti-CD3 x Anti-VEGFR1 Bispecific Anti...
+2026-01-26 12:37:47,761 - INFO -    Specs Count: 12
+2026-01-26 12:37:47,762 - INFO -    Targets Found: 2
+2026-01-26 12:37:47,762 - INFO -    Specs Preview: [('Targets', 'CD3 & VEGFR1'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:37:48,012 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-vegfr1-tandem-scfv-108.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:37:48,028 - INFO - 💤 Sleeping 9.8s...
+2026-01-26 12:38:02,477 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-csl-cd3-tandem-scfv-144.htm:
+2026-01-26 12:38:02,477 - INFO -    Name: Recombinant Anti-Csl x Anti-CD3 Bispecific Antibody (Tandem scFv) (BSFV-144) - Creative Biolabs
+2026-01-26 12:38:02,478 - INFO -    CatNo: CB-144
+2026-01-26 12:38:02,478 - INFO -    Summary: Recombinant Anti-Csl x Anti-CD3 Bispecific Antibod...
+2026-01-26 12:38:02,478 - INFO -    Specs Count: 12
+2026-01-26 12:38:02,478 - INFO -    Targets Found: 2
+2026-01-26 12:38:02,478 - INFO -    Specs Preview: [('Targets', 'Csl & CD3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:38:02,748 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-csl-cd3-tandem-scfv-144.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:38:02,764 - INFO - 💤 Sleeping 7.9s...
+2026-01-26 12:38:16,676 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-ca72-4-cd3-tandem-fab-215.htm:
+2026-01-26 12:38:16,676 - INFO -    Name: Recombinant Anti-CA72-4 x Anti-CD3 Bispecific Antibody (Tandem Fab) (BSFAB-027) - Creative Biolabs
+2026-01-26 12:38:16,676 - INFO -    CatNo: CB-215
+2026-01-26 12:38:16,676 - INFO -    Summary: Recombinant Anti-CA72-4 x Anti-CD3 Bispecific Anti...
+2026-01-26 12:38:16,676 - INFO -    Specs Count: 12
+2026-01-26 12:38:16,677 - INFO -    Targets Found: 2
+2026-01-26 12:38:16,677 - INFO -    Specs Preview: [('Targets', 'CA72-4 & CD3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:38:16,953 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ca72-4-cd3-tandem-fab-215.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:38:16,968 - INFO - 💤 Sleeping 11.2s...
+2026-01-26 12:38:33,971 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-p97-tandem-scfv-97.htm:
+2026-01-26 12:38:33,971 - INFO -    Name: Recombinant Anti-CD3 x Anti-p97 Bispecific Antibody (Tandem scFv) (BSFV-097) - Creative Biolabs
+2026-01-26 12:38:33,971 - INFO -    CatNo: CB-97
+2026-01-26 12:38:33,971 - INFO -    Summary: Recombinant Anti-CD3 x Anti-p97 Bispecific Antibod...
+2026-01-26 12:38:33,971 - INFO -    Specs Count: 12
+2026-01-26 12:38:33,972 - INFO -    Targets Found: 2
+2026-01-26 12:38:33,972 - INFO -    Specs Preview: [('Targets', 'CD3 & p97'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:38:34,243 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-p97-tandem-scfv-97.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:38:34,260 - INFO - 💤 Sleeping 5.1s...
+2026-01-26 12:38:44,300 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-il2r-tandem-scfv-93.htm:
+2026-01-26 12:38:44,300 - INFO -    Name: Recombinant Anti-CD3 x Anti-IL2R Bispecific Antibody (Tandem scFv) (BSFV-093) - Creative Biolabs
+2026-01-26 12:38:44,301 - INFO -    CatNo: CB-93
+2026-01-26 12:38:44,301 - INFO -    Summary: Recombinant Anti-CD3 x Anti-IL2R Bispecific Antibo...
+2026-01-26 12:38:44,301 - INFO -    Specs Count: 12
+2026-01-26 12:38:44,301 - INFO -    Targets Found: 2
+2026-01-26 12:38:44,301 - INFO -    Specs Preview: [('Targets', 'CD3 & IL2R'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:38:44,563 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-il2r-tandem-scfv-93.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:38:44,580 - INFO - 💤 Sleeping 5.1s...
+2026-01-26 12:38:55,139 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-igf1r-tandem-fab-280.htm:
+2026-01-26 12:38:55,139 - INFO -    Name: Recombinant Anti-CD3 x Anti-IGF1R Bispecific Antibody (Tandem Fab) (BSFAB-092) - Creative Biolabs
+2026-01-26 12:38:55,139 - INFO -    CatNo: CB-280
+2026-01-26 12:38:55,139 - INFO -    Summary: Recombinant Anti-CD3 x Anti-IGF1R Bispecific Antib...
+2026-01-26 12:38:55,140 - INFO -    Specs Count: 12
+2026-01-26 12:38:55,140 - INFO -    Targets Found: 2
+2026-01-26 12:38:55,140 - INFO -    Specs Preview: [('Targets', 'CD3 & IGF1R'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:38:55,431 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-igf1r-tandem-fab-280.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:38:55,447 - INFO - 💤 Sleeping 8.7s...
+2026-01-26 12:39:10,909 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-purification.htm:
+2026-01-26 12:39:10,909 - INFO -    Name: Bispecific Antibody (BsAb) Purification - Creative Biolabs
+2026-01-26 12:39:10,909 - INFO -    CatNo: CB-purification
+2026-01-26 12:39:10,909 - INFO -    Summary: ...
+2026-01-26 12:39:10,909 - INFO -    Specs Count: 0
+2026-01-26 12:39:10,910 - INFO -    Targets Found: 0
+2026-01-26 12:39:10,910 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:39:11,183 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-bsab-purification.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:39:11,198 - INFO - 💤 Sleeping 6.6s...
+2026-01-26 12:39:22,166 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-bcl1-idiotype-cd3-tandem-fab-204.htm:
+2026-01-26 12:39:22,167 - INFO -    Name: Recombinant Anti-B Cell Lymphoma BCL1 Idiotype x Anti-CD3 Bispecific Antibody (Tandem Fab) (BSFAB-016) - Creative Biolabs
+2026-01-26 12:39:22,167 - INFO -    CatNo: CB-204
+2026-01-26 12:39:22,167 - INFO -    Summary: Recombinant Anti-B cell lymphoma BCL1 Idiotype x A...
+2026-01-26 12:39:22,168 - INFO -    Specs Count: 12
+2026-01-26 12:39:22,168 - INFO -    Targets Found: 2
+2026-01-26 12:39:22,168 - INFO -    Specs Preview: [('Targets', 'B Cell Lymphoma BCL1 Idiotype & CD3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Mouse')]...
+2026-01-26 12:39:22,429 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-b-cell-lymphoma-bcl1-idiotype-cd3-tandem-fab-204.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:39:22,446 - INFO - 💤 Sleeping 9.1s...
+2026-01-26 12:39:37,273 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-hbvgp3-tandem-fab-277.htm:
+2026-01-26 12:39:37,274 - INFO -    Name: Recombinant Anti-CD3 x Anti-HBVgp3 Bispecific Antibody (Tandem Fab) (BSFAB-089) - Creative Biolabs
+2026-01-26 12:39:37,274 - INFO -    CatNo: CB-277
+2026-01-26 12:39:37,274 - INFO -    Summary: Recombinant Anti-CD3 x Anti-HBVgp3 Bispecific Anti...
+2026-01-26 12:39:37,274 - INFO -    Specs Count: 12
+2026-01-26 12:39:37,274 - INFO -    Targets Found: 2
+2026-01-26 12:39:37,274 - INFO -    Specs Preview: [('Targets', 'CD3 & HBVgp3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:39:37,531 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-hbvgp3-tandem-fab-277.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:39:37,548 - INFO - 💤 Sleeping 7.6s...
+2026-01-26 12:39:48,614 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cea-tandem-fab-260.htm:
+2026-01-26 12:39:48,615 - INFO -    Name: Recombinant Anti-CD3 x Anti-CEA Bispecific Antibody (Tandem Fab) (BSFAB-072) - Creative Biolabs
+2026-01-26 12:39:48,615 - INFO -    CatNo: CB-260
+2026-01-26 12:39:48,615 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CEA Bispecific Antibod...
+2026-01-26 12:39:48,615 - INFO -    Specs Count: 12
+2026-01-26 12:39:48,615 - INFO -    Targets Found: 2
+2026-01-26 12:39:48,616 - INFO -    Specs Preview: [('Targets', 'CD3 & CEA'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:39:48,871 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cea-tandem-fab-260.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:39:48,889 - INFO - 💤 Sleeping 7.3s...
+2026-01-26 12:40:02,153 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-drug-conjugates-development.htm:
+2026-01-26 12:40:02,153 - INFO -    Name: Bispecific Antibody-drug Conjugates Development - Creative Biolabs
+2026-01-26 12:40:02,154 - INFO -    CatNo: CB-development
+2026-01-26 12:40:02,154 - INFO -    Summary: ...
+2026-01-26 12:40:02,154 - INFO -    Specs Count: 0
+2026-01-26 12:40:02,154 - INFO -    Targets Found: 0
+2026-01-26 12:40:02,154 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:40:02,447 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-drug-conjugates-development.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:40:02,463 - INFO - 💤 Sleeping 7.9s...
+2026-01-26 12:40:15,297 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-antibody-analysis.htm:
+2026-01-26 12:40:15,297 - INFO -    Name: Bispecific Antibody(BsAb) Analysis - Creative Biolabs
+2026-01-26 12:40:15,298 - INFO -    CatNo: CB-analysis
+2026-01-26 12:40:15,298 - INFO -    Summary: ...
+2026-01-26 12:40:15,298 - INFO -    Specs Count: 0
+2026-01-26 12:40:15,298 - INFO -    Targets Found: 0
+2026-01-26 12:40:15,298 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:40:15,568 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-antibody-analysis.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:40:15,579 - INFO - 💤 Sleeping 10.3s...
+2026-01-26 12:40:30,902 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-b7h3-tandem-fab-252.htm:
+2026-01-26 12:40:30,902 - INFO -    Name: Recombinant Anti-CD3 x Anti-B7H3 Bispecific Antibody (Tandem Fab) (BSFAB-064) - Creative Biolabs
+2026-01-26 12:40:30,902 - INFO -    CatNo: CB-252
+2026-01-26 12:40:30,902 - INFO -    Summary: Recombinant Anti-CD3 x Anti-B7H3 Bispecific Antibo...
+2026-01-26 12:40:30,902 - INFO -    Specs Count: 12
+2026-01-26 12:40:30,903 - INFO -    Targets Found: 2
+2026-01-26 12:40:30,903 - INFO -    Specs Preview: [('Targets', 'CD3 & B7H3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:40:31,178 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-b7h3-tandem-fab-252.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:40:31,193 - INFO - 💤 Sleeping 9.6s...
+2026-01-26 12:40:44,386 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-gpnmb-tandem-scfv-88.htm:
+2026-01-26 12:40:44,387 - INFO -    Name: Recombinant Anti-CD3 x Anti-GPNMB Bispecific Antibody (Tandem scFv) (BSFV-088) - Creative Biolabs
+2026-01-26 12:40:44,387 - INFO -    CatNo: CB-88
+2026-01-26 12:40:44,387 - INFO -    Summary: Recombinant Anti-CD3 x Anti-GPNMB Bispecific Antib...
+2026-01-26 12:40:44,387 - INFO -    Specs Count: 12
+2026-01-26 12:40:44,387 - INFO -    Targets Found: 2
+2026-01-26 12:40:44,388 - INFO -    Specs Preview: [('Targets', 'CD3 & GPNMB'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:40:44,656 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-gpnmb-tandem-scfv-88.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:40:44,676 - INFO - 💤 Sleeping 6.5s...
+2026-01-26 12:40:54,799 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-cspg4-tandem-fab-282.htm:
+2026-01-26 12:40:54,800 - INFO -    Name: Recombinant Anti-CD3 x Anti-CSPG4 Bispecific Antibody (Tandem Fab) (BSFAB-094) - Creative Biolabs
+2026-01-26 12:40:54,800 - INFO -    CatNo: CB-282
+2026-01-26 12:40:54,800 - INFO -    Summary: Recombinant Anti-CD3 x Anti-CSPG4 Bispecific Antib...
+2026-01-26 12:40:54,800 - INFO -    Specs Count: 12
+2026-01-26 12:40:54,800 - INFO -    Targets Found: 2
+2026-01-26 12:40:54,800 - INFO -    Specs Preview: [('Targets', 'CD3 & CSPG4'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:40:55,063 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-cspg4-tandem-fab-282.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:40:55,084 - INFO - 💤 Sleeping 8.8s...
+2026-01-26 12:41:08,626 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd3-dll3-tandem-scfv-76.htm:
+2026-01-26 12:41:08,626 - INFO -    Name: Recombinant Anti-CD3 x Anti-DLL3 Bispecific Antibody (Tandem scFv) (BSFV-076) - Creative Biolabs
+2026-01-26 12:41:08,626 - INFO -    CatNo: CB-76
+2026-01-26 12:41:08,626 - INFO -    Summary: Recombinant Anti-CD3 x Anti-DLL3 Bispecific Antibo...
+2026-01-26 12:41:08,627 - INFO -    Specs Count: 12
+2026-01-26 12:41:08,627 - INFO -    Targets Found: 2
+2026-01-26 12:41:08,627 - INFO -    Specs Preview: [('Targets', 'CD3 & DLL3'), ('Type', 'Tandem scFv'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:41:08,915 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-cd3-dll3-tandem-scfv-76.htm: 'SyncQueryRequestBuilder' object has no attribute 'select'
+2026-01-26 12:41:08,940 - INFO - 💤 Sleeping 10.1s...
+2026-01-26 12:41:24,021 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/cell-free-bispecific-antibody-expression.htm:
+2026-01-26 12:41:24,021 - INFO -    Name: Cell-free Bispecific Antibody Expression - Creative Biolabs
+2026-01-26 12:41:24,021 - INFO -    CatNo: CB-expression
+2026-01-26 12:41:24,021 - INFO -    Summary: ...
+2026-01-26 12:41:24,022 - INFO -    Specs Count: 0
+2026-01-26 12:41:24,022 - INFO -    Targets Found: 0
+2026-01-26 12:41:24,022 - WARNING -    ⚠️ Specs are EMPTY! Selectors might be wrong.
+2026-01-26 12:45:43,051 - INFO - 🚀 [CB ANTIBODY] Starting Stealth Harvest. Limit: 1
+2026-01-26 12:45:43,619 - INFO - 🌐 Launching Browser with Local IP (Proxy Disabled)
+2026-01-26 12:45:43,892 - INFO - 💓 [HEARTBEAT] Scanning Target: cd3.htm
+2026-01-26 12:45:52,852 - INFO - 🔎 Found 118 product links.
+2026-01-26 12:46:00,095 - INFO - 🧐 [DEBUG] Parsed Data for https://www.creative-biolabs.com/bsab/bispecific-cd123-cd3-tandem-fab-218.htm:
+2026-01-26 12:46:00,095 - INFO -    Name: Recombinant Anti-CD123 x Anti-CD3 Bispecific Antibody (Tandem Fab) (BSFAB-030) - Creative Biolabs
+2026-01-26 12:46:00,095 - INFO -    CatNo: CB-218
+2026-01-26 12:46:00,095 - INFO -    Summary: Recombinant Anti-CD123 x Anti-CD3 Bispecific Antib...
+2026-01-26 12:46:00,096 - INFO -    Specs Count: 12
+2026-01-26 12:46:00,096 - INFO -    Targets Found: 2
+2026-01-26 12:46:00,096 - INFO -    Specs Preview: [('Targets', 'CD123 & CD3'), ('Type', 'Tandem Fab'), ('Species Reactivity', 'Human')]...
+2026-01-26 12:46:00,798 - INFO - ✅ Saved: CB-218
+2026-01-26 12:46:00,813 - INFO - 📦 Progress: 1/1
+2026-01-26 12:46:00,814 - INFO - 💤 Sleeping 9.9s...
+2026-01-26 12:49:45,965 - INFO - 🚀 [CB ANTIBODY] Starting FULL Harvest (A-Z). Limit: 10000
+2026-01-26 12:49:46,508 - INFO - 🌐 Launching Browser with Proxy: http://gate.decodo.com:10001
+2026-01-26 12:49:46,623 - INFO - 🔗 Fetching Target List from https://www.creative-biolabs.com/bsab/category/by-targets-1377.htm
+2026-01-26 12:49:50,017 - ERROR - ❌ Failed to fetch target list: Page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://www.creative-biolabs.com/bsab/category/by-targets-1377.htm
+Call log:
+  - navigating to "https://www.creative-biolabs.com/bsab/category/by-targets-1377.htm", waiting until "load"
+
+2026-01-26 12:50:40,506 - INFO - 🚀 [CB ANTIBODY] Starting FULL Harvest (A-Z) via Local IP. Limit: 10000
+2026-01-26 12:50:41,074 - INFO - 🌐 Launching Browser with Local IP (Proxy Disabled)
+2026-01-26 12:50:41,178 - INFO - 🔗 Fetching Target List from https://www.creative-biolabs.com/bsab/category/by-targets-1377.htm
+2026-01-26 12:50:52,310 - INFO - ✅ Found 265 unique target categories.
+2026-01-26 12:50:52,318 - INFO - 💓 [HEARTBEAT] Scanning Target: ccr5
+2026-01-26 12:51:02,814 - INFO - 🔎 Found 85 products for ccr5
+2026-01-26 12:51:05,915 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-diabody-12739.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:51:05,924 - INFO - 💤 Sleeping 16.7s (Local IP Safety)...
+2026-01-26 12:51:24,852 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-miniantibody-6474.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:51:24,860 - INFO - 💤 Sleeping 19.3s (Local IP Safety)...
+2026-01-26 12:51:46,184 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fab-sdab-fc-12110.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:51:46,194 - INFO - 💤 Sleeping 12.5s (Local IP Safety)...
+2026-01-26 12:52:00,510 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-single-chain-diabody-3651.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:52:00,517 - INFO - 💤 Sleeping 12.1s (Local IP Safety)...
+2026-01-26 12:52:14,434 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-diabody-599.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:52:14,440 - INFO - 💤 Sleeping 16.9s (Local IP Safety)...
+2026-01-26 12:52:32,982 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-sdab-igg-12058.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:52:32,989 - INFO - 💤 Sleeping 13.8s (Local IP Safety)...
+2026-01-26 12:52:48,861 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-sdab-fc-sdab-12006.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:52:48,868 - INFO - 💤 Sleeping 18.9s (Local IP Safety)...
+2026-01-26 12:53:09,383 - INFO - ✅ Saved: CB-development
+2026-01-26 12:53:09,389 - INFO - 📦 Total Saved: 1
+2026-01-26 12:53:09,390 - INFO - 💤 Sleeping 15.6s (Local IP Safety)...
+2026-01-26 12:53:26,764 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-scdiabody-ch3-8959.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:53:26,770 - INFO - 💤 Sleeping 18.1s (Local IP Safety)...
+2026-01-26 12:53:46,616 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fv-igg-9847.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:53:46,622 - INFO - 💤 Sleeping 19.4s (Local IP Safety)...
+2026-01-26 12:54:07,878 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-scdiabody-fc-8072.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:54:07,885 - INFO - 💤 Sleeping 15.0s (Local IP Safety)...
+2026-01-26 12:54:24,770 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fab-igg-1556.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:54:24,777 - INFO - 💤 Sleeping 19.9s (Local IP Safety)...
+2026-01-26 12:54:46,516 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fab-fv-4878.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:54:46,521 - INFO - 💤 Sleeping 12.5s (Local IP Safety)...
+2026-01-26 12:55:00,771 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-tandem-scfv-2218.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:55:00,778 - INFO - 💤 Sleeping 19.1s (Local IP Safety)...
+2026-01-26 12:55:21,565 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fab-scfv-fc-9137.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:55:21,571 - INFO - 💤 Sleeping 19.8s (Local IP Safety)...
+2026-01-26 12:55:43,189 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-fab-scfv-fc-9314.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:55:43,195 - INFO - 💤 Sleeping 20.0s (Local IP Safety)...
+2026-01-26 12:56:04,870 - ERROR - Error processing https://www.creative-biolabs.com/bsab/bispecific-ccr5-cd3-diabody-ch3-8604.htm: {'message': '"target_master" has no attribute "updated_at"', 'code': '09000', 'hint': None, 'details': None}
+2026-01-26 12:56:04,877 - INFO - 💤 Sleeping 11.3s (Local IP Safety)...

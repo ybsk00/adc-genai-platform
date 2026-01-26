@@ -104,8 +104,8 @@ async def ai_assistant_chat(req: AIChatRequest):
             
         genai.configure(api_key=settings.GOOGLE_API_KEY)
         
-        # 모델 선택 전략: Settings의 모델 -> 1.5 Flash
-        model_name = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+        # 모델 선택 전략: Settings의 모델 -> 2.0 Flash
+        model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
         try:
             model = genai.GenerativeModel(model_name)
         except Exception as e:
@@ -1133,8 +1133,17 @@ async def patch_inventory_item(table: str, id: str, req: PatchRequest, backgroun
     try:
         updates = req.updates
         
-        # 0. Bio Metrics Mapping (Handle missing columns by putting into properties)
-        bio_metrics = ["binding_affinity", "isotype", "host_species", "orr_pct", "os_months", "pfs_months"]
+        # 0. Field Mapping (Handle missing columns by putting into properties)
+        # These fields are not columns in the table but should be stored in the 'properties' JSONB column
+        property_fields = [
+            # Bio Metrics
+            "binding_affinity", "isotype", "host_species", "orr_pct", "os_months", "pfs_months", 
+            "dor_months", "patient_count", "adverse_events_grade3_pct",
+            # ADC Design
+            "target_1", "target_2", "target_symbol", "antibody_format", "linker_type", "dar", "gene_id", "uniprot_id",
+            # Chemical / IP
+            "payload_smiles", "linker_smiles", "full_smiles", "canonical_smiles", "molecular_weight", "patent_id", "patent_expiry"
+        ]
         
         # 1. 수동 수정 플래그 설정
         if table in ["commercial_reagents", "golden_set_library"]:
@@ -1148,13 +1157,19 @@ async def patch_inventory_item(table: str, id: str, req: PatchRequest, backgroun
                 props = (existing.data[0].get("properties") or {}) if existing.data else {}
                 
                 changed = False
-                for metric in bio_metrics:
-                    if metric in updates:
-                        props[metric] = updates[metric]
+                for field in property_fields:
+                    if field in updates:
+                        props[field] = updates[field]
                         # columns don't exist yet, so we remove from top-level updates to avoid PGRST204
-                        del updates[metric]
+                        del updates[field]
                         changed = True
                 
+                # Handle nested properties if sent as a dict (just in case)
+                if "properties" in updates and isinstance(updates["properties"], dict):
+                    props.update(updates["properties"])
+                    del updates["properties"]
+                    changed = True
+
                 if changed:
                     updates["properties"] = props
 

@@ -5,11 +5,12 @@ import sys
 from dotenv import load_dotenv
 
 # Load .env
-env_path = os.path.join(os.getcwd(), "backend", ".env")
-load_dotenv(env_path)
+# Add backend directory to sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 
-# Add backend to path
-sys.path.append(os.path.join(os.getcwd(), "backend"))
+load_dotenv(os.path.join(current_dir, ".env"))
 
 from app.services.ai_refiner import ai_refiner
 from batch_refine_commercial import batch_refine_commercial_reagents

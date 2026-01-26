@@ -322,3 +322,321 @@
 2026-01-25 16:29:27,037 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
 2026-01-25 16:29:32,245 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
 2026-01-25 16:29:37,098 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:49:59,020 - INFO - ✅ Supabase Env Found: URL=https://jrqtkenqmzpoieyusyqh.supabase.co, KEY=**********
+2026-01-25 16:50:00,692 - WARNING - rdkit missing. SMILES validation disabled.
+2026-01-25 16:50:01,873 - INFO - 🚀 [AMBEED LITE] ADC Toxins (Start Page: 1, Limit: 100000)
+2026-01-25 16:50:05,959 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:50:05.959418 - Category: ADC Toxins, Page: 1
+2026-01-25 16:50:05,959 - INFO - 🌐 [PAGE 1] Accessing: https://www.ambeed.com/adc-toxins.html (Sleep: 3.23s)
+2026-01-25 16:50:09,432 - INFO - 📦 [PAGE 1] Processing 20 new products.
+2026-01-25 16:50:09,433 - INFO - 🔨 Refining record: [Cat No.7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 16:50:13,288 - INFO - 🔨 Refining record: [Cat No.daun02] (AI Enriching...)
+2026-01-25 16:50:17,896 - INFO - 🔨 Refining record: [Cat No.(s)-seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:50:22,065 - INFO - 🔨 Refining record: [Cat No.1023758-14-6] (AI Enriching...)
+2026-01-25 16:50:25,885 - INFO - 🔨 Refining record: [Cat No.exatecan] (AI Enriching...)
+2026-01-25 16:50:29,676 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:50:33,932 - INFO - 🔨 Refining record: [Cat No.Duostatin-5] (AI Enriching...)
+2026-01-25 16:50:38,388 - INFO - 🔨 Refining record: [Cat No.auristatin-e] (AI Enriching...)
+2026-01-25 16:50:43,267 - INFO - 🔨 Refining record: [Cat No.fmoc-mmae] (AI Enriching...)
+2026-01-25 16:50:47,730 - INFO - 🔨 Refining record: [Cat No.ac-exatecan] (AI Enriching...)
+2026-01-25 16:50:51,456 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:50:52,206 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:50:52,206 - INFO -    Sample: 7-aminomethyl-10-methyl-11-fluoro-camptothecin - 7-Aminomethyl-10-methyl-11-fluoro camptothecin
+2026-01-25 16:50:52,206 - INFO - 🔨 Refining record: [Cat No.182182-31-6] (AI Enriching...)
+2026-01-25 16:50:55,960 - INFO - 🔨 Refining record: [Cat No.17-aep-ga] (AI Enriching...)
+2026-01-25 16:51:00,665 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 16:51:05,449 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 16:51:09,534 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 16:51:13,885 - INFO - 🔨 Refining record: [Cat No.drf-1042] (AI Enriching...)
+2026-01-25 16:51:17,693 - INFO - 🔨 Refining record: [Cat No.calicheamicin] (AI Enriching...)
+2026-01-25 16:51:22,571 - INFO - 🔨 Refining record: [Cat No.eribulin] (AI Enriching...)
+2026-01-25 16:51:27,277 - INFO - 🔨 Refining record: [Cat No.sg3199] (AI Enriching...)
+2026-01-25 16:51:31,969 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 16:51:36,288 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:51:36,398 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:51:36,399 - INFO -    Sample: 182182-31-6 - 182182-31-6
+2026-01-25 16:51:36,399 - INFO - ✅ [PAGE 1] Completed. [CRAWLER] Moving to Page 2...
+2026-01-25 16:51:38,568 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:51:38.568054 - Category: ADC Toxins, Page: 2
+2026-01-25 16:51:38,568 - INFO - 🌐 [PAGE 2] Accessing: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2 (Sleep: 2.08s)
+2026-01-25 16:51:41,520 - INFO - 📦 [PAGE 2] Processing 20 new products.
+2026-01-25 16:51:41,521 - INFO - 🔨 Refining record: [Cat No.exatecan-mesylate-dihydrate] (AI Enriching...)
+2026-01-25 16:51:45,376 - INFO - 🔨 Refining record: [Cat No.10-methoxycamptothecin] (AI Enriching...)
+2026-01-25 16:51:49,402 - INFO - 🔨 Refining record: [Cat No.mmaf-ome] (AI Enriching...)
+2026-01-25 16:51:54,020 - INFO - 🔨 Refining record: [Cat No.ansamitocin-p-3] (AI Enriching...)
+2026-01-25 16:51:58,287 - INFO - 🔨 Refining record: [Cat No.dm4-sme] (AI Enriching...)
+2026-01-25 16:52:02,541 - INFO - 🔨 Refining record: [Cat No.Tomaymycin-DM] (AI Enriching...)
+2026-01-25 16:52:06,077 - INFO - 🔨 Refining record: [Cat No.dm1] (AI Enriching...)
+2026-01-25 16:52:10,512 - ERROR - Gemini API Error: Invalid \escape: line 3 column 147 (char 152)
+2026-01-25 16:52:10,512 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-e] (AI Enriching...)
+2026-01-25 16:52:15,392 - INFO - 🔨 Refining record: [Cat No.dolastatin-10] (AI Enriching...)
+2026-01-25 16:52:19,697 - INFO - 🔨 Refining record: [Cat No.dm1-sme] (AI Enriching...)
+2026-01-25 16:52:23,936 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:52:24,053 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:52:24,054 - INFO -    Sample: exatecan-mesylate-dihydrate - Exatecan mesylate dihydrate
+2026-01-25 16:52:24,054 - INFO - 🔨 Refining record: [Cat No.hemiasterlin] (AI Enriching...)
+2026-01-25 16:52:27,969 - INFO - 🔨 Refining record: [Cat No.c-11] (AI Enriching...)
+2026-01-25 16:52:32,370 - INFO - 🔨 Refining record: [Cat No.duocarmycin-mb] (AI Enriching...)
+2026-01-25 16:52:36,402 - INFO - 🔨 Refining record: [Cat No.azonafide-peaba] (AI Enriching...)
+2026-01-25 16:52:40,257 - INFO - 🔨 Refining record: [Cat No.dc10sme] (AI Enriching...)
+2026-01-25 16:52:44,380 - INFO - 🔨 Refining record: [Cat No.sc209] (AI Enriching...)
+2026-01-25 16:52:48,891 - INFO - 🔨 Refining record: [Cat No.corixetan] (AI Enriching...)
+2026-01-25 16:52:54,539 - INFO - 🔨 Refining record: [Cat No.tubulysin-im-2] (AI Enriching...)
+2026-01-25 16:52:59,052 - INFO - 🔨 Refining record: [Cat No.2',3'-cgamp-c2-sh] (AI Enriching...)
+2026-01-25 16:53:03,828 - INFO - 🔨 Refining record: [Cat No.fmoc-mmaf-ome] (AI Enriching...)
+2026-01-25 16:53:08,103 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:53:08,506 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:53:08,506 - INFO -    Sample: hemiasterlin - Hemiasterlin
+2026-01-25 16:53:08,506 - INFO - ✅ [PAGE 2] Completed. [CRAWLER] Moving to Page 3...
+2026-01-25 16:53:10,298 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:53:10.298544 - Category: ADC Toxins, Page: 3
+2026-01-25 16:53:10,299 - INFO - 🌐 [PAGE 3] Accessing: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=3 (Sleep: 1.70s)
+2026-01-25 16:53:13,185 - INFO - 📦 [PAGE 3] Processing 20 new products.
+2026-01-25 16:53:13,185 - INFO - 🔨 Refining record: [Cat No.hemiasterlin-derivative-1] (AI Enriching...)
+2026-01-25 16:53:16,678 - INFO - 🔨 Refining record: [Cat No.aniline-mpb-amino-c3-pbd] (AI Enriching...)
+2026-01-25 16:53:20,991 - INFO - 🔨 Refining record: [Cat No.py-mpb-amino-c3-pbd] (AI Enriching...)
+2026-01-25 16:53:25,087 - INFO - 🔨 Refining record: [Cat No.tubulysin-im-1] (AI Enriching...)
+2026-01-25 16:53:29,468 - INFO - 🔨 Refining record: [Cat No.exatecan-methylacetamide-oh] (AI Enriching...)
+2026-01-25 16:53:33,541 - INFO - 🔨 Refining record: [Cat No.7-hydroxyethyl-carbamate-(10me-11f-camptothecin)] (AI Enriching...)
+2026-01-25 16:53:38,152 - INFO - 🔨 Refining record: [Cat No.duocarmycin-ma] (AI Enriching...)
+2026-01-25 16:53:42,395 - INFO - 🔨 Refining record: [Cat No.seco-duocarmycin-tm] (AI Enriching...)
+2026-01-25 16:53:45,595 - INFO - 🔨 Refining record: [Cat No.dc1sme] (AI Enriching...)
+2026-01-25 16:53:49,772 - INFO - 🔨 Refining record: [Cat No.nh2-methylpropanamide-exatecan-tfa] (AI Enriching...)
+2026-01-25 16:53:54,076 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:53:54,208 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:53:54,209 - INFO -    Sample: hemiasterlin-derivative-1 - Hemiasterlin derivative-1
+2026-01-25 16:53:54,209 - INFO - 🔨 Refining record: [Cat No.seco-duocarmycin-sa] (AI Enriching...)
+2026-01-25 16:53:58,086 - INFO - 🔨 Refining record: [Cat No.nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt-hcl] (AI Enriching...)
+2026-01-25 16:54:02,306 - INFO - 🔨 Refining record: [Cat No.pds-mmae] (AI Enriching...)
+2026-01-25 16:54:07,183 - INFO - 🔨 Refining record: [Cat No.tubulysin-m] (AI Enriching...)
+2026-01-25 16:54:11,099 - INFO - 🔨 Refining record: [Cat No.dc41sme] (AI Enriching...)
+2026-01-25 16:54:15,310 - INFO - 🔨 Refining record: [Cat No.aminohexylgeldanamycin] (AI Enriching...)
+2026-01-25 16:54:19,996 - INFO - 🔨 Refining record: [Cat No.tubulysin-e] (AI Enriching...)
+2026-01-25 16:54:24,489 - INFO - 🔨 Refining record: [Cat No.dc41] (AI Enriching...)
+2026-01-25 16:54:28,480 - INFO - 🔨 Refining record: [Cat No.dc4sme] (AI Enriching...)
+2026-01-25 16:54:32,282 - INFO - 🔨 Refining record: [Cat No.dc44sme] (AI Enriching...)
+2026-01-25 16:54:36,291 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:54:36,393 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:54:36,394 - INFO -    Sample: seco-duocarmycin-sa - Seco-Duocarmycin SA
+2026-01-25 16:54:36,394 - INFO - ✅ [PAGE 3] Completed. [CRAWLER] Moving to Page 4...
+2026-01-25 16:54:39,831 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:54:39.831838 - Category: ADC Toxins, Page: 4
+2026-01-25 16:54:39,832 - INFO - 🌐 [PAGE 4] Accessing: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=4 (Sleep: 3.35s)
+2026-01-25 16:54:42,480 - INFO - 📦 [PAGE 4] Processing 20 new products.
+2026-01-25 16:54:42,481 - INFO - 🔨 Refining record: [Cat No.17-gmb-apa-ga] (AI Enriching...)
+2026-01-25 16:54:46,450 - INFO - 🔨 Refining record: [Cat No.tubulysin-h] (AI Enriching...)
+2026-01-25 16:54:50,471 - INFO - 🔨 Refining record: [Cat No.aeruginosin-865] (AI Enriching...)
+2026-01-25 16:54:54,859 - INFO - 🔨 Refining record: [Cat No.diacetyl-agrochelin] (AI Enriching...)
+2026-01-25 16:54:59,446 - INFO - 🔨 Refining record: [Cat No.agrochelin] (AI Enriching...)
+2026-01-25 16:55:03,156 - INFO - 🔨 Refining record: [Cat No.(-)-cbi-cdpi1] (AI Enriching...)
+2026-01-25 16:55:06,895 - INFO - 🔨 Refining record: [Cat No.muscotoxin-a] (AI Enriching...)
+2026-01-25 16:55:12,193 - INFO - 🔨 Refining record: [Cat No.luisol-a] (AI Enriching...)
+2026-01-25 16:55:15,518 - INFO - 🔨 Refining record: [Cat No.tubulysin-d] (AI Enriching...)
+2026-01-25 16:55:20,484 - INFO - 🔨 Refining record: [Cat No.tubulysin-i] (AI Enriching...)
+2026-01-25 16:55:25,378 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:55:25,773 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:55:25,773 - INFO -    Sample: 17-gmb-apa-ga - 17-GMB-APA-GA
+2026-01-25 16:55:25,774 - INFO - 🔨 Refining record: [Cat No.mensacarcin] (AI Enriching...)
+2026-01-25 16:55:29,620 - INFO - 🔨 Refining record: [Cat No.clezutoclax] (AI Enriching...)
+2026-01-25 16:55:35,186 - INFO - 🔨 Refining record: [Cat No.eg5-in-2] (AI Enriching...)
+2026-01-25 16:55:39,313 - INFO - 🔨 Refining record: [Cat No.e104] (AI Enriching...)
+2026-01-25 16:55:44,030 - INFO - 🔨 Refining record: [Cat No.(-)-cbi-cdpi2] (AI Enriching...)
+2026-01-25 16:55:48,373 - INFO - 🔨 Refining record: [Cat No.duocarmycin] (AI Enriching...)
+2026-01-25 16:55:52,397 - INFO - 🔨 Refining record: [Cat No.dc4] (AI Enriching...)
+2026-01-25 16:55:57,077 - INFO - 🔨 Refining record: [Cat No.isofistularin-3] (AI Enriching...)
+2026-01-25 16:56:01,719 - INFO - 🔨 Refining record: [Cat No.nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt] (AI Enriching...)
+2026-01-25 16:56:05,657 - INFO - 🔨 Refining record: [Cat No.maytansinoid-b] (AI Enriching...)
+2026-01-25 16:56:10,409 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:56:10,562 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:56:10,562 - INFO -    Sample: mensacarcin - Mensacarcin
+2026-01-25 16:56:10,562 - INFO - ✅ [PAGE 4] Completed. [CRAWLER] Moving to Page 5...
+2026-01-25 16:56:12,825 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:56:12.825097 - Category: ADC Toxins, Page: 5
+2026-01-25 16:56:12,825 - INFO - 🌐 [PAGE 5] Accessing: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=5 (Sleep: 2.17s)
+2026-01-25 16:56:15,745 - INFO - 📦 [PAGE 5] Processing 20 new products.
+2026-01-25 16:56:15,745 - INFO - 🔨 Refining record: [Cat No.s-me-dm4] (AI Enriching...)
+2026-01-25 16:56:20,117 - INFO - 🔨 Refining record: [Cat No.gly-cyclopropane-exatecan] (AI Enriching...)
+2026-01-25 16:56:23,574 - INFO - 🔨 Refining record: [Cat No.anticancer-agent-81] (AI Enriching...)
+2026-01-25 16:56:28,091 - INFO - 🔨 Refining record: [Cat No.s-methyl-dm1] (AI Enriching...)
+2026-01-25 16:56:32,345 - ERROR - Gemini API Error: Invalid \escape: line 4 column 155 (char 189)
+2026-01-25 16:56:32,346 - INFO - 🔨 Refining record: [Cat No.dc0-nh2] (AI Enriching...)
+2026-01-25 16:56:36,764 - INFO - 🔨 Refining record: [Cat No.mmaf-sodium] (AI Enriching...)
+2026-01-25 16:56:41,003 - INFO - 🔨 Refining record: [Cat No.sg2057] (AI Enriching...)
+2026-01-25 16:56:45,139 - INFO - 🔨 Refining record: [Cat No.pbd-dimer-2] (AI Enriching...)
+2026-01-25 16:56:49,558 - INFO - 🔨 Refining record: [Cat No.cyclopropaneacetamide-exatecan] (AI Enriching...)
+2026-01-25 16:56:53,482 - INFO - 🔨 Refining record: [Cat No.tubulin-polymerization-in-38] (AI Enriching...)
+2026-01-25 16:56:57,867 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:56:58,010 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:56:58,011 - INFO -    Sample: s-me-dm4 - S-Me-DM4
+2026-01-25 16:56:58,011 - INFO - 🔨 Refining record: [Cat No.taltobulin-hcl] (AI Enriching...)
+2026-01-25 16:57:02,332 - INFO - 🔨 Refining record: [Cat No.tam470] (AI Enriching...)
+2026-01-25 16:57:06,260 - INFO - 🔨 Refining record: [Cat No.inx-sm-6] (AI Enriching...)
+2026-01-25 16:57:10,670 - INFO - 🔨 Refining record: [Cat No.inx-sm-56] (AI Enriching...)
+2026-01-25 16:57:14,596 - INFO - 🔨 Refining record: [Cat No.aminohexylgeldanamycin-hcl] (AI Enriching...)
+2026-01-25 16:57:19,132 - INFO - 🔨 Refining record: [Cat No.methotrexate-monohydrate] (AI Enriching...)
+2026-01-25 16:57:23,895 - INFO - 🔨 Refining record: [Cat No.daunorubicin] (AI Enriching...)
+2026-01-25 16:57:27,875 - INFO - 🔨 Refining record: [Cat No.duocarmycin-a] (AI Enriching...)
+2026-01-25 16:57:32,649 - INFO - 🔨 Refining record: [Cat No.duocarmycin-ga] (AI Enriching...)
+2026-01-25 16:57:36,725 - INFO - 🔨 Refining record: [Cat No.sandramycin] (AI Enriching...)
+2026-01-25 16:57:41,605 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:57:41,981 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:57:41,982 - INFO -    Sample: taltobulin-hcl - Taltobulin HCl
+2026-01-25 16:57:41,982 - INFO - ✅ [PAGE 5] Completed. [CRAWLER] Moving to Page 6...
+2026-01-25 16:57:45,418 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:57:45.418326 - Category: ADC Toxins, Page: 6
+2026-01-25 16:57:45,418 - INFO - 🌐 [PAGE 6] Accessing: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=6 (Sleep: 3.35s)
+2026-01-25 16:57:47,504 - WARNING - ⚠️ [PAGE 6] No products found. Likely end of category.
+2026-01-25 16:57:47,571 - INFO - 🚀 [AMBEED LITE] ADC Linker (Start Page: 1, Limit: 100000)
+2026-01-25 16:57:51,732 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:57:51.732309 - Category: ADC Linker, Page: 1
+2026-01-25 16:57:51,732 - INFO - 🌐 [PAGE 1] Accessing: https://www.ambeed.com/adc-linkers.html (Sleep: 3.40s)
+2026-01-25 16:57:55,107 - WARNING - ⚠️ [PAGE 1] No products found. Likely end of category.
+2026-01-25 16:57:55,163 - INFO - 🚀 [AMBEED LITE] ADC Payload-Linker (Start Page: 1, Limit: 100000)
+2026-01-25 16:57:58,529 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:57:58.528946 - Category: ADC Payload-Linker, Page: 1
+2026-01-25 16:57:58,529 - INFO - 🌐 [PAGE 1] Accessing: https://www.ambeed.com/payload-linker-conjugate.html (Sleep: 2.66s)
+2026-01-25 16:58:02,387 - INFO - 📦 [PAGE 1] Processing 20 new products.
+2026-01-25 16:58:02,387 - INFO - 🔨 Refining record: [Cat No.mc-mmad] (AI Enriching...)
+2026-01-25 16:58:06,378 - INFO - 🔨 Refining record: [Cat No.psma-alb-56] (AI Enriching...)
+2026-01-25 16:58:10,588 - INFO - 🔨 Refining record: [Cat No.1473403-87-0] (AI Enriching...)
+2026-01-25 16:58:14,702 - INFO - 🔨 Refining record: [Cat No.2680543-57-9] (AI Enriching...)
+2026-01-25 16:58:18,862 - INFO - 🔨 Refining record: [Cat No.auristatin-f] (AI Enriching...)
+2026-01-25 16:58:23,030 - INFO - 🔨 Refining record: [Cat No.MC-Val-Cit-PAB-Exatecan] (AI Enriching...)
+2026-01-25 16:58:27,561 - INFO - 🔨 Refining record: [Cat No.1620837-70-8] (AI Enriching...)
+2026-01-25 16:58:31,714 - INFO - 🔨 Refining record: [Cat No.1810001-93-4] (AI Enriching...)
+2026-01-25 16:58:36,515 - INFO - 🔨 Refining record: [Cat No.2129164-91-4] (AI Enriching...)
+2026-01-25 16:58:40,895 - INFO - 🔨 Refining record: [Cat No.1895916-24-1] (AI Enriching...)
+2026-01-25 16:58:45,928 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:58:46,045 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:58:46,045 - INFO -    Sample: mc-mmad - Mc-MMAD
+2026-01-25 16:58:46,046 - INFO - 🔨 Refining record: [Cat No.1228105-51-8] (AI Enriching...)
+2026-01-25 16:58:50,855 - INFO - 🔨 Refining record: [Cat No.1912408-92-4] (AI Enriching...)
+2026-01-25 16:58:54,581 - INFO - 🔨 Refining record: [Cat No.fl118] (AI Enriching...)
+2026-01-25 16:58:58,389 - INFO - 🔨 Refining record: [Cat No.1600418-29-8] (AI Enriching...)
+2026-01-25 16:59:02,685 - INFO - 🔨 Refining record: [Cat No.mal-c2-gly3-eda-pnu-159682] (AI Enriching...)
+2026-01-25 16:59:07,791 - INFO - 🔨 Refining record: [Cat No.MC-Val-Cit-PAB-Auristatin-E] (AI Enriching...)
+2026-01-25 16:59:12,476 - INFO - 🔨 Refining record: [Cat No.mmae-smcc] (AI Enriching...)
+2026-01-25 16:59:16,997 - INFO - 🔨 Refining record: [Cat No.1801838-28-7] (AI Enriching...)
+2026-01-25 16:59:21,886 - INFO - 🔨 Refining record: [Cat No.2353409-69-3] (AI Enriching...)
+2026-01-25 16:59:27,115 - INFO - 🔨 Refining record: [Cat No.mal-phe-c4-vc-pab-mmae] (AI Enriching...)
+2026-01-25 16:59:32,505 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 16:59:32,882 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 16:59:32,882 - INFO -    Sample: 1228105-51-8 - SMCC-DM1 (DM1-SMCC)
+2026-01-25 16:59:32,882 - INFO - ✅ [PAGE 1] Completed. [CRAWLER] Moving to Page 2...
+2026-01-25 16:59:34,937 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T16:59:34.937129 - Category: ADC Payload-Linker, Page: 2
+2026-01-25 16:59:34,937 - INFO - 🌐 [PAGE 2] Accessing: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=2 (Sleep: 1.98s)
+2026-01-25 16:59:37,725 - INFO - 📦 [PAGE 2] Processing 20 new products.
+2026-01-25 16:59:37,725 - INFO - 🔨 Refining record: [Cat No.sc-vc-pab-mmae] (AI Enriching...)
+2026-01-25 16:59:42,763 - INFO - 🔨 Refining record: [Cat No.doxorubicin-smcc] (AI Enriching...)
+2026-01-25 16:59:46,905 - INFO - 🔨 Refining record: [Cat No.2845164-91-0] (AI Enriching...)
+2026-01-25 16:59:50,944 - INFO - 🔨 Refining record: [Cat No.2866301-18-8] (AI Enriching...)
+2026-01-25 16:59:55,005 - INFO - 🔨 Refining record: [Cat No.cb07-exatecan] (AI Enriching...)
+2026-01-25 16:59:59,148 - INFO - 🔨 Refining record: [Cat No.2170118-23-5] (AI Enriching...)
+2026-01-25 17:00:03,032 - INFO - 🔨 Refining record: [Cat No.br-val-ala-nh2-bicyclo[1.1.1]pentane-7-mad-mdcpt] (AI Enriching...)
+2026-01-25 17:00:07,268 - INFO - 🔨 Refining record: [Cat No.mc-gly-gly-phe-gly-(r)-cyclopropane-exatecan] (AI Enriching...)
+2026-01-25 17:00:12,322 - INFO - 🔨 Refining record: [Cat No.glucocorticoid-receptor-agonist-1-ala-ala-mal] (AI Enriching...)
+2026-01-25 17:00:17,353 - INFO - 🔨 Refining record: [Cat No.dbco-peg4-ggfg-exatecan] (AI Enriching...)
+2026-01-25 17:00:23,110 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:00:23,243 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:00:23,243 - INFO -    Sample: sc-vc-pab-mmae - SC-VC-PAB-MMAE
+2026-01-25 17:00:23,244 - INFO - 🔨 Refining record: [Cat No.topotecan] (AI Enriching...)
+2026-01-25 17:00:27,713 - INFO - 🔨 Refining record: [Cat No.(s)-10-hydroxycamptothecin] (AI Enriching...)
+2026-01-25 17:00:32,225 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-f] (AI Enriching...)
+2026-01-25 17:00:36,330 - INFO - 🔨 Refining record: [Cat No.2758671-45-1] (AI Enriching...)
+2026-01-25 17:00:41,759 - INFO - 🔨 Refining record: [Cat No.deruxtecan-analog-2] (AI Enriching...)
+2026-01-25 17:00:46,288 - INFO - 🔨 Refining record: [Cat No.2414393-22-7] (AI Enriching...)
+2026-01-25 17:00:50,714 - INFO - 🔨 Refining record: [Cat No.1818864-51-5] (AI Enriching...)
+2026-01-25 17:00:55,164 - INFO - 🔨 Refining record: [Cat No.1650569-89-3] (AI Enriching...)
+2026-01-25 17:00:59,997 - INFO - 🔨 Refining record: [Cat No.9-aminocamptothecin] (AI Enriching...)
+2026-01-25 17:01:04,911 - INFO - 🔨 Refining record: [Cat No.maytansinol] (AI Enriching...)
+2026-01-25 17:01:09,343 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:01:09,492 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:01:09,493 - INFO -    Sample: topotecan - Topotecan (SKF 104864A)
+2026-01-25 17:01:09,493 - INFO - ✅ [PAGE 2] Completed. [CRAWLER] Moving to Page 3...
+2026-01-25 17:01:11,833 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T17:01:11.833056 - Category: ADC Payload-Linker, Page: 3
+2026-01-25 17:01:11,833 - INFO - 🌐 [PAGE 3] Accessing: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=3 (Sleep: 2.26s)
+2026-01-25 17:01:14,445 - INFO - 📦 [PAGE 3] Processing 20 new products.
+2026-01-25 17:01:14,446 - INFO - 🔨 Refining record: [Cat No.exatecan-mesylate] (AI Enriching...)
+2026-01-25 17:01:18,409 - INFO - 🔨 Refining record: [Cat No.rubitecan] (AI Enriching...)
+2026-01-25 17:01:22,102 - INFO - 🔨 Refining record: [Cat No.dm4] (AI Enriching...)
+2026-01-25 17:01:27,016 - INFO - 🔨 Refining record: [Cat No.1491152-26-1] (AI Enriching...)
+2026-01-25 17:01:32,495 - INFO - 🔨 Refining record: [Cat No.1375089-56-7] (AI Enriching...)
+2026-01-25 17:01:36,418 - INFO - 🔨 Refining record: [Cat No.756487-18-0] (AI Enriching...)
+2026-01-25 17:01:40,799 - INFO - 🔨 Refining record: [Cat No.1415329-13-3] (AI Enriching...)
+2026-01-25 17:01:46,572 - INFO - 🔨 Refining record: [Cat No.vipivotide-tetraxetan] (AI Enriching...)
+2026-01-25 17:01:53,272 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-d] (AI Enriching...)
+2026-01-25 17:01:57,895 - INFO - 🔨 Refining record: [Cat No.1401963-17-4] (AI Enriching...)
+2026-01-25 17:02:03,978 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:02:04,364 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:02:04,364 - INFO -    Sample: exatecan-mesylate - Exatecan mesylate (DX8951f)
+2026-01-25 17:02:04,364 - INFO - 🔨 Refining record: [Cat No.sn-38] (AI Enriching...)
+2026-01-25 17:02:08,389 - INFO - 🔨 Refining record: [Cat No.mmaf-ome] (AI Enriching...)
+2026-01-25 17:02:13,787 - INFO - 🔨 Refining record: [Cat No.mc-mmae] (AI Enriching...)
+2026-01-25 17:02:18,495 - INFO - 🔨 Refining record: [Cat No.Vc-seco-DUBA] (AI Enriching...)
+2026-01-25 17:02:23,310 - INFO - 🔨 Refining record: [Cat No.dm1] (AI Enriching...)
+2026-01-25 17:02:28,240 - ERROR - Gemini API Error: Invalid \escape: line 3 column 147 (char 152)
+2026-01-25 17:02:28,240 - INFO - 🔨 Refining record: [Cat No.monomethyl-auristatin-e] (AI Enriching...)
+2026-01-25 17:02:33,717 - INFO - 🔨 Refining record: [Cat No.dm1-sme] (AI Enriching...)
+2026-01-25 17:02:38,529 - INFO - 🔨 Refining record: [Cat No.gly3-vc-pab-mmae] (AI Enriching...)
+2026-01-25 17:02:43,854 - INFO - 🔨 Refining record: [Cat No.val-cit-pab-mmaf] (AI Enriching...)
+2026-01-25 17:02:50,565 - INFO - 🔨 Refining record: [Cat No.mal-di-eg-val-cit-pab-mmae] (AI Enriching...)
+2026-01-25 17:02:55,744 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:02:55,883 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:02:55,884 - INFO -    Sample: sn-38 - SN-38
+2026-01-25 17:02:55,885 - INFO - ✅ [PAGE 3] Completed. [CRAWLER] Moving to Page 4...
+2026-01-25 17:02:59,298 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T17:02:59.298370 - Category: ADC Payload-Linker, Page: 4
+2026-01-25 17:02:59,299 - INFO - 🌐 [PAGE 4] Accessing: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=4 (Sleep: 3.25s)
+2026-01-25 17:03:02,330 - INFO - 📦 [PAGE 4] Processing 20 new products.
+2026-01-25 17:03:02,331 - INFO - 🔨 Refining record: [Cat No.azido-peg4-val-cit-pab-mmae] (AI Enriching...)
+2026-01-25 17:03:09,428 - INFO - 🔨 Refining record: [Cat No.pnu-eda-gly5] (AI Enriching...)
+2026-01-25 17:03:14,974 - INFO - 🔨 Refining record: [Cat No.psma-val-cit-pab-mmae] (AI Enriching...)
+2026-01-25 17:03:21,831 - INFO - 🔨 Refining record: [Cat No.osu-glu-vc-pab-mmad] (AI Enriching...)
+2026-01-25 17:03:28,672 - INFO - 🔨 Refining record: [Cat No.mc-vc-pab-mmad] (AI Enriching...)
+2026-01-25 17:03:35,210 - INFO - 🔨 Refining record: [Cat No.lys-nepsilon-spdb-dm4] (AI Enriching...)
+2026-01-25 17:03:41,146 - INFO - 🔨 Refining record: [Cat No.2',3'-cgamp-c2-ppa] (AI Enriching...)
+2026-01-25 17:03:46,814 - INFO - 🔨 Refining record: [Cat No.mcc-dm1] (AI Enriching...)
+2026-01-25 17:03:52,283 - INFO - 🔨 Refining record: [Cat No.dm21] (AI Enriching...)
+2026-01-25 17:03:57,669 - INFO - 🔨 Refining record: [Cat No.modified-mmaf-c5-cooh] (AI Enriching...)
+2026-01-25 17:04:02,570 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:04:02,991 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:04:02,991 - INFO -    Sample: azido-peg4-val-cit-pab-mmae - Azido-PEG4-Val-Cit-PAB-MMAE
+2026-01-25 17:04:02,992 - INFO - 🔨 Refining record: [Cat No.mc-betaglucuronide-mmae-1] (AI Enriching...)
+2026-01-25 17:04:08,167 - INFO - 🔨 Refining record: [Cat No.mal-(ch2)5-val-cit-pab-eribulin] (AI Enriching...)
+2026-01-25 17:04:14,108 - INFO - 🔨 Refining record: [Cat No.mc-aaa-nhch2och2coo-7-aminomethyl-10-methyl-11-fluoro-camptothecin] (AI Enriching...)
+2026-01-25 17:04:18,450 - INFO - 🔨 Refining record: [Cat No.cys-mcmmad] (AI Enriching...)
+2026-01-25 17:04:23,973 - INFO - 🔨 Refining record: [Cat No.dgn549-l] (AI Enriching...)
+2026-01-25 17:04:28,985 - INFO - 🔨 Refining record: [Cat No.dm4-smcc] (AI Enriching...)
+2026-01-25 17:04:34,753 - INFO - 🔨 Refining record: [Cat No.mipsagargin] (AI Enriching...)
+2026-01-25 17:04:39,655 - INFO - 🔨 Refining record: [Cat No.barzuxetan] (AI Enriching...)
+2026-01-25 17:04:43,732 - INFO - 🔨 Refining record: [Cat No.hs-(ch2)3co-l-ala-d-ala-l-ala-nh-ch2-s-(ch2)5-co-dm] (AI Enriching...)
+2026-01-25 17:04:48,952 - INFO - 🔨 Refining record: [Cat No.cl2e-sn38] (AI Enriching...)
+2026-01-25 17:04:55,682 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:04:55,849 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:04:55,850 - INFO -    Sample: mc-betaglucuronide-mmae-1 - MC-betaglucuronide-MMAE-1
+2026-01-25 17:04:55,850 - INFO - ✅ [PAGE 4] Completed. [CRAWLER] Moving to Page 5...
+2026-01-25 17:04:58,556 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T17:04:58.556513 - Category: ADC Payload-Linker, Page: 5
+2026-01-25 17:04:58,558 - INFO - 🌐 [PAGE 5] Accessing: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=5 (Sleep: 2.46s)
+2026-01-25 17:05:01,635 - INFO - 📦 [PAGE 5] Processing 20 new products.
+2026-01-25 17:05:01,636 - INFO - 🔨 Refining record: [Cat No.cl2e-sn38-tfa] (AI Enriching...)
+2026-01-25 17:05:07,201 - INFO - 🔨 Refining record: [Cat No.aminooxy-catb-lxr] (AI Enriching...)
+2026-01-25 17:05:11,720 - INFO - 🔨 Refining record: [Cat No.(rac)-lys-smcc-dm1] (AI Enriching...)
+2026-01-25 17:05:17,877 - INFO - 🔨 Refining record: [Cat No.he-s2] (AI Enriching...)
+2026-01-25 17:05:22,063 - INFO - 🔨 Refining record: [Cat No.aminobenzenesulfonic-auristatin-e] (AI Enriching...)
+2026-01-25 17:05:27,068 - INFO - 🔨 Refining record: [Cat No.sgd-1910] (AI Enriching...)
+2026-01-25 17:05:32,925 - INFO - 🔨 Refining record: [Cat No.mc-vc-pab-tubulysin-m] (AI Enriching...)
+2026-01-25 17:05:38,226 - INFO - 🔨 Refining record: [Cat No.mb-vc-mgba] (AI Enriching...)
+2026-01-25 17:05:43,034 - INFO - 🔨 Refining record: [Cat No.dgn549-c] (AI Enriching...)
+2026-01-25 17:05:47,457 - INFO - 🔨 Refining record: [Cat No.mc-betaglucuronide-mmae-2] (AI Enriching...)
+2026-01-25 17:05:54,138 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:05:54,525 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:05:54,525 - INFO -    Sample: cl2e-sn38-tfa - CL2E-SN38 TFA
+2026-01-25 17:05:54,526 - INFO - 🔨 Refining record: [Cat No.nampt-inhibitor-linker-2] (AI Enriching...)
+2026-01-25 17:05:59,150 - INFO - 🔨 Refining record: [Cat No.ggfg-eribulin] (AI Enriching...)
+2026-01-25 17:06:04,972 - INFO - 🔨 Refining record: [Cat No.dl-01] (AI Enriching...)
+2026-01-25 17:06:09,638 - INFO - 🔨 Refining record: [Cat No.pb089] (AI Enriching...)
+2026-01-25 17:06:15,474 - INFO - 🔨 Refining record: [Cat No.tlr7-8-agonist-4-hydroxy-peg6-acid] (AI Enriching...)
+2026-01-25 17:06:19,800 - INFO - 🔨 Refining record: [Cat No.nitro-pds-tubulysin-m] (AI Enriching...)
+2026-01-25 17:06:24,975 - INFO - 🔨 Refining record: [Cat No.mc-val-cit-pab-retapamulin] (AI Enriching...)
+2026-01-25 17:06:29,631 - INFO - 🔨 Refining record: [Cat No.mac-glucuronide-alpha-hydroxy-lactone-linked-sn-38] (AI Enriching...)
+2026-01-25 17:06:33,962 - INFO - 🔨 Refining record: [Cat No.vcp-eribulin] (AI Enriching...)
+2026-01-25 17:06:39,971 - INFO - 🔨 Refining record: [Cat No.dba-dm4] (AI Enriching...)
+2026-01-25 17:06:44,637 - ERROR - Gemini API Error: Invalid \escape: line 3 column 159 (char 164)
+2026-01-25 17:06:44,637 - INFO - 📤 Saving 10 items to Supabase...
+2026-01-25 17:06:44,785 - INFO - ✅ Saved Successfully! Inserted/Updated 10 rows.
+2026-01-25 17:06:44,786 - INFO -    Sample: nampt-inhibitor-linker-2 - NAMPT inhibitor-linker 2
+2026-01-25 17:06:44,787 - INFO - ✅ [PAGE 5] Completed. [CRAWLER] Moving to Page 6...
+2026-01-25 17:06:46,417 - INFO - 💓 [CRAWLER_HEARTBEAT] 2026-01-25T17:06:46.417649 - Category: ADC Payload-Linker, Page: 6
+2026-01-25 17:06:46,418 - INFO - 🌐 [PAGE 6] Accessing: https://www.ambeed.com/payload-linker-conjugate.html?pagesize=20&pageindex=6 (Sleep: 1.50s)
+2026-01-25 17:06:48,476 - WARNING - ⚠️ [PAGE 6] No products found. Likely end of category.
