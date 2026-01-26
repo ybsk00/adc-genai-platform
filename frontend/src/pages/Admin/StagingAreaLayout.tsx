@@ -50,6 +50,7 @@ export function StagingAreaLayout() {
                             <StagingAreaTab
                                 initialSearchQuery={globalSearchQuery}
                                 onSearchClear={() => setGlobalSearchQuery("")}
+                                onSwitchToKnowledge={() => setActiveTab("knowledge")}
                             />
                         </CardContent>
                     </Card>

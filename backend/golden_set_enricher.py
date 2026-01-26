@@ -69,7 +69,7 @@ class GoldenSetEnricher:
                 retmax=max_results,
                 sort="date", # Get latest first
                 datetype="pdat",
-                mindate=(datetime.now().year - 2), # Last 2 years for "New" stuff
+                mindate=(datetime.now().year - 7), # Last 7 years for more "Failure" cases
                 maxdate=datetime.now().year
             )
             record = Entrez.read(handle)

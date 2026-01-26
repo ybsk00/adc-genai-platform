@@ -89,86 +89,101 @@ class AIChatRequest(BaseModel):
     record_id: str
     message: str
     context: Optional[Dict[str, Any]] = None
+    mode: str = "rag" # rag, general
+    target_field: Optional[str] = None # For Autofill intent
 
 
 @router.post("/ai/chat")
 async def ai_assistant_chat(req: AIChatRequest):
     """
-    AI 어시스턴트 사이드바용 채팅 API
-    원문(Raw Data)을 기반으로 사장님의 질문에 답변
+    AI 어시스턴트 사이드바용 채팅 API (Dual Agent System)
+    - RAG Mode: Multi-Source Search + Strict Citations
+    - General Mode: LLM Knowledge + Disclaimer
     """
     try:
         import google.generativeai as genai
+        from app.services.rag_service import rag_service
+        
         if not settings.GOOGLE_API_KEY:
             raise HTTPException(status_code=500, detail="GOOGLE_API_KEY is not configured")
             
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        
-        # 모델 선택 전략: Settings의 모델 -> 2.0 Flash
         model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
-        try:
-            model = genai.GenerativeModel(model_name)
-        except Exception as e:
-            print(f"⚠️ {model_name} initialization failed: {e}")
-            model_name = 'gemini-1.5-flash'
-            model = genai.GenerativeModel(model_name)
+        model = genai.GenerativeModel(model_id)
 
+        # 1. Determine Mode & Context
+        mode = req.mode
+        context_str = ""
         
-        # 1. 컨텍스트 준비
-        context_data = req.context or {}
-        context_str = json.dumps(context_data, indent=2, ensure_ascii=False)
-        
-        # 2. 프롬프트 구성
-        system_prompt = f"""You are an ADC Data Analyst Assistant. 
-You are helping a user (the "Boss") verify and refine pharmaceutical data for an Antibody-Drug Conjugate (ADC) platform.
-The user is looking at a specific record. Below is the RAW DATA (JSON) for this record.
+        # Autofill Override
+        if req.target_field:
+            mode = "rag" # Autofill always uses RAG
+            req.message = f"Find the value for the field '{req.target_field}' of this item. If found, provide ONLY the value and the source."
 
-RAW DATA:
-{context_str[:15000]} 
+        if mode == "rag":
+            # Multi-Source Search
+            search_query = req.message
+            # If record context is provided, enrich query with drug name
+            if req.context and "drug_name" in req.context:
+                search_query = f"{req.context['drug_name']} {req.message}"
+                
+            retrieved_chunks = await rag_service.search_all(search_query, top_k_per_source=3)
+            
+            # Format Context with Source IDs
+            context_str = "RETRIEVED KNOWLEDGE:\n"
+            for chunk in retrieved_chunks:
+                source_id = chunk.get('id')
+                source_type = chunk.get('source', 'unknown')
+                content = chunk.get('content', '')
+                metadata = chunk.get('metadata', {})
+                context_str += f"- [{source_type}:{source_id}] {content} (Meta: {metadata})\n"
+                
+            system_prompt = """You are a STRICT Data Analyst. 
+Answer the user's question using ONLY the provided RETRIEVED KNOWLEDGE.
+Do NOT use your internal knowledge.
+If the answer is not in the context, say "데이터가 없어 답을 할 수 없습니다." and suggest switching to General Mode.
 
-INSTRUCTIONS:
-- Primary Source: Provided RAW DATA. Always check here first.
-- Secondary Source: Your internal knowledge about ADCs and pharmaceuticals.
-- If the information is in the RAW DATA, answer based on it and mention "원문에 따르면...".
-- If the information is NOT in the RAW DATA but you know it (e.g., general facts about Dato-DXd or Enhertu), provide the answer based on your knowledge and mention "원문에는 없지만, 일반적인 정보에 따르면...".
-- If you truly cannot find or know the information, then say "해당 정보를 찾을 수 없습니다."
-- Keep the answer professional, helpful, and in Korean.
-- For SMILES, provide it if requested and available.
+CITATION RULE:
+Every sentence must end with a citation in the format `[Source: table:id]`.
+Example: "Trastuzumab targets HER2 [Source: antibody_library:123]."
+"""
+        else:
+            # General Mode
+            system_prompt = """You are a Helpful AI Assistant.
+Answer the user's question using your general knowledge about ADCs and pharmaceuticals.
+Start your answer with: "**[General Knowledge]** This answer is based on general AI knowledge, not internal data."
+"""
+
+        # 2. Construct Full Prompt
+        full_prompt = f"""{system_prompt}
+
+USER CONTEXT (Current Item):
+{json.dumps(req.context or {}, indent=2, ensure_ascii=False)[:2000]}
+
+{context_str}
+
+User Question: {req.message}
 """
         
-        full_prompt = f"{system_prompt}\n\nUser Question: {req.message}"
-        
-        # 3. Gemini 호출
+        # 3. Call Gemini
         try:
             response = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: model.generate_content(full_prompt)
             )
+            answer = response.text.strip() if response and response.text else "No response generated."
             
-            if not response or not response.text:
-                # 세이프티 필터 등에 의해 차단된 경우
-                if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                    print(f"AI Chat Blocked: {response.prompt_feedback}")
-                    return {"answer": "죄송합니다. 해당 질문에 대한 답변이 정책에 의해 차단되었습니다."}
-                return {"answer": "AI가 답변을 생성하지 못했습니다. (Empty Response)"}
-                
-            return {"answer": response.text.strip()}
+            return {
+                "answer": answer,
+                "mode": mode,
+                "sources": retrieved_chunks if mode == "rag" else []
+            }
             
-        except Exception as gen_error:
-            print(f"Gemini Generation Error ({model_name}): {gen_error}")
-            # 2.5-flash 실패 시 1.5-flash로 재시도
-            if model_name == 'gemini-2.0-flash':
-                print("Retrying with gemini-1.5-flash...")
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: model.generate_content(full_prompt)
-                )
-                return {"answer": response.text.strip()}
-            raise gen_error
-        
+        except Exception as e:
+            print(f"Gemini Error: {e}")
+            return {"answer": "Error generating response."}
+
     except Exception as e:
         print(f"AI Chat Critical Error: {e}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

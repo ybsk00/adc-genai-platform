@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { getSession } from '@/lib/supabase'
 import { API_BASE_URL } from '@/lib/api'
 import SmilesDrawer from 'smiles-drawer'
+import { AIAssistantPanel } from './AIAssistantPanel'
 
 // --- Types ---
 interface GoldenSetDraft {
@@ -179,20 +180,20 @@ function MetricValue({ value, unit, type }: { value?: string | number, unit?: st
     return <span className={`font-mono ${colorClass}`}>{value}{unit}</span>
 }
 
-// ... imports ...
-
 interface StagingAreaTabProps {
     initialSearchQuery?: string
     onSearchClear?: () => void
+    onSwitchToKnowledge?: () => void
 }
 
-export function StagingAreaTab({ initialSearchQuery, onSearchClear }: StagingAreaTabProps) {
+export function StagingAreaTab({ initialSearchQuery, onSearchClear, onSwitchToKnowledge }: StagingAreaTabProps) {
     const queryClient = useQueryClient()
     const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '')
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearchQuery || '')
     const [showRawData, setShowRawData] = useState(false)
+    const [aiTrigger, setAiTrigger] = useState<string | undefined>(undefined)
 
     // Update search when prop changes (from cross-tab link)
     useEffect(() => {
@@ -271,8 +272,6 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear }: StagingAre
     const handlePromote = async () => {
         if (!selectedDraftId) return
         // Just update status to 'approved' via same patch for now, or use specific endpoint if needed
-        // Plan says: "Ensure status update to 'approved' moves item"
-        // We can use the patch endpoint to set status='approved'
         updateMutation.mutate({
             id: selectedDraftId,
             updates: { ...formData, status: 'approved' }
@@ -280,6 +279,53 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear }: StagingAre
         toast.success("Promoted to Golden Set!")
         setSelectedDraftId(null) // Close panel
     }
+
+    // Handle Source Click from AI Panel
+    const handleSourceClick = (type: string, id: string) => {
+        if (type === 'knowledge_base') {
+            if (onSwitchToKnowledge) {
+                onSwitchToKnowledge()
+                toast.success(`Navigating to Knowledge Base: ${id}`)
+            } else {
+                toast.info(`Source: ${type} (${id}) - Please check Knowledge Tab`)
+            }
+        } else if (type === 'golden_set' || type === 'antibody_library') {
+            if (type === 'golden_set' && id !== selectedDraftId) {
+                setSelectedDraftId(id)
+                toast.success("Switched to cited candidate")
+            }
+        }
+    }
+
+    const handleMagicFill = (field: string) => {
+        setAiTrigger(`Find the value for '${field}' of ${formData.drug_name}`)
+    }
+
+    // Helper for Input with Magic Fill
+    const renderInputWithMagic = (label: string, field: keyof GoldenSetDraft, placeholder?: string) => (
+        <div className="space-y-2">
+            <Label className="text-slate-400 text-xs flex justify-between items-center">
+                {label}
+                {!formData[field] && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-purple-400 hover:text-purple-300"
+                        onClick={() => handleMagicFill(label)}
+                        title="Ask AI to fill this"
+                    >
+                        <Wand2 className="w-3 h-3" />
+                    </Button>
+                )}
+            </Label>
+            <Input
+                value={formData[field] as string || ''}
+                onChange={e => setFormData({ ...formData, [field]: e.target.value })}
+                className={`bg-slate-950 border-slate-800 ${!formData[field] ? 'border-red-900/50 bg-red-950/10' : ''}`}
+                placeholder={placeholder || "-"}
+            />
+        </div>
+    )
 
     // --- Render ---
     return (
@@ -357,231 +403,168 @@ export function StagingAreaTab({ initialSearchQuery, onSearchClear }: StagingAre
                 </div>
             </div>
 
-            {/* 2. Right Panel: Detail View */}
+            {/* 2. Right Panel: Details & AI */}
             <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden flex flex-col">
                 {selectedDraft ? (
-                    <>
-                        {/* Header */}
-                        <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                    {formData.drug_name}
-                                    {formData.is_ai_extracted && <Sparkles className="w-4 h-4 text-yellow-500" />}
-                                </h3>
-                                <p className="text-xs text-slate-500 font-mono">{selectedDraft.id}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving} className="h-8 text-xs">
-                                    {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
-                                    Save Changes
-                                </Button>
-                                <Button size="sm" onClick={handlePromote} className="h-8 text-xs bg-purple-600 hover:bg-purple-500">
-                                    Promote to Golden Set
-                                </Button>
-                            </div>
-                        </div>
-
-                        <ScrollArea className="flex-1 p-6">
-                            <div className="space-y-8 max-w-4xl mx-auto">
-                                {/* Section A: Basic Info */}
-                                <section className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">
-                                        Section A: Basic & Clinical Status
-                                    </h4>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Drug Name</Label>
-                                            <Input
-                                                value={formData.drug_name || ''}
-                                                onChange={e => setFormData({ ...formData, drug_name: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Outcome Type</Label>
-                                            <Select
-                                                value={formData.outcome_type || 'Unknown'}
-                                                onValueChange={v => setFormData({ ...formData, outcome_type: v })}
-                                            >
-                                                <SelectTrigger className="bg-slate-950 border-slate-800">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Success">Success (Approved)</SelectItem>
-                                                    <SelectItem value="Failure">Failure</SelectItem>
-                                                    <SelectItem value="Terminated">Terminated</SelectItem>
-                                                    <SelectItem value="Unknown">Unknown</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="col-span-2 space-y-2">
-                                            <Label className="text-slate-400 text-xs">Reviewer Note</Label>
-                                            <Textarea
-                                                value={formData.reviewer_note || ''}
-                                                onChange={e => setFormData({ ...formData, reviewer_note: e.target.value })}
-                                                className="bg-slate-950 border-slate-800 h-20 text-xs"
-                                                placeholder="Add notes for other reviewers..."
-                                            />
-                                        </div>
-                                    </div>
-                                </section>
-
-                                {/* Section B: Metrics */}
-                                <section className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-blue-400 uppercase tracking-wider border-b border-blue-900/30 pb-2 flex items-center gap-2">
-                                        <Activity className="w-4 h-4" /> Section B: Clinical Metrics
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {[
-                                            { label: 'ORR (%)', key: 'orr_pct', type: 'orr' },
-                                            { label: 'PFS (mo)', key: 'pfs_months', type: 'pfs' },
-                                            { label: 'OS (mo)', key: 'os_months', type: 'os' },
-                                            { label: 'DoR (mo)', key: 'dor_months', type: 'pfs' },
-                                            { label: 'Patient Count', key: 'patient_count', type: 'os' },
-                                            { label: 'AE Grade 3+ (%)', key: 'adverse_events_grade3_pct', type: 'orr' },
-                                        ].map((field) => (
-                                            <div key={field.key} className="space-y-2">
-                                                <Label className="text-slate-400 text-xs">{field.label}</Label>
-                                                <div className="relative">
-                                                    <Input
-                                                        value={formData[field.key as keyof GoldenSetDraft] || ''}
-                                                        onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
-                                                        className={`bg-slate-950 border-slate-800 ${!formData[field.key as keyof GoldenSetDraft] ? 'border-red-900/50 bg-red-950/10' : ''}`}
-                                                        placeholder="-"
-                                                    />
-                                                    {/* Visual Cue Overlay (Only if not editing? For now just input) */}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-
-                                {/* Section C: ADC Design */}
-                                <section className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-purple-900/30 pb-2 flex items-center gap-2">
-                                        <Microscope className="w-4 h-4" /> Section C: ADC Design
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Target Antigen</Label>
-                                            <Input
-                                                value={formData.target || ''}
-                                                onChange={e => setFormData({ ...formData, target: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Antibody Format</Label>
-                                            <Input
-                                                value={formData.antibody_format || ''}
-                                                onChange={e => setFormData({ ...formData, antibody_format: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                                placeholder="e.g. IgG1"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Linker Type</Label>
-                                            <Input
-                                                value={formData.linker_type || ''}
-                                                onChange={e => setFormData({ ...formData, linker_type: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                                placeholder="e.g. Cleavable"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">DAR</Label>
-                                            <Input
-                                                value={formData.dar || ''}
-                                                onChange={e => setFormData({ ...formData, dar: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs">Binding (Kd)</Label>
-                                            <Input
-                                                value={formData.binding_affinity || ''}
-                                                onChange={e => setFormData({ ...formData, binding_affinity: e.target.value })}
-                                                className="bg-slate-950 border-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-                                </section>
-
-                                {/* Section D: Chemical / IP */}
-                                <section className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-green-400 uppercase tracking-wider border-b border-green-900/30 pb-2 flex items-center gap-2">
-                                        <FlaskConical className="w-4 h-4" /> Section D: Chemical & IP
-                                    </h4>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-400 text-xs flex justify-between">
-                                                SMILES Code
-                                                <Button variant="ghost" size="sm" className="h-4 p-0 text-slate-500 hover:text-white" onClick={() => {
-                                                    navigator.clipboard.writeText(formData.smiles_code || '')
-                                                    toast.success("Copied SMILES")
-                                                }}>
-                                                    <Copy className="w-3 h-3 mr-1" /> Copy
-                                                </Button>
-                                            </Label>
-                                            <Textarea
-                                                value={formData.smiles_code || ''}
-                                                onChange={e => setFormData({ ...formData, smiles_code: e.target.value })}
-                                                className="bg-slate-950 border-slate-800 font-mono text-xs h-20"
-                                            />
-                                            <ChemicalStructure smiles={formData.smiles_code || ''} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-slate-400 text-xs">Molecular Weight</Label>
-                                                <Input
-                                                    value={formData.molecular_weight || ''}
-                                                    onChange={e => setFormData({ ...formData, molecular_weight: e.target.value })}
-                                                    className="bg-slate-950 border-slate-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-slate-400 text-xs">Patent ID</Label>
-                                                <Input
-                                                    value={formData.patent_id || ''}
-                                                    onChange={e => setFormData({ ...formData, patent_id: e.target.value })}
-                                                    className="bg-slate-950 border-slate-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-slate-400 text-xs">Patent Expiry</Label>
-                                                <Input
-                                                    value={formData.patent_expiry || ''}
-                                                    onChange={e => setFormData({ ...formData, patent_expiry: e.target.value })}
-                                                    className="bg-slate-950 border-slate-800"
-                                                    type="date"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                {/* Raw Data Toggle */}
-                                <div className="pt-8 border-t border-slate-800">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setShowRawData(!showRawData)}
-                                        className="text-slate-500 hover:text-white text-xs"
-                                    >
-                                        <Database className="w-3 h-3 mr-2" />
-                                        {showRawData ? "Hide Raw Data" : "Show Raw Data (JSON)"}
+                    <div className="flex h-full">
+                        {/* Main Detail Content (Scrollable) */}
+                        <div className="flex-1 flex flex-col min-w-0">
+                            {/* Header */}
+                            <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        {formData.drug_name}
+                                        {formData.is_ai_extracted && <Sparkles className="w-4 h-4 text-yellow-500" />}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">{selectedDraft.id}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving} className="h-8 text-xs">
+                                        {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
+                                        Save Changes
                                     </Button>
-                                    {showRawData && (
-                                        <div className="mt-4 p-4 bg-slate-950 rounded-lg border border-slate-800 overflow-auto max-h-60">
-                                            <pre className="text-[10px] text-slate-400 font-mono">
-                                                {JSON.stringify(selectedDraft.raw_data || {}, null, 2)}
-                                            </pre>
-                                        </div>
-                                    )}
+                                    <Button size="sm" onClick={handlePromote} className="h-8 text-xs bg-purple-600 hover:bg-purple-500">
+                                        Promote to Golden Set
+                                    </Button>
                                 </div>
                             </div>
-                        </ScrollArea>
-                    </>
+
+                            <ScrollArea className="flex-1 p-6">
+                                <div className="space-y-8 max-w-4xl mx-auto">
+                                    {/* Section A */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                                            Section A: Basic & Clinical Status
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            {renderInputWithMagic("Drug Name", "drug_name")}
+                                            <div className="space-y-2">
+                                                <Label className="text-slate-400 text-xs">Outcome Type</Label>
+                                                <Select
+                                                    value={formData.outcome_type || 'Unknown'}
+                                                    onValueChange={v => setFormData({ ...formData, outcome_type: v })}
+                                                >
+                                                    <SelectTrigger className="bg-slate-950 border-slate-800">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Success">Success (Approved)</SelectItem>
+                                                        <SelectItem value="Failure">Failure</SelectItem>
+                                                        <SelectItem value="Terminated">Terminated</SelectItem>
+                                                        <SelectItem value="Unknown">Unknown</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="col-span-2 space-y-2">
+                                                <Label className="text-slate-400 text-xs">Reviewer Note</Label>
+                                                <Textarea
+                                                    value={formData.reviewer_note || ''}
+                                                    onChange={e => setFormData({ ...formData, reviewer_note: e.target.value })}
+                                                    className="bg-slate-950 border-slate-800 h-20 text-xs"
+                                                    placeholder="Add notes for other reviewers..."
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Section B */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-blue-400 uppercase tracking-wider border-b border-blue-900/30 pb-2 flex items-center gap-2">
+                                            <Activity className="w-4 h-4" /> Section B: Clinical Metrics
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {renderInputWithMagic("ORR (%)", "orr_pct")}
+                                            {renderInputWithMagic("PFS (mo)", "pfs_months")}
+                                            {renderInputWithMagic("OS (mo)", "os_months")}
+                                            {renderInputWithMagic("DoR (mo)", "dor_months")}
+                                            {renderInputWithMagic("Patient Count", "patient_count")}
+                                            {renderInputWithMagic("AE Grade 3+ (%)", "adverse_events_grade3_pct")}
+                                        </div>
+                                    </section>
+
+                                    {/* Section C */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-purple-900/30 pb-2 flex items-center gap-2">
+                                            <Microscope className="w-4 h-4" /> Section C: ADC Design
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {renderInputWithMagic("Target Antigen", "target")}
+                                            {renderInputWithMagic("Antibody Format", "antibody_format", "e.g. IgG1")}
+                                            {renderInputWithMagic("Linker Type", "linker_type", "e.g. Cleavable")}
+                                            {renderInputWithMagic("DAR", "dar")}
+                                            {renderInputWithMagic("Binding (Kd)", "binding_affinity")}
+                                        </div>
+                                    </section>
+
+                                    {/* Section D */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-green-400 uppercase tracking-wider border-b border-green-900/30 pb-2 flex items-center gap-2">
+                                            <FlaskConical className="w-4 h-4" /> Section D: Chemical & IP
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-slate-400 text-xs flex justify-between">
+                                                    SMILES Code
+                                                    <div className="flex gap-2">
+                                                        <Button variant="ghost" size="sm" className="h-4 p-0 text-purple-400 hover:text-purple-300" onClick={() => handleMagicFill("SMILES Code")}>
+                                                            <Wand2 className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-4 p-0 text-slate-500 hover:text-white" onClick={() => {
+                                                            navigator.clipboard.writeText(formData.smiles_code || '')
+                                                            toast.success("Copied SMILES")
+                                                        }}>
+                                                            <Copy className="w-3 h-3 mr-1" /> Copy
+                                                        </Button>
+                                                    </div>
+                                                </Label>
+                                                <Textarea
+                                                    value={formData.smiles_code || ''}
+                                                    onChange={e => setFormData({ ...formData, smiles_code: e.target.value })}
+                                                    className="bg-slate-950 border-slate-800 font-mono text-xs h-20"
+                                                />
+                                                <ChemicalStructure smiles={formData.smiles_code || ''} />
+                                            </div>
+                                            <div className="space-y-4">
+                                                {renderInputWithMagic("Molecular Weight", "molecular_weight")}
+                                                {renderInputWithMagic("Patent ID", "patent_id")}
+                                                {renderInputWithMagic("Patent Expiry", "patent_expiry")}
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Raw Data Toggle */}
+                                    <div className="pt-8 border-t border-slate-800">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setShowRawData(!showRawData)}
+                                            className="text-slate-500 hover:text-white text-xs"
+                                        >
+                                            <Database className="w-3 h-3 mr-2" />
+                                            {showRawData ? "Hide Raw Data" : "Show Raw Data (JSON)"}
+                                        </Button>
+                                        {showRawData && (
+                                            <div className="mt-4 p-4 bg-slate-950 rounded-lg border border-slate-800 overflow-auto max-h-60">
+                                                <pre className="text-[10px] text-slate-400 font-mono">
+                                                    {JSON.stringify(selectedDraft.raw_data || {}, null, 2)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                        </div>
+
+                        {/* AI Panel (Right Side, Fixed Width) */}
+                        <div className="w-[350px] border-l border-slate-800 bg-slate-950/50">
+                            <AIAssistantPanel
+                                contextData={selectedDraft}
+                                onSourceClick={handleSourceClick}
+                                triggerQuery={aiTrigger}
+                                onClearTrigger={() => setAiTrigger(undefined)}
+                            />
+                        </div>
+                    </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
                         <Microscope className="w-12 h-12 mb-4 opacity-20" />
