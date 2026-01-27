@@ -881,3 +881,44 @@ Call log:
 2026-01-27 11:41:16,381 - INFO - ✅ Saved: ADC-P-076 | CAS: 6199-67-3 | Name: Cucurbitacin B (
 2026-01-27 11:41:16,388 - INFO - 💤 Sleeping 14.7s (Safety Delay)...
 2026-01-27 11:41:31,081 - INFO - Processing: https://www.creative-biolabs.com/adc/cucurbitacin-e-779.htm
+2026-01-27 11:41:43,932 - INFO - ✅ Saved: ADC-P-077 | CAS: 18444-66-1 | Name: Cucurbitacin E (
+2026-01-27 11:41:43,938 - INFO - 💤 Sleeping 19.7s (Safety Delay)...
+2026-01-27 11:42:03,677 - INFO - Processing: https://www.creative-biolabs.com/adc/curvulin-780.htm
+2026-01-27 11:42:16,550 - INFO - ✅ Saved: ADC-P-078 | CAS: 19054-27-4 | Name: Curvulin (
+2026-01-27 11:42:16,555 - INFO - 💤 Sleeping 14.0s (Safety Delay)...
+2026-01-27 11:42:30,547 - INFO - Processing: https://www.creative-biolabs.com/adc/cyclopamine-free-base-781.htm
+2026-01-27 11:42:43,369 - INFO - ✅ Saved: ADC-P-079 | CAS: 4449-51-8 | Name: Cyclopamine, Free Base (
+2026-01-27 11:42:43,375 - INFO - 💤 Sleeping 17.1s (Safety Delay)...
+2026-01-27 11:43:00,431 - INFO - Processing: https://www.creative-biolabs.com/adc/daunorubicin-hcl-782.htm
+2026-01-27 11:43:13,096 - INFO - ✅ Saved: ADC-P-080 | CAS: 23541-50-6 | Name: Daunorubicin HCl (
+2026-01-27 11:43:13,102 - INFO - 💤 Sleeping 12.4s (Safety Delay)...
+2026-01-27 11:43:25,500 - INFO - Processing: https://www.creative-biolabs.com/adc/dl-dithiothreitol-dtt-783.htm
+2026-01-27 11:43:38,183 - INFO - ✅ Saved: ADC-P-081 | CAS: 3483-12-3 | Name: DL-Dithiothreitol/DTT (
+2026-01-27 11:43:38,188 - INFO - 💤 Sleeping 16.9s (Safety Delay)...
+2026-01-27 11:43:55,105 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-anti-ab-adcs-3.htm
+2026-01-27 11:44:06,618 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-3
+2026-01-27 11:44:07,759 - INFO - ✅ Saved: CBL-ADC-3 | CAS: None | Name: Anti-Ab ADC Products
+2026-01-27 11:44:07,763 - INFO - 💤 Sleeping 16.2s (Safety Delay)...
+2026-01-27 11:44:23,925 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-adcs-1.htm
+2026-01-27 11:44:35,461 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-1
+2026-01-27 11:44:36,636 - INFO - ✅ Saved: CBL-ADC-1 | CAS: None | Name: Customized ADC Products
+2026-01-27 11:44:36,639 - INFO - 💤 Sleeping 10.8s (Safety Delay)...
+2026-01-27 11:44:47,503 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-fluoroab-9.htm
+2026-01-27 11:45:04,588 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-9
+2026-01-27 11:45:06,436 - INFO - ✅ Saved: CBL-ADC-9 | CAS: None | Name: Customized FluoroAb™ Products
+2026-01-27 11:45:06,439 - INFO - 💤 Sleeping 15.3s (Safety Delay)...
+2026-01-27 11:45:21,743 - INFO - 📄 Processing Page 5: https://www.creative-biolabs.com/adc/classify-adc-toxins-6.htm?page=5
+2026-01-27 11:45:34,160 - INFO - 🔎 Found 23 products on page 5
+2026-01-27 11:45:34,163 - INFO - Processing: https://www.creative-biolabs.com/adc/17-dmap-ga-786.htm
+2026-01-27 11:45:36,763 - INFO - ✅ Saved: ADC-P-084 | CAS: None | Name: 17-DMAP-GA (
+2026-01-27 11:45:36,769 - INFO - 💤 Sleeping 13.0s (Safety Delay)...
+2026-01-27 11:45:49,806 - INFO - Processing: https://www.creative-biolabs.com/adc/17-gmb-apa-ga-796.htm
+2026-01-27 11:46:03,898 - INFO - ✅ Saved: ADC-P-094 | CAS: None | Name: 17-GMB-APA-GA (
+2026-01-27 11:46:03,905 - INFO - 💤 Sleeping 12.3s (Safety Delay)...
+2026-01-27 11:46:16,173 - INFO - Processing: https://www.creative-biolabs.com/adc/4-methyl-ahtea-puwainaphycin-f-791.htm
+2026-01-27 11:46:29,784 - INFO - ✅ Saved: ADC-P-089 | CAS: None | Name: 4-methyl-Ahtea-Puwainaphycin F (
+2026-01-27 11:46:29,791 - INFO - 💤 Sleeping 15.4s (Safety Delay)...
+2026-01-27 11:46:45,202 - INFO - Processing: https://www.creative-biolabs.com/adc/9-hydroxyellipticine-hydrochloride-800.htm
+2026-01-27 11:46:58,883 - INFO - ✅ Saved: ADC-P-098 | CAS: 52238-35-4 | Name: 9-Hydroxyellipticine, hydrochloride (
+2026-01-27 11:46:58,891 - INFO - 💤 Sleeping 13.3s (Safety Delay)...
+2026-01-27 11:47:12,189 - INFO - Processing: https://www.creative-biolabs.com/adc/beta-amanitin-790.htm
