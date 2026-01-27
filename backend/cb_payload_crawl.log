@@ -1078,3 +1078,93 @@ Call log:
 2026-01-27 12:10:00,930 - INFO - Processing: https://www.creative-biolabs.com/adc/pseudolaric-acid-b-830.htm
 2026-01-27 12:10:13,954 - INFO - ✅ Saved: ADC-P-128 | CAS: 82508-31-4 | Name: Pseudolaric acid B (
 2026-01-27 12:10:13,960 - INFO - 💤 Sleeping 13.6s (Safety Delay)...
+2026-01-27 12:10:27,572 - INFO - Processing: https://www.creative-biolabs.com/adc/pseurotin-a-831.htm
+2026-01-27 12:10:40,653 - INFO - ✅ Saved: ADC-P-129 | CAS: 58523-30-1 | Name: Pseurotin A (
+2026-01-27 12:10:40,658 - INFO - 💤 Sleeping 12.7s (Safety Delay)...
+2026-01-27 12:10:53,349 - INFO - Processing: https://www.creative-biolabs.com/adc/puwainaphycin-f-833.htm
+2026-01-27 12:11:06,379 - INFO - ✅ Saved: ADC-P-131 | CAS: None | Name: Puwainaphycin F (
+2026-01-27 12:11:06,385 - INFO - 💤 Sleeping 16.5s (Safety Delay)...
+2026-01-27 12:11:22,905 - INFO - Processing: https://www.creative-biolabs.com/adc/quinaldopeptin-835.htm
+2026-01-27 12:11:36,148 - INFO - ✅ Saved: ADC-P-133 | CAS: 130743-07-6 | Name: Quinaldopeptin (
+2026-01-27 12:11:36,154 - INFO - 💤 Sleeping 19.4s (Safety Delay)...
+2026-01-27 12:11:55,518 - INFO - Processing: https://www.creative-biolabs.com/adc/rebeccamycin-836.htm
+2026-01-27 12:12:08,549 - INFO - ✅ Saved: ADC-P-134 | CAS: 93908-02-2 | Name: Rebeccamycin (
+2026-01-27 12:12:08,556 - INFO - 💤 Sleeping 18.4s (Safety Delay)...
+2026-01-27 12:12:26,947 - INFO - Processing: https://www.creative-biolabs.com/adc/ro-5-3335-837.htm
+2026-01-27 12:12:39,958 - INFO - ✅ Saved: ADC-P-135 | CAS: 30195-30-3 | Name: Ro 5-3335 (
+2026-01-27 12:12:39,964 - INFO - 💤 Sleeping 15.8s (Safety Delay)...
+2026-01-27 12:12:55,767 - INFO - Processing: https://www.creative-biolabs.com/adc/safracin-b-838.htm
+2026-01-27 12:13:09,263 - INFO - ✅ Saved: ADC-P-136 | CAS: 87578-99-2 | Name: Safracin B (
+2026-01-27 12:13:09,268 - INFO - 💤 Sleeping 17.8s (Safety Delay)...
+2026-01-27 12:13:27,093 - INFO - Processing: https://www.creative-biolabs.com/adc/sanguinarine-840.htm
+2026-01-27 12:13:40,164 - INFO - ✅ Saved: ADC-P-138 | CAS: 2447-54-3 | Name: Sanguinarine (
+2026-01-27 12:13:40,171 - INFO - 💤 Sleeping 11.8s (Safety Delay)...
+2026-01-27 12:13:51,927 - INFO - Processing: https://www.creative-biolabs.com/adc/sinefungin-841.htm
+2026-01-27 12:14:04,976 - INFO - ✅ Saved: ADC-P-139 | CAS: 58944-73-3 | Name: Sinefungin (
+2026-01-27 12:14:04,981 - INFO - 💤 Sleeping 15.2s (Safety Delay)...
+2026-01-27 12:14:20,217 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-anti-ab-adcs-3.htm
+2026-01-27 12:14:31,817 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-3
+2026-01-27 12:14:33,240 - INFO - ✅ Saved: CBL-ADC-3 | CAS: None | Name: Anti-Ab ADC Products
+2026-01-27 12:14:33,243 - INFO - 💤 Sleeping 10.1s (Safety Delay)...
+2026-01-27 12:14:43,352 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-adcs-1.htm
+2026-01-27 12:14:54,990 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-1
+2026-01-27 12:14:56,423 - INFO - ✅ Saved: CBL-ADC-1 | CAS: None | Name: Customized ADC Products
+2026-01-27 12:14:56,429 - INFO - 💤 Sleeping 11.2s (Safety Delay)...
+2026-01-27 12:15:07,600 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-fluoroab-9.htm
+2026-01-27 12:15:19,221 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-9
+2026-01-27 12:15:20,647 - INFO - ✅ Saved: CBL-ADC-9 | CAS: None | Name: Customized FluoroAb™ Products
+2026-01-27 12:15:20,653 - INFO - 💤 Sleeping 13.6s (Safety Delay)...
+2026-01-27 12:15:34,290 - INFO - Processing: https://www.creative-biolabs.com/adc/telomestatin-842.htm
+2026-01-27 12:15:47,344 - INFO - ✅ Saved: ADC-P-140 | CAS: 265114-54-3 | Name: Telomestatin (
+2026-01-27 12:15:47,350 - INFO - 💤 Sleeping 15.4s (Safety Delay)...
+2026-01-27 12:16:02,793 - INFO - Processing: https://www.creative-biolabs.com/adc/thiocolchicine-843.htm
+2026-01-27 12:16:16,280 - INFO - ✅ Saved: ADC-P-141 | CAS: 2730-71-4 | Name: Thiocolchicine (
+2026-01-27 12:16:16,286 - INFO - 💤 Sleeping 14.1s (Safety Delay)...
+2026-01-27 12:16:30,350 - INFO - Processing: https://www.creative-biolabs.com/adc/tolytoxin-844.htm
+2026-01-27 12:16:44,602 - INFO - ✅ Saved: ADC-P-142 | CAS: None | Name: Tolytoxin (
+2026-01-27 12:16:44,609 - INFO - 💤 Sleeping 18.8s (Safety Delay)...
+2026-01-27 12:17:03,396 - INFO - Processing: https://www.creative-biolabs.com/adc/tripolin-a-845.htm
+2026-01-27 12:17:16,508 - INFO - ✅ Saved: ADC-P-143 | CAS: 1148118-92-6 | Name: Tripolin A (
+2026-01-27 12:17:16,513 - INFO - 💤 Sleeping 14.5s (Safety Delay)...
+2026-01-27 12:17:31,050 - INFO - Processing: https://www.creative-biolabs.com/adc/tubastatin-a-hcl-846.htm
+2026-01-27 12:17:44,133 - INFO - ✅ Saved: ADC-P-144 | CAS: 1310693-92-5 | Name: Tubastatin A HCl (
+2026-01-27 12:17:44,139 - INFO - 💤 Sleeping 19.5s (Safety Delay)...
+2026-01-27 12:18:03,600 - INFO - 📄 Processing Page 8: https://www.creative-biolabs.com/adc/classify-adc-toxins-6.htm?page=8
+2026-01-27 12:18:15,206 - INFO - 🔎 Found 11 products on page 8
+2026-01-27 12:18:15,209 - INFO - Processing: https://www.creative-biolabs.com/adc/dgn462-4723.htm
+2026-01-27 12:18:18,112 - INFO - ✅ Saved: ADC-P-150 | CAS: 1394079-41-4 | Name: DGN462 (
+2026-01-27 12:18:18,119 - INFO - 💤 Sleeping 17.7s (Safety Delay)...
+2026-01-27 12:18:35,802 - INFO - Processing: https://www.creative-biolabs.com/adc/hexynoyl-meropenem-24069.htm
+2026-01-27 12:18:49,057 - INFO - ✅ Saved: WJY-0423-LS2 | CAS: None | Name: Hexynoyl meropenem (
+2026-01-27 12:18:49,065 - INFO - 💤 Sleeping 15.9s (Safety Delay)...
+2026-01-27 12:19:04,956 - INFO - Processing: https://www.creative-biolabs.com/adc/maytansine-dm3-24072.htm
+2026-01-27 12:19:18,417 - INFO - ✅ Saved: WJY-0423-LS5 | CAS: 796073-54-6 | Name: Maytansine DM3 (
+2026-01-27 12:19:18,423 - INFO - 💤 Sleeping 19.7s (Safety Delay)...
+2026-01-27 12:19:38,146 - INFO - Processing: https://www.creative-biolabs.com/adc/rachelmycin-4720.htm
+2026-01-27 12:19:51,197 - INFO - ✅ Saved: ADC-P-147 | CAS: 69866-21-3 | Name: Rachelmycin (
+2026-01-27 12:19:51,202 - INFO - 💤 Sleeping 10.3s (Safety Delay)...
+2026-01-27 12:20:01,472 - INFO - Processing: https://www.creative-biolabs.com/adc/seco-duocarmycin-sa-4722.htm
+2026-01-27 12:20:14,570 - INFO - ✅ Saved: ADC-P-149 | CAS: 144667-38-9 | Name: Seco-Duocarmycin SA (
+2026-01-27 12:20:14,576 - INFO - 💤 Sleeping 19.5s (Safety Delay)...
+2026-01-27 12:20:34,040 - INFO - Processing: https://www.creative-biolabs.com/adc/sg3199-24071.htm
+2026-01-27 12:20:47,107 - INFO - ✅ Saved: WJY-0423-LS4 | CAS: 1595275-71-0 | Name: SG3199 (
+2026-01-27 12:20:47,112 - INFO - 💤 Sleeping 10.1s (Safety Delay)...
+2026-01-27 12:20:57,258 - INFO - Processing: https://www.creative-biolabs.com/adc/sulfo-dgn462-sodium-24070.htm
+2026-01-27 12:21:10,316 - INFO - ✅ Saved: WJY-0423-LS3 | CAS: 1401203-09-5 | Name: Sulfo-DGN462 (sodium) (
+2026-01-27 12:21:10,322 - INFO - 💤 Sleeping 17.9s (Safety Delay)...
+2026-01-27 12:21:28,257 - INFO - Processing: https://www.creative-biolabs.com/adc/t785-24068.htm
+2026-01-27 12:21:41,299 - INFO - ✅ Saved: WJY-0423-LS1 | CAS: None | Name: T785 (
+2026-01-27 12:21:41,305 - INFO - 💤 Sleeping 17.8s (Safety Delay)...
+2026-01-27 12:21:59,095 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-anti-ab-adcs-3.htm
+2026-01-27 12:22:10,702 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-3
+2026-01-27 12:22:12,128 - INFO - ✅ Saved: CBL-ADC-3 | CAS: None | Name: Anti-Ab ADC Products
+2026-01-27 12:22:12,132 - INFO - 💤 Sleeping 15.6s (Safety Delay)...
+2026-01-27 12:22:27,745 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-adcs-1.htm
+2026-01-27 12:22:39,359 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-1
+2026-01-27 12:22:40,786 - INFO - ✅ Saved: CBL-ADC-1 | CAS: None | Name: Customized ADC Products
+2026-01-27 12:22:40,790 - INFO - 💤 Sleeping 12.9s (Safety Delay)...
+2026-01-27 12:22:53,726 - INFO - Processing: https://www.creative-biolabs.com/adc/target-list-customized-fluoroab-9.htm
+2026-01-27 12:23:05,336 - WARNING - ⚠️ Cat No not found. Generated: CBL-ADC-9
+2026-01-27 12:23:06,733 - INFO - ✅ Saved: CBL-ADC-9 | CAS: None | Name: Customized FluoroAb™ Products
+2026-01-27 12:23:06,737 - INFO - 💤 Sleeping 11.1s (Safety Delay)...
+2026-01-27 12:23:17,880 - INFO - 🏁 Crawler Finished. Total Processed: 170

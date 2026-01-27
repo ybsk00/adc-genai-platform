@@ -1,0 +1,176 @@
+2026-01-27 12:56:45,824 - INFO - 🚀 Starting Ambeed Linker Safe Crawler (3 pages -> 1 min rest)
+2026-01-27 12:56:46,385 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 12:56:46,534 - INFO - 📄 Processing Page 1: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=1
+2026-01-27 12:56:50,614 - INFO - 🔎 Found 20 products on page.
+2026-01-27 12:56:55,401 - INFO - ✅ Saved: 31576-51-9 | CAS: 31576-51-9
+2026-01-27 12:57:02,189 - INFO - ✅ Saved: 1286281-32-0 | CAS: 1286281-32-0
+2026-01-27 12:57:11,203 - INFO - ✅ Saved: 872679-70-4 | CAS: 872679-70-4
+2026-01-27 12:57:20,065 - INFO - ✅ Saved: 1260092-50-9 | CAS: 1260092-50-9
+2026-01-27 12:57:28,184 - INFO - ✅ Saved: 1193111-39-5 | CAS: 1193111-39-5
+2026-01-27 12:57:34,501 - INFO - ✅ Saved: 1347760-82-0 | CAS: 1347760-82-0
+2026-01-27 12:57:42,521 - INFO - ✅ Saved: 2101206-31-7 | CAS: 2101206-31-7
+2026-01-27 12:57:49,542 - INFO - ✅ Saved: 1343476-44-7 | CAS: 1343476-44-7
+2026-01-27 12:57:56,766 - INFO - ✅ Saved: 485800-27-9 | CAS: 485800-27-9
+2026-01-27 12:58:03,431 - INFO - ✅ Saved: 1802907-98-7 | CAS: 1802907-98-7
+2026-01-27 12:58:09,819 - INFO - ✅ Saved: 79642-50-5 | CAS: 79642-50-5
+2026-01-27 12:58:19,293 - INFO - ✅ Saved: 1305053-43-3 | CAS: 1305053-43-3
+2026-01-27 12:58:29,470 - INFO - ✅ Saved: 756525-99-2 | CAS: 756525-99-2
+2026-01-27 12:58:37,499 - INFO - ✅ Saved: 2101206-29-3 | CAS: 2101206-29-3
+2026-01-27 12:58:45,787 - INFO - ✅ Saved: 870487-10-8 | CAS: 870487-10-8
+2026-01-27 12:59:00,502 - INFO - 📄 Processing Page 2: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=2
+2026-01-27 12:59:02,477 - INFO - 🔎 Found 20 products on page.
+2026-01-27 12:59:06,140 - INFO - ✅ Saved: 1008402-79-6 | CAS: 1008402-79-6
+2026-01-27 12:59:12,219 - INFO - ✅ Saved: 2264011-98-3 | CAS: 2264011-98-3
+2026-01-27 12:59:19,629 - INFO - ✅ Saved: 187794-49-6 | CAS: 187794-49-6
+2026-01-27 12:59:27,687 - INFO - ✅ Saved: 916746-27-5 | CAS: 916746-27-5
+2026-01-27 12:59:35,737 - INFO - ✅ Saved: 1325208-25-0 | CAS: 1325208-25-0
+2026-01-27 12:59:42,423 - INFO - ✅ Saved: 138148-62-6 | CAS: 138148-62-6
+2026-01-27 12:59:47,549 - INFO - ✅ Saved: 2101206-32-8 | CAS: 2101206-32-8
+2026-01-27 12:59:53,729 - INFO - ✅ Saved: 160580-70-1 | CAS: 160580-70-1
+2026-01-27 13:00:00,532 - INFO - ✅ Saved: 1599440-25-1 | CAS: 1599440-25-1
+2026-01-27 13:00:06,872 - INFO - ✅ Saved: 1408057-91-9 | CAS: 1408057-91-9
+2026-01-27 13:00:14,136 - INFO - ✅ Saved: 944561-44-8 | CAS: 944561-44-8
+2026-01-27 13:00:23,180 - INFO - ✅ Saved: 133803-81-3 | CAS: 133803-81-3
+2026-01-27 13:00:32,043 - INFO - ✅ Saved: 260367-12-2 | CAS: 260367-12-2
+2026-01-27 13:00:41,582 - INFO - ✅ Saved: pddec-nb | CAS: 1956318-90-3
+2026-01-27 13:00:47,565 - INFO - ✅ Saved: 80366-85-4 | CAS: 80366-85-4
+2026-01-27 13:00:54,675 - INFO - ✅ Saved: 1433997-01-3 | CAS: 1433997-01-3
+2026-01-27 13:01:04,457 - INFO - ✅ Saved: 1425803-45-7 | CAS: 1425803-45-7
+2026-01-27 13:01:10,741 - INFO - ✅ Saved: 159858-22-7 | CAS: 159858-22-7
+2026-01-27 13:01:16,368 - INFO - ✅ Saved: 756526-04-2 | CAS: 756526-04-2
+2026-01-27 13:01:25,722 - INFO - ✅ Saved: 1415328-95-8 | CAS: 1415328-95-8
+2026-01-27 13:01:40,692 - INFO - 📄 Processing Page 3: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=3
+2026-01-27 13:01:42,076 - INFO - 🔎 Found 20 products on page.
+2026-01-27 13:01:45,912 - INFO - ✅ Saved: 2253965-03-4 | CAS: 2253965-03-4
+2026-01-27 13:01:54,712 - INFO - ✅ Saved: 2101206-14-6 | CAS: 2101206-14-6
+2026-01-27 13:02:00,354 - INFO - ✅ Saved: 874302-76-8 | CAS: 874302-76-8
+2026-01-27 13:02:07,153 - INFO - ✅ Saved: 2253965-01-2 | CAS: 2253965-01-2
+2026-01-27 13:02:16,930 - INFO - ✅ Saved: 1951424-92-2 | CAS: 1951424-92-2
+2026-01-27 13:02:22,182 - INFO - ✅ Saved: 111625-28-6 | CAS: 111625-28-6
+2026-01-27 13:02:28,614 - INFO - ✅ Saved: 756526-03-1 | CAS: 756526-03-1
+2026-01-27 13:02:34,386 - INFO - ✅ Saved: tetrazine-biotin | CAS: 1714123-51-9
+2026-01-27 13:02:41,699 - INFO - ✅ Saved: 1342211-31-7 | CAS: 1342211-31-7
+2026-01-27 13:02:47,882 - INFO - ✅ Saved: 894096-02-7 | CAS: 894096-02-7
+2026-01-27 13:02:54,169 - INFO - ✅ Saved: 1435934-53-4 | CAS: 1435934-53-4
+2026-01-27 13:03:03,367 - INFO - ✅ Saved: azide-peg1-val-cit-pabc-oh | CAS: 2055041-40-0
+2026-01-27 13:03:08,772 - INFO - ✅ Saved: 103750-03-4 | CAS: 103750-03-4
+2026-01-27 13:03:15,758 - INFO - ✅ Saved: 1881221-47-1 | CAS: 1881221-47-1
+2026-01-27 13:03:20,732 - INFO - ✅ Saved: 581065-93-2 | CAS: 581065-93-2
+2026-01-27 13:03:27,598 - INFO - ✅ Saved: 894095-98-8 | CAS: 894095-98-8
+2026-01-27 13:03:33,797 - INFO - ✅ Saved: boc-aminooxy-peg2-bromide | CAS: 252378-67-9
+2026-01-27 13:03:43,113 - INFO - ✅ Saved: 1639939-40-4 | CAS: 1639939-40-4
+2026-01-27 13:03:48,262 - INFO - ✅ Saved: 1116085-98-3 | CAS: 1116085-98-3
+2026-01-27 13:04:00,552 - INFO - 🛑 Batch of 3 pages done. Resting for 60s...
+2026-01-27 13:05:00,561 - INFO - 📄 Processing Page 4: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=4
+2026-01-27 13:05:03,625 - INFO - 🔎 Found 20 products on page.
+2026-01-27 13:05:08,276 - INFO - ✅ Saved: 27425-92-9 | CAS: 27425-92-9
+2026-01-27 13:05:14,485 - INFO - ✅ Saved: 148579-94-6 | CAS: 148579-94-6
+2026-01-27 13:05:20,062 - INFO - ✅ Saved: 1394238-92-6 | CAS: 1394238-92-6
+2026-01-27 13:05:26,838 - INFO - ✅ Saved: 874208-94-3 | CAS: 874208-94-3
+2026-01-27 13:05:33,806 - INFO - ✅ Saved: 2413428-36-9 | CAS: 2413428-36-9
+2026-01-27 13:05:39,111 - INFO - ✅ Saved: 2101206-21-5 | CAS: 2101206-21-5
+2026-01-27 13:05:48,596 - INFO - ✅ Saved: 150114-97-9 | CAS: 150114-97-9
+2026-01-27 13:05:56,682 - INFO - ✅ Saved: 1007386-15-3 | CAS: 1007386-15-3
+2026-01-27 13:06:03,197 - INFO - ✅ Saved: 103898-11-9 | CAS: 103898-11-9
+2026-01-27 13:06:09,126 - INFO - ✅ Saved: 778596-26-2 | CAS: 778596-26-2
+2026-01-27 13:06:19,002 - INFO - ✅ Saved: 1353011-74-1 | CAS: 1353011-74-1
+2026-01-27 13:06:25,865 - INFO - ✅ Saved: 518044-32-1 | CAS: 518044-32-1
+2026-01-27 13:06:35,191 - INFO - ✅ Saved: 170941-79-4 | CAS: 170941-79-4
+2026-01-27 13:06:44,022 - INFO - ✅ Saved: ec1167 | CAS: 1610414-00-0
+2026-01-27 13:06:52,305 - INFO - ✅ Saved: 663598-98-9 | CAS: 663598-98-9
+2026-01-27 13:07:00,678 - INFO - ✅ Saved: 1314378-11-4 | CAS: 1314378-11-4
+2026-01-27 13:07:07,642 - INFO - ✅ Saved: 1127247-34-0 | CAS: 1127247-34-0
+2026-01-27 13:07:13,435 - INFO - ✅ Saved: 859230-20-9 | CAS: 859230-20-9
+2026-01-27 13:07:19,205 - INFO - ✅ Saved: 2353409-80-8 | CAS: 2353409-80-8
+2026-01-27 13:07:26,548 - INFO - ✅ Saved: 2285373-84-2 | CAS: 2285373-84-2
+2026-01-27 13:07:40,350 - INFO - 📄 Processing Page 5: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=5
+2026-01-27 13:07:41,904 - INFO - 🔎 Found 19 products on page.
+2026-01-27 13:07:44,937 - INFO - ✅ Saved: 132178-37-1 | CAS: 132178-37-1
+2026-01-27 13:07:54,793 - INFO - ✅ Saved: 57159-62-3 | CAS: 57159-62-3
+2026-01-27 13:08:05,007 - INFO - ✅ Saved: 2101206-87-3 | CAS: 2101206-87-3
+2026-01-27 13:08:12,097 - INFO - ✅ Saved: 870487-08-4 | CAS: 870487-08-4
+2026-01-27 13:08:18,407 - INFO - ✅ Saved: 68528-80-3 | CAS: 68528-80-3
+2026-01-27 13:08:25,716 - INFO - ✅ Saved: 437655-96-4 | CAS: 437655-96-4
+2026-01-27 13:08:32,437 - INFO - ✅ Saved: 518044-40-1 | CAS: 518044-40-1
+2026-01-27 13:08:39,239 - INFO - ✅ Saved: 159857-81-5 | CAS: 159857-81-5
+2026-01-27 13:08:45,460 - INFO - ✅ Saved: 165963-71-3 | CAS: 165963-71-3
+2026-01-27 13:08:52,370 - INFO - ✅ Saved: 1314378-16-9 | CAS: 1314378-16-9
+2026-01-27 13:08:58,582 - INFO - ✅ Saved: 1070798-99-0 | CAS: 1070798-99-0
+2026-01-27 13:09:05,791 - INFO - ✅ Saved: 57757-57-0 | CAS: 57757-57-0
+2026-01-27 13:09:14,757 - INFO - ✅ Saved: 158913-22-5 | CAS: 158913-22-5
+2026-01-27 13:09:20,806 - INFO - ✅ Saved: 1884578-00-0 | CAS: 1884578-00-0
+2026-01-27 13:09:27,171 - INFO - ✅ Saved: 53053-08-0 | CAS: 53053-08-0
+2026-01-27 13:09:32,940 - INFO - ✅ Saved: spdh | CAS: 1824718-79-7
+2026-01-27 13:09:40,902 - INFO - ✅ Saved: 1076198-38-3 | CAS: 1076198-38-3
+2026-01-27 13:09:47,638 - INFO - ✅ Saved: dupa(otbu)-oh | CAS: 1026987-94-9
+2026-01-27 13:09:54,483 - INFO - ✅ Saved: 796073-55-7 | CAS: 796073-55-7
+2026-01-27 13:10:05,396 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 13:10:06,526 - INFO - 🔎 Found 0 products on page.
+2026-01-27 13:10:06,530 - WARNING - ⚠️ Page 6 yield 0 items. Empty count: 1
+2026-01-27 13:10:13,099 - INFO - 📄 Processing Page 7: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=7
+2026-01-27 13:10:14,223 - INFO - 🔎 Found 0 products on page.
+2026-01-27 13:10:14,225 - WARNING - ⚠️ Page 7 yield 0 items. Empty count: 2
+2026-01-27 13:10:21,709 - INFO - 📄 Processing Page 8: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=8
+2026-01-27 13:10:22,306 - INFO - 🔎 Found 0 products on page.
+2026-01-27 13:10:22,309 - WARNING - ⚠️ Page 8 yield 0 items. Empty count: 3
+2026-01-27 13:10:22,309 - INFO - 🏁 3 consecutive empty pages. Assuming end of list.
+2026-01-27 13:10:22,366 - INFO - ✅ Crawler Finished.
+2026-01-27 13:13:13,711 - INFO - 🚀 Starting Ambeed Linker Crawler (From Pg 6, Batch 2, Rest 120s)
+2026-01-27 13:13:14,261 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:13:14,410 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 13:13:17,008 - INFO - 🔎 Found 0 products.
+2026-01-27 13:13:17,012 - WARNING - ⚠️ Page 6 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:13:40,200 - INFO - 🚀 Starting Ambeed Linker Crawler (From Pg 6, Batch 2, Rest 120s)
+2026-01-27 13:13:40,923 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:13:41,062 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 13:13:45,489 - INFO - 🔎 Found 0 products.
+2026-01-27 13:13:45,493 - WARNING - ⚠️ Page 6 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:16:45,504 - INFO - 🔄 Retrying Page 6...
+2026-01-27 13:16:45,573 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:17:03,019 - INFO - 🔎 Found 0 products.
+2026-01-27 13:17:03,022 - ERROR - ❌ Page 6 failed again. Skipping.
+2026-01-27 13:17:03,023 - INFO - running... next page in 18.9s
+2026-01-27 13:17:21,893 - INFO - 📄 Processing Page 7: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=7
+2026-01-27 13:17:23,136 - INFO - 🔎 Found 0 products.
+2026-01-27 13:17:23,139 - WARNING - ⚠️ Page 7 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:19:40,160 - INFO - 🚀 Starting Ambeed Linker Crawler (From Pg 6, Batch 2, Rest 120s)
+2026-01-27 13:19:40,693 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:19:40,815 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 13:19:43,820 - INFO - 🔎 Found 0 products.
+2026-01-27 13:19:43,823 - WARNING - ⚠️ Page 6 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:22:43,828 - INFO - 🔄 Retrying Page 6...
+2026-01-27 13:22:43,883 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:22:46,358 - INFO - 🔎 Found 0 products.
+2026-01-27 13:22:46,361 - ERROR - ❌ Page 6 failed again. Skipping.
+2026-01-27 13:22:46,361 - INFO - running... next page in 13.4s
+2026-01-27 13:22:59,727 - INFO - 📄 Processing Page 7: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=7
+2026-01-27 13:23:01,204 - INFO - 🔎 Found 0 products.
+2026-01-27 13:23:01,208 - WARNING - ⚠️ Page 7 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:26:01,221 - INFO - 🔄 Retrying Page 7...
+2026-01-27 13:26:01,269 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:26:03,678 - INFO - 🔎 Found 0 products.
+2026-01-27 13:26:03,681 - ERROR - ❌ Page 7 failed again. Skipping.
+2026-01-27 13:26:03,681 - INFO - running... next page in 18.9s
+2026-01-27 13:26:22,548 - INFO - 📄 Processing Page 8: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=8
+2026-01-27 13:26:23,959 - INFO - 🔎 Found 0 products.
+2026-01-27 13:26:23,963 - WARNING - ⚠️ Page 8 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 13:29:23,972 - INFO - 🔄 Retrying Page 8...
+2026-01-27 13:29:24,190 - INFO - 🌐 Launching Browser (Stealth Mode)
+2026-01-27 13:29:26,909 - INFO - 🔎 Found 0 products.
+2026-01-27 13:29:26,913 - ERROR - ❌ Page 8 failed again. Skipping.
+2026-01-27 13:29:26,913 - INFO - 🏁 3 consecutive empty pages (including retries). Stopping.
+2026-01-27 13:29:26,981 - INFO - ✅ Crawler Finished.
+2026-01-27 14:13:00,590 - INFO - 🚀 Starting Ambeed Linker Crawler (VISIBLE MODE). Do not close the browser window.
+2026-01-27 14:13:01,149 - INFO - 🌐 Launching Browser (Headed Mode - Visible Window)
+2026-01-27 14:13:07,068 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 14:13:09,504 - INFO - 🔎 Found 0 products.
+2026-01-27 14:13:09,512 - WARNING - ⚠️ Page 6 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 14:17:52,885 - INFO - 🚀 Starting Ambeed Linker Crawler (VISIBLE MODE). Do not close the browser window.
+2026-01-27 14:17:53,430 - INFO - 🌐 Launching Browser (Headed Mode - Visible Window)
+2026-01-27 14:17:53,706 - INFO - 📄 Processing Page 6: https://www.ambeed.com/adc%20linker.html?pagesize=20&pageindex=6
+2026-01-27 14:17:56,025 - INFO - 🔎 Found 0 products.
+2026-01-27 14:17:56,213 - WARNING - ⚠️ Page 6 yielded 0 items. Possible BLOCK. Entering Emergency Sleep (180s)...
+2026-01-27 14:26:51,952 - INFO - 🚀 Starting Ambeed Linker Crawler (Sequential Warm-up Mode).
+2026-01-27 14:26:52,510 - INFO - 🌐 Launching Browser (Headed Mode)
+2026-01-27 14:30:26,723 - INFO - 🧪 [Warm-up] Visiting Page 1 to satisfy sequencing...
+2026-01-27 14:30:33,926 - INFO -    Done warm-up for page 1

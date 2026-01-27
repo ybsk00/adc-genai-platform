@@ -6,7 +6,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { X, Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-
 interface InventoryDetailPanelProps {
     item: any
     type: 'antibodies' | 'reagents'
@@ -149,6 +148,24 @@ function AIAssistantPanel({ item, type }: { item: any, type: string }) {
                     )}
                     {messages.map((msg, idx) => (
                         <div key={idx} className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                            {msg.role === 'assistant' && (
+                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
+                                    <Bot className="w-3 h-3 text-purple-400" />
+                                </div>
+                            )}
+                            <div className={cn(
+                                "rounded-lg px-3 py-2 max-w-[85%] text-sm whitespace-pre-wrap",
+                                msg.role === 'user'
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-800 text-slate-200"
+                            )}>
+                                {msg.content}
+                            </div>
+                        </div>
+                    ))}
+                    {loading && (
+                        <div className="flex gap-3 justify-start">
+                            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
                                 <Bot className="w-3 h-3 text-purple-400" />
                             </div>
                             <div className="bg-slate-800 rounded-lg px-3 py-2">
@@ -156,21 +173,21 @@ function AIAssistantPanel({ item, type }: { item: any, type: string }) {
                             </div>
                         </div>
                     )}
+                </div>
+            </ScrollArea>
+            <div className="p-3 border-t border-slate-800 flex gap-2">
+                <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    placeholder="Ask a question..."
+                    className="bg-slate-900 border-slate-700 text-slate-200 focus:ring-purple-500"
+                    disabled={loading}
+                />
+                <Button size="icon" onClick={handleSend} disabled={loading || !input.trim()} className="bg-purple-600 hover:bg-purple-700">
+                    <Send className="w-4 h-4" />
+                </Button>
+            </div>
         </div>
-            </ScrollArea >
-        <div className="p-3 border-t border-slate-800 flex gap-2">
-            <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask a question..."
-                className="bg-slate-900 border-slate-700 text-slate-200 focus:ring-purple-500"
-                disabled={loading}
-            />
-            <Button size="icon" onClick={handleSend} disabled={loading || !input.trim()} className="bg-purple-600 hover:bg-purple-700">
-                <Send className="w-4 h-4" />
-            </Button>
-        </div>
-        </div >
     )
 }
