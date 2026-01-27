@@ -37,8 +37,8 @@ function App() {
           {/* Admin Routes (Protected + Role Check) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
-            <Route path="inventory" element={<TotalInventoryLayout />} />
-            <Route path="data-inventory" element={<TotalDataInventory />} />
+            <Route path="inventory" element={<TotalDataInventory />} />
+            <Route path="adc-inventory" element={<TotalInventoryLayout />} />
             <Route path="staging" element={<StagingAreaPage />} />
             <Route path="goldenset" element={<GoldenSetLibraryPage />} />
             <Route path="user-operations" element={<UserOperations />} />

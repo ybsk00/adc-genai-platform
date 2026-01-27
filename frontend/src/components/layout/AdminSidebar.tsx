@@ -8,7 +8,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Shield,
-    FlaskConical
+    FlaskConical,
+    Beaker
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,7 @@ interface AdminSidebarProps {
 const menuItems = [
     { icon: LayoutDashboard, label: 'Overview', href: '/admin' },
     { icon: Database, label: 'Total Inventory', href: '/admin/inventory' },
+    { icon: Beaker, label: 'ADC Total Inventory', href: '/admin/adc-inventory' },
     { icon: FlaskConical, label: 'Staging Area', href: '/admin/staging' },
     { icon: Sparkles, label: 'Golden Set Library', href: '/admin/goldenset' },
     { icon: Users, label: 'User Operations', href: '/admin/user-operations' },

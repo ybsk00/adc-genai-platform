@@ -78,8 +78,9 @@ export function InventoryDetailPanel({ item, type, onClose, onUpdate }: Inventor
     const handleSave = async () => {
         setSaving(true)
         try {
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
             const table = type === 'antibodies' ? 'antibody_library' : 'commercial_reagents'
-            const res = await fetch(`/api/admin/inventory/${table}/${item.id}`, {
+            const res = await fetch(`${API_BASE}/api/admin/inventory/${table}/${item.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ updates: editData })
@@ -408,7 +409,7 @@ function AIAssistantPanel({ item, type, onSmilesGenerated }: {
         setLoading(true)
 
         try {
-            const API_BASE = import.meta.env.VITE_API_URL || ''
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
             const res = await fetch(`${API_BASE}/api/admin/ai/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

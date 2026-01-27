@@ -29,12 +29,13 @@ export function AntibodyListTab({ onSelect, selectedId }: AntibodyListTabProps) 
     const fetchData = async () => {
         setLoading(true)
         try {
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
             const params = new URLSearchParams({
                 page: page.toString(),
                 limit: limit.toString(),
                 search: search
             })
-            const res = await fetch(`/api/library/antibodies?${params}`)
+            const res = await fetch(`${API_BASE}/api/library/antibodies?${params}`)
             if (res.ok) {
                 const json = await res.json()
                 setData(json.data || [])

@@ -73,6 +73,7 @@ export function ReagentListTab({ onSelect, selectedId }: ReagentListTabProps) {
     const fetchData = async () => {
         setLoading(true)
         try {
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
             const params = new URLSearchParams({
                 page: page.toString(),
                 limit: limit.toString(),
@@ -87,7 +88,7 @@ export function ReagentListTab({ onSelect, selectedId }: ReagentListTabProps) {
                 params.append('manual_override', 'true')
             }
 
-            const res = await fetch(`/api/library/reagents?${params}`)
+            const res = await fetch(`${API_BASE}/api/library/reagents?${params}`)
             if (res.ok) {
                 const json = await res.json()
                 setData(json.data || [])
