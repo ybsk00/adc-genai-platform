@@ -124,7 +124,7 @@ class CB_AntibodyCrawler:
                         return anchors.map(a => a.href).filter(h => h.includes('symbolsearch-'));
                     }
                 """)
-                all_target_links = list(set(links))
+                all_target_links = sorted(list(set(links)))
                 logger.info(f"✅ Found {len(all_target_links)} unique target categories.")
                 await page.close()
             except Exception as e:
@@ -150,7 +150,7 @@ class CB_AntibodyCrawler:
                             const links = Array.from(document.querySelectorAll('a'));
                             return links
                                 .map(a => a.href)
-                                .filter(href => href.includes('bispecific-') && href.endsWith('.htm') && !href.includes('category/'));
+                                .filter(href => href.includes('bispecific-') && href.endsWith('.htm') && !href.includes('category/') && /\-\d+\.htm$/.test(href));
                         }
                     """)
                     product_links = list(set(product_links))
@@ -181,6 +181,12 @@ class CB_AntibodyCrawler:
     async def process_product(self, context, url):
         # 중복 체크
         cat_no_raw = url.split('-')[-1].replace('.htm', '')
+        
+        # Validate that cat_no_raw is a number (product ID)
+        if not cat_no_raw.isdigit():
+            logger.warning(f"⚠️ Invalid Product ID in URL: {url} (ID: {cat_no_raw}). Skipping.")
+            return False
+
         # Handle cases where cat_no might be extracted differently
         # Usually CB-xxxx. Let's just use the url end part as key.
         cat_no = f"CB-{cat_no_raw}"

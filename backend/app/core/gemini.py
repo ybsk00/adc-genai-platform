@@ -11,7 +11,7 @@ def get_gemini_model(
     model_name: str | None = None
 ) -> ChatGoogleGenerativeAI:
     """
-    Gemini 2.0 Flash 모델 인스턴스 반환
+    Gemini 2.5 Flash 모델 인스턴스 반환
     
     Args:
         temperature: 생성 온도 (0~1)

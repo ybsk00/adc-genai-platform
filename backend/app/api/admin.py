@@ -108,7 +108,7 @@ async def ai_assistant_chat(req: AIChatRequest):
             raise HTTPException(status_code=500, detail="GOOGLE_API_KEY is not configured")
             
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+        model_id = settings.GEMINI_MODEL_ID or 'gemini-2.5-flash'
         model = genai.GenerativeModel(model_id)
 
         # 1. Determine Mode & Context

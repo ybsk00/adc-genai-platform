@@ -383,7 +383,7 @@ Abstract: {abstract[:3500]}"""
 
         try:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
-            model_id = settings.GEMINI_MODEL_ID or 'gemini-2.0-flash'
+            model_id = settings.GEMINI_MODEL_ID or 'gemini-2.5-flash'
             model = genai.GenerativeModel(model_id)
             
             loop = asyncio.get_event_loop()
