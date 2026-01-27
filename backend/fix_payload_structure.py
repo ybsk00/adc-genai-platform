@@ -28,115 +28,211 @@ supabase: Client = create_client(url, key)
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-async def fetch_smiles_from_pubchem(cas_number: str):
-    """CAS 번호로 PubChem에서 SMILES 가져오기"""
-    if not cas_number or cas_number.lower() == 'none':
-        return None
+import os
+import asyncio
+import logging
+import json
+import re
+import aiohttp
+from datetime import datetime
+from dotenv import load_dotenv
+import google.generativeai as genai
+from supabase import create_client, Client
+
+# RDKit Imports
+try:
+    from rdkit import Chem
+    from rdkit.Chem import Descriptors
+except ImportError:
+    print("❌ RDKit is missing. Please install: pip install rdkit")
+    exit(1)
+
+# Load env
+load_dotenv()
+
+# Setup Logging
+logger = logging.getLogger("AI_Structure_Fixer_Adv")
+logger.setLevel(logging.INFO)
+if logger.hasHandlers(): logger.handlers.clear()
+ch = logging.StreamHandler()
+ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logger.addHandler(ch)
+
+# Supabase & Gemini
+supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# 최신 제미나이 2.0 플래시 모델로 업데이트
+model = genai.GenerativeModel('gemini-2.0-flash')
+
+async def fetch_pubchem(identifier: str, namespace: str = 'name'):
+    """PubChem API Call helper"""
+    if not identifier: return None
+    clean_id = identifier.strip()
+    if namespace == 'name':
+        # 이름 세척: 불필요한 괄호 및 설명 제거
+        clean_id = clean_id.split('(')[0].split('CAT#:')[0].strip()
+        clean_id = re.sub(r'\s+', '%20', clean_id)
     
-    # Clean CAS number (sometimes has spaces or prefix)
-    cas_clean = re.sub(r'[^0-9-]', '', cas_number)
-    
-    pubchem_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{cas_clean}/property/CanonicalSMILES,MolecularFormula,MolecularWeight/JSON"
+    url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/{namespace}/{clean_id}/property/CanonicalSMILES,MolecularFormula,MolecularWeight/JSON"
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(pubchem_url, timeout=10) as response:
+            async with session.get(url, timeout=10) as response:
                 if response.status == 200:
                     data = await response.json()
-                    props = data['PropertyTable']['Properties'][0]
-                    return {
-                        "smiles": props.get('CanonicalSMILES'),
-                        "formula": props.get('MolecularFormula'),
-                        "mw": str(props.get('MolecularWeight'))
-                    }
-                else:
-                    # Try by Name if CAS fails (Optional)
-                    return None
+                    if 'PropertyTable' in data and 'Properties' in data['PropertyTable']:
+                        props = data['PropertyTable']['Properties'][0]
+                        
+                        smiles = props.get('CanonicalSMILES')
+                        if not smiles: return None # SMILES 없으면 실패 처리 -> 다음 단계로 넘어감
+                        
+                        mw_raw = props.get('MolecularWeight')
+                        mw = float(mw_raw) if mw_raw else None
+                        
+                        return {
+                            "smiles": smiles,
+                            "mw": mw,
+                            "source": f"PubChem ({namespace})"
+                        }
     except Exception as e:
-        logger.error(f"PubChem API Error ({cas_number}): {e}")
+        # logger.warning(f"PubChem Error ({identifier}): {e}")
         return None
+    return None
 
-async def verify_with_ai(product_name: str, smiles: str, formula: str):
-    """AI를 사용하여 제품명과 구조식의 일치 여부 검증"""
+async def generate_smiles_via_llm(name: str, cas: str):
+    """LLM에게 SMILES 생성을 요청"""
     prompt = f"""
-    Check if the following chemical information is consistent.
-    Product Name: {product_name}
-    Proposed SMILES: {smiles}
-    Proposed Formula: {formula}
+    You are a chemical expert. Provide the Canonical SMILES for the following substance.
+    Product Name: {name}
+    CAS Number: {cas}
 
-    Does this SMILES/Formula correctly represent the product name? 
-    Answer in JSON format:
+    Output strictly in JSON format:
     {{
-        "is_match": true/false,
-        "reason": "short explanation",
-        "confidence": 0.0 to 1.0
+        "smiles": "INSERT_SMILES_HERE",
+        "source": "Gemini 2.0 Flash Knowledge"
     }}
+    If unknown, return null for smiles.
     """
-    
     try:
-        response = model.generate_content(prompt)
-        # Extract JSON from response
-        match = re.search(r'{{.*}}', response.text, re.DOTALL)
+        res = model.generate_content(prompt)
+        match = re.search(r'\{.*\}', res.text, re.DOTALL)
         if match:
-            return json.loads(match.group())
-        return None
+            data = json.loads(match.group())
+            if data.get('smiles') and data['smiles'] != "null":
+                return data
     except Exception as e:
-        logger.error(f"AI Verification Error: {e}")
-        return None
+        logger.error(f"LLM Error: {e}")
+    return None
 
-async def run_fixer():
-    logger.info("🛠️ Starting AI Structure Fixer...")
+def validate_rdkit(smiles: str, target_mw_str: str):
+    """RDKit으로 SMILES 유효성 및 분자량 오차 검증"""
+    if not smiles or smiles == "None":
+        return False, "SMILES is None or empty"
+        
+    try:
+        mol = Chem.MolFromSmiles(str(smiles))
+        if not mol:
+            return False, "Invalid SMILES syntax (RDKit parsing failed)"
+        
+        calc_mw = Descriptors.MolWt(mol)
+        
+        if not target_mw_str:
+            return True, f"Valid Structure (Target MW missing, Calc: {calc_mw:.2f})"
+
+        # Clean target MW
+        target_mw_clean = re.sub(r'[^0-9.]', '', str(target_mw_str))
+        if not target_mw_clean:
+            return True, f"Valid Structure (Target MW unreadable, Calc: {calc_mw:.2f})"
+            
+        target_mw = float(target_mw_clean)
+        
+        # Error calculation
+        error = abs(calc_mw - target_mw)
+        error_pct = (error / target_mw) * 100
+        
+        # Tolerance: 1% or 5 Daltons
+        if error_pct < 1.0 or error < 5.0:
+            return True, f"MW Match (Calc: {calc_mw:.2f}, Target: {target_mw}, Error: {error_pct:.2f}%)"
+        else:
+            return False, f"MW Mismatch (Calc: {calc_mw:.2f} vs Target: {target_mw}, Diff: {error:.2f})"
+            
+    except Exception as e:
+        return False, f"RDKit Error: {e}"
+
+async def run_pipeline():
+    logger.info("🧪 Starting Advanced Structure Refinement Pipeline...")
     
-    # 1. 대상 레코드 조회 (CAS는 있는데 SMILES는 없는 것들)
+    # 1. 대상 조회 (SMILES 없는 것들)
     res = supabase.table("commercial_reagents")\
         .select("*")\
-        .not_.is_("cas_number", "null")\
-        .is_("smiles_code", "null")\
         .eq("source_name", "Creative Biolabs")\
-        .execute()
+        .is_("smiles_code", "null")\
+        .execute() # .not.is_("cas_number", "null") 제거 -> CAS 없어도 이름으로 시도
     
     targets = res.data
-    logger.info(f"🔎 Found {len(targets)} records to refine.")
+    logger.info(f"🎯 Targets found: {len(targets)}")
     
     for item in targets:
-        record_id = item['id']
+        rid = item['id']
         name = item['product_name']
         cas = item['cas_number']
+        target_mw = item.get('molecular_weight')
         
-        logger.info(f"🔄 Processing: {name} (CAS: {cas})")
+        logger.info(f"🔬 Analyzing: {name} (CAS: {cas}, MW: {target_mw})")
         
-        # 2. PubChem에서 정보 가져오기
-        pc_data = await fetch_smiles_from_pubchem(cas)
+        candidate = None
         
-        if pc_data and pc_data['smiles']:
-            smiles = pc_data['smiles']
-            formula = pc_data['formula']
+        # Step 1: PubChem by CAS
+        if cas:
+            candidate = await fetch_pubchem(cas, 'name') # CAS is searched via 'name' endpoint often effectively or strict 'compound/name'
+            # Actually PubChem REST uses 'name' endpoint for CAS too? 
+            # Wait, strict CAS endpoint is not separate, usually 'name/CAS-NO' works.
+        
+        # Step 2: PubChem by Name (if Step 1 failed)
+        if not candidate:
+            candidate = await fetch_pubchem(name, 'name')
             
-            # 3. AI 검증
-            v_res = await verify_with_ai(name, smiles, formula)
+        # Step 3: LLM Fallback (if both failed)
+        if not candidate:
+            logger.info("   ⚠️ API failed. Asking Gemini...")
+            llm_res = await generate_smiles_via_llm(name, cas)
+            if llm_res:
+                candidate = {
+                    "smiles": llm_res['smiles'],
+                    "source": "Gemini AI (Knowledge Base)"
+                }
+        
+        # Validation & Update
+        if candidate:
+            smiles = candidate['smiles']
+            is_valid, reason = validate_rdkit(smiles, target_mw)
             
-            if v_res and v_res.get('is_match'):
-                logger.info(f"✅ AI Verified: {name} matches {smiles}")
+            if is_valid:
+                logger.info(f"   ✅ APPROVED: {reason}")
                 
-                # 4. DB 업데이트
+                # Update DB
+                props = item.get('properties') or {}
+                props['structure_source'] = candidate['source']
+                props['validation_log'] = reason
+                props['refined_at'] = datetime.now().isoformat()
+                
                 supabase.table("commercial_reagents").update({
                     "smiles_code": smiles,
-                    "formula": formula,
                     "ai_refined": True,
-                    "summary": f"Structure verified via PubChem and AI. (Reason: {v_res.get('reason')})"
-                }).eq("id", record_id).execute()
+                    "properties": props,
+                    "summary": f"Structure refined via {candidate['source']}. {reason}"
+                }).eq("id", rid).execute()
             else:
-                reason = v_res.get('reason') if v_res else "Verification failed"
-                logger.warning(f"❌ AI Rejected: {name} (Reason: {reason})")
-                supabase.table("commercial_reagents").update({
-                    "ai_refined": False,
-                    "summary": f"AI Refinement Failed: {reason}"
-                }).eq("id", record_id).execute()
+                logger.warning(f"   ❌ REJECTED: {reason}")
+                # Optional: Mark as failed so we don't retry immediately?
         else:
-            logger.warning(f"⚠️ No data found in PubChem for CAS: {cas}")
-        
-        # Rate limit safety
-        await asyncio.sleep(2)
+            logger.warning("   🚫 No structure found from any source.")
+            
+        await asyncio.sleep(1)
+
+if __name__ == "__main__":
+    asyncio.run(run_pipeline())
+
 
 if __name__ == "__main__":
     asyncio.run(run_fixer())

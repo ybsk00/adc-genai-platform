@@ -86,9 +86,9 @@ class PromptUpdateRequest(BaseModel):
 
 class AIChatRequest(BaseModel):
     """AI 어시스턴트 채팅 요청"""
-    record_id: str
+    record_id: Any # Relaxed from str to handle int/str
     message: str
-    context: Optional[Dict[str, Any]] = None
+    context: Any = None # Relaxed from Dict[str, Any]
     mode: str = "rag" # rag, general
     target_field: Optional[str] = None # For Autofill intent
 
