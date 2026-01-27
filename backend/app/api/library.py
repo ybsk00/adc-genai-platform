@@ -72,22 +72,26 @@ async def search_golden_set(
 async def get_antibodies(
     page: int = 1,
     limit: int = 20,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    source: Optional[str] = None
 ):
-    """항체 라이브러리 조회"""
+    """항체 라이브러리 조회 (cat_no 검색 포함)"""
     try:
         query = supabase.table("antibody_library").select("*", count="exact")
-        
+
         if search:
-            # OR search on name and target
-            query = query.or_(f"name.ilike.%{search}%,target.ilike.%{search}%")
-            
+            # OR search on product_name, cat_no, related_disease
+            query = query.or_(f"product_name.ilike.%{search}%,cat_no.ilike.%{search}%,related_disease.ilike.%{search}%")
+
+        if source:
+            query = query.eq("source_name", source)
+
         start = (page - 1) * limit
         end = start + limit - 1
-        query = query.range(start, end)
-        
+        query = query.order("crawled_at", desc=True).range(start, end)
+
         result = query.execute()
-        
+
         return {
             "data": result.data,
             "total": result.count,
@@ -103,22 +107,44 @@ async def get_antibodies(
 async def get_reagents(
     page: int = 1,
     limit: int = 20,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    missing_smiles: Optional[bool] = None,
+    ai_refined: Optional[bool] = None,
+    manual_override: Optional[bool] = None,
+    source: Optional[str] = None
 ):
-    """시약 라이브러리 조회"""
+    """
+    시약 라이브러리 조회 (Status 필터링 포함)
+    - missing_smiles: SMILES가 없는 항목만
+    - ai_refined: AI 정제된 항목만
+    - manual_override: 수동 수정된 항목만
+    """
     try:
         query = supabase.table("commercial_reagents").select("*", count="exact")
-        
+
         if search:
-            # OR search on name and cas_number
-            query = query.or_(f"name.ilike.%{search}%,cas_number.ilike.%{search}%")
-            
+            # OR search on product_name, cas_number, ambeed_cat_no
+            query = query.or_(f"product_name.ilike.%{search}%,cas_number.ilike.%{search}%,ambeed_cat_no.ilike.%{search}%")
+
+        # Status Filters
+        if missing_smiles:
+            query = query.is_("smiles_code", "null")
+
+        if ai_refined is not None:
+            query = query.eq("ai_refined", ai_refined)
+
+        if manual_override is not None:
+            query = query.eq("is_manual_override", manual_override)
+
+        if source:
+            query = query.eq("source_name", source)
+
         start = (page - 1) * limit
         end = start + limit - 1
-        query = query.range(start, end)
-        
+        query = query.order("crawled_at", desc=True).range(start, end)
+
         result = query.execute()
-        
+
         return {
             "data": result.data,
             "total": result.count,
@@ -128,3 +154,45 @@ async def get_reagents(
     except Exception as e:
         print(f"Reagent Search Error: {e}")
         return {"data": [], "total": 0, "page": page, "limit": limit}
+
+
+@router.post("/reagents/{id}/autofill-smiles")
+async def autofill_reagent_smiles(id: str):
+    """
+    PubChem에서 SMILES 자동 채우기 (단일 레코드)
+    CAS 또는 Name으로 조회 후 Desalt + MW 검증
+    """
+    try:
+        from app.services.pubchem_service import pubchem_service
+
+        # 1. 레코드 조회
+        res = supabase.table("commercial_reagents").select("*").eq("id", id).execute()
+        if not res.data:
+            return {"error": "Record not found"}
+
+        record = res.data[0]
+
+        # 2. PubChem 조회
+        result = await pubchem_service.autofill_smiles(record)
+
+        if "error" in result:
+            return result
+
+        # 3. DB 업데이트 (선택적 - 자동 저장 시)
+        # 여기서는 결과만 반환하고, 프론트엔드에서 확인 후 저장
+        return {
+            "status": "success",
+            "record_id": id,
+            "current_smiles": record.get("smiles_code"),
+            "suggested_smiles": result.get("smiles_code"),
+            "desalted_smiles": result.get("desalted_smiles"),
+            "molecular_weight": result.get("molecular_weight"),
+            "calculated_mw": result.get("calculated_mw"),
+            "mw_difference": result.get("mw_difference"),
+            "validation_status": result.get("validation_status"),
+            "pubchem_cid": result.get("pubchem_cid"),
+            "formula": result.get("formula")
+        }
+    except Exception as e:
+        print(f"Autofill SMILES Error: {e}")
+        return {"error": str(e)}

@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Search, Loader2, ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AntibodyListTabProps {
@@ -78,22 +79,23 @@ export function AntibodyListTab({ onSelect, selectedId }: AntibodyListTabProps) 
                 <Table>
                     <TableHeader className="bg-slate-900/50 sticky top-0 z-10">
                         <TableRow className="hover:bg-transparent border-slate-800">
-                            <TableHead className="text-slate-400">ID</TableHead>
+                            <TableHead className="text-slate-400 w-[100px]">Cat No</TableHead>
                             <TableHead className="text-slate-400">Name</TableHead>
                             <TableHead className="text-slate-400">Target</TableHead>
                             <TableHead className="text-slate-400">Host</TableHead>
+                            <TableHead className="text-slate-400 w-[80px]">Source</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={5} className="h-24 text-center">
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" />
                                 </TableCell>
                             </TableRow>
                         ) : data.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center text-slate-500">
+                                <TableCell colSpan={5} className="h-24 text-center text-slate-500">
                                     No antibodies found.
                                 </TableCell>
                             </TableRow>
@@ -107,17 +109,24 @@ export function AntibodyListTab({ onSelect, selectedId }: AntibodyListTabProps) 
                                     )}
                                     onClick={() => onSelect(item)}
                                 >
-                                    <TableCell className="font-mono text-xs text-slate-500">
-                                        {item.id.slice(0, 8)}...
+                                    <TableCell className="font-mono text-xs text-blue-400">
+                                        {item.cat_no || '-'}
                                     </TableCell>
                                     <TableCell className="font-medium text-slate-200">
-                                        {item.name}
+                                        <div className="truncate max-w-[200px]" title={item.product_name}>
+                                            {item.product_name || item.name || '-'}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-slate-300">
-                                        {item.target || '-'}
+                                        {item.related_disease || item.target || '-'}
                                     </TableCell>
                                     <TableCell className="text-slate-400">
                                         {item.host_species || '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className="text-xs border-slate-600 text-slate-400">
+                                            {item.source_name || 'Unknown'}
+                                        </Badge>
                                     </TableCell>
                                 </TableRow>
                             ))

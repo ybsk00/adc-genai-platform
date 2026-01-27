@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingPage } from './pages/Landing'
 import { DashboardLayout, DashboardHome, ADCBuilder, ResultViewer, GoldenSetLibrary } from './pages/Dashboard'
-import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage, DesignRunsPage } from './pages/Admin'
+import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage, DesignRunsPage, TotalInventoryLayout } from './pages/Admin'
 import TotalDataInventory from './pages/Admin/TotalDataInventory'
 import { StagingAreaPage } from './pages/Admin/StagingAreaPage'
 import { GoldenSetLibraryPage } from './pages/Admin/GoldenSetLibraryPage'
@@ -37,7 +37,8 @@ function App() {
           {/* Admin Routes (Protected + Role Check) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
-            <Route path="inventory" element={<TotalDataInventory />} />
+            <Route path="inventory" element={<TotalInventoryLayout />} />
+            <Route path="data-inventory" element={<TotalDataInventory />} />
             <Route path="staging" element={<StagingAreaPage />} />
             <Route path="goldenset" element={<GoldenSetLibraryPage />} />
             <Route path="user-operations" element={<UserOperations />} />

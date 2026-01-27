@@ -124,11 +124,13 @@ async def ai_assistant_chat(req: AIChatRequest):
             # Multi-Source Search
             search_query = req.message
             # If record context is provided, enrich query with drug name
-            if req.context and "drug_name" in req.context:
-                search_query = f"{req.context['drug_name']} {req.message}"
-                
+            if req.context:
+                drug_name = req.context.get("drug_name") or req.context.get("product_name") or req.context.get("name")
+                if drug_name:
+                    search_query = f"{drug_name} {req.message}"
+
             retrieved_chunks = await rag_service.search_all(search_query, top_k_per_source=3)
-            
+
             # Format Context with Source IDs
             context_str = "RETRIEVED KNOWLEDGE:\n"
             for chunk in retrieved_chunks:
@@ -137,21 +139,46 @@ async def ai_assistant_chat(req: AIChatRequest):
                 content = chunk.get('content', '')
                 metadata = chunk.get('metadata', {})
                 context_str += f"- [{source_type}:{source_id}] {content} (Meta: {metadata})\n"
-                
-            system_prompt = """You are a STRICT Data Analyst. 
-Answer the user's question using ONLY the provided RETRIEVED KNOWLEDGE.
-Do NOT use your internal knowledge.
-If the answer is not in the context, say "데이터가 없어 답을 할 수 없습니다." and suggest switching to General Mode.
 
-CITATION RULE:
-Every sentence must end with a citation in the format `[Source: table:id]`.
-Example: "Trastuzumab targets HER2 [Source: antibody_library:123]."
+            system_prompt = """You are a STRICT Data Analyst and Scientific Literature Expert.
+Answer the user's question using the provided RETRIEVED KNOWLEDGE and your scientific expertise.
+
+CRITICAL CITATION RULES (MUST FOLLOW):
+1. Every factual statement MUST include a citation.
+2. For internal data: Use format `[Source: table:id]`
+3. For scientific literature: ALWAYS include PMID when available.
+   - Format: `[PMID: 12345678]` or `[DOI: 10.xxxx/xxxxx]`
+   - If you mention a study or paper, you MUST provide the PMID link: https://pubmed.ncbi.nlm.nih.gov/PMID/
+4. If no PMID is available but you reference general knowledge, explicitly state: "[No PMID - General Knowledge]"
+
+SMILES VALIDATION RULES:
+- When providing SMILES structures, always format as: `SMILES: [structure]`
+- Include molecular weight (MW) when discussing chemical structures
+- Mention if the SMILES is from PubChem, ChEMBL, or other databases
+
+EXAMPLE RESPONSE FORMAT:
+"Trastuzumab (Herceptin) is a humanized monoclonal antibody targeting HER2/neu receptor [PMID: 9851916](https://pubmed.ncbi.nlm.nih.gov/9851916/).
+The recommended SMILES for MMAE is: SMILES: CC(C)C[C@H]... [Source: commercial_reagents:abc123]"
+
+If the answer is not in the context, say "내부 데이터에서 찾을 수 없습니다. 일반 지식 모드로 전환해주세요."
 """
         else:
-            # General Mode
-            system_prompt = """You are a Helpful AI Assistant.
-Answer the user's question using your general knowledge about ADCs and pharmaceuticals.
-Start your answer with: "**[General Knowledge]** This answer is based on general AI knowledge, not internal data."
+            # General Mode - Still require PMID citations
+            system_prompt = """You are a Helpful AI Assistant specialized in ADCs and pharmaceuticals.
+Answer using your general knowledge but ALWAYS provide academic citations.
+
+**[General Knowledge Mode]** - This answer is based on general AI knowledge, not internal data.
+
+CRITICAL CITATION RULES (MUST FOLLOW):
+1. For ANY scientific claim, provide a PMID or DOI reference.
+2. Format: [PMID: 12345678](https://pubmed.ncbi.nlm.nih.gov/12345678/)
+3. If you cannot provide a specific PMID, indicate: "[Citation needed - verify independently]"
+4. When discussing chemical structures, provide SMILES in format: `SMILES: [structure]`
+
+Your response should be:
+- Scientifically accurate
+- Include at least 1-3 relevant PMID citations
+- Clearly formatted with structure information when applicable
 """
 
         # 2. Construct Full Prompt
