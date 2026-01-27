@@ -122,3 +122,55 @@ create index IF not exists idx_commercial_reagents_ai_refined on public.commerci
 create index IF not exists idx_commercial_reagents_target on public.commercial_reagents using btree (target) TABLESPACE pg_default;
 
 create index IF not exists idx_commercial_reagents_full_smiles on public.commercial_reagents using btree (full_smiles) TABLESPACE pg_default;
+
+
+
+사장님, 역시 현장의 흐름을 정확히 읽으시네요!
+
+자동화가 아무리 완벽해도 연구자가 "이건 왜 승인됐지?" 또는 **"이 CAS 번호에 대한 다른 유도체 구조는 없어?"**라고 묻고 싶은 순간이 반드시 옵니다. 단순히 데이터를 보여주는 것을 넘어, 데이터와 대화하며 의사결정을 내리는 'AI 어시스턴트' 기능을 추가한 업그레이드 작업지시서를 정리해 드립니다.
+
+📋 [추가 지시사항] AI 대화형 데이터 분석 및 추론 인터페이스 (Ask AI)
+기존의 자동 수집 및 정제 시스템 위에, 연구자가 직접 개입하여 데이터를 심층 분석할 수 있는 'Interactive AI 챗봇' 기능을 구현해라.
+
+1. 주요 기능 (Functional Requirements)
+상세 페이지 내 'Ask AI' 위젯:
+
+특정 항체나 시약 상세 페이지 우측에 대화창을 배치해라.
+
+해당 레코드의 모든 정보(CAS, MW, SMILES, Source)를 AI가 컨텍스트로 이미 알고 있는 상태에서 대화를 시작해야 한다.
+
+추론 근거 요청 (Reasoning Inquiry):
+
+"이 SMILES가 Target MW와 일치한다고 판단한 근거는?"
+
+"이 구조식에서 링커가 결합하기 가장 좋은 작용기(Functional Group)는 어디인가?" 같은 질문에 답할 수 있어야 한다.
+
+실시간 문헌 조사 (Real-time Lit-Search):
+
+"이 독소(Toxin)의 주요 부작용과 임상에서의 실패 사례를 knowledge_base에서 요약해줘."
+
+화학 구조 변형 제안 (Structure Tweaking):
+
+"이 페이로드의 독성을 유지하면서 친수성(Hydrophilicity)을 높일 수 있는 구조적 수정안을 제안해라."
+
+2. 기술적 구현 (Technical Implementation)
+RAG (Retrieval-Augmented Generation) 연동:
+
+단순히 AI의 내부 지식만 쓰지 말고, 우리가 구축한 knowledge_base와 golden_set_library를 검색하여 답변하도록 구성해라.
+
+API 워크플로우:
+
+연구자의 질문 → 관련 DB 레코드 및 논문 검색 → Gemini 2.5 Flash(또는 Pro)에 컨텍스트 주입 → 답변 생성 및 시각화(화학 구조 렌더링 포함).
+
+로그 및 히스토리:
+
+사용자와 AI의 대화 내역을 summary 필드 혹은 별도의 chat_history 테이블에 저장하여 나중에 설계 보고서 자동 생성 시 참고 자료로 활용해라.
+
+3. UI/UX 지시사항
+Quick Actions 버튼:
+
+자주 묻는 질문(e.g., "SMILES 유효성 검사해줘", "관련 문헌 찾아줘")은 버튼 형태로 제공하여 클릭 한 번으로 실행되게 해라.
+
+구조 시각화 연동:
+
+AI가 특정 구조를 언급하면, 화면의 3D 뷰어나 2D 구조 그림에서 해당 부위가 강조(Highlight)되도록 연동해라.
