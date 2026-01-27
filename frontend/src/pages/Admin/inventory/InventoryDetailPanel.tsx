@@ -6,10 +6,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
     X, Send, Bot, Sparkles, Loader2, Edit3, Save, XCircle,
     FileSearch, FlaskConical, BookOpen, Zap, CheckCircle2, AlertTriangle,
-    ExternalLink, MessageSquare
+    ExternalLink, MessageSquare, Database
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -403,16 +405,18 @@ function StructureComparisonView({ currentSmiles, suggestedSmiles, onAccept }: {
     )
 }
 
-// AI Assistant Panel with Quick Actions
+// AI Assistant Panel with Quick Actions and Mode Toggle
 function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
     item: any,
     type: string,
     onSmilesGenerated?: (smiles: string) => void,
     onClose: () => void
 }) {
-    const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([])
+    const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string, mode?: 'rag' | 'general' }[]>([])
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
+    const [mode, setMode] = useState<'rag' | 'general'>('rag')
+    const [lastUserQuery, setLastUserQuery] = useState('')
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -425,11 +429,13 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
         }
     }, [messages])
 
-    const handleSend = async (customPrompt?: string) => {
+    const handleSend = async (customPrompt?: string, forceMode?: 'rag' | 'general') => {
         const userMsg = customPrompt || input
         if (!userMsg.trim() || loading) return
 
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }])
+        const activeMode = forceMode || mode
+        setLastUserQuery(userMsg)
+        setMessages(prev => [...prev, { role: 'user', content: userMsg, mode: activeMode }])
         if (!customPrompt) setInput('')
         setLoading(true)
 
@@ -442,14 +448,14 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
                     record_id: item.id,
                     message: userMsg,
                     context: item,
-                    mode: 'rag'
+                    mode: activeMode
                 })
             })
 
             if (res.ok) {
                 const data = await res.json()
                 const answer = data.answer || "No response generated."
-                setMessages(prev => [...prev, { role: 'assistant', content: answer }])
+                setMessages(prev => [...prev, { role: 'assistant', content: answer, mode: data.mode || activeMode }])
 
                 // SMILES extraction
                 const smilesMatch = answer.match(/SMILES[:\s]+([A-Za-z0-9@+\-\[\]\(\)\\\/=#$%]+)/i)
@@ -472,17 +478,54 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
         handleSend(prompt)
     }
 
+    const handleRetryWithGeneral = () => {
+        if (lastUserQuery) {
+            handleSend(lastUserQuery, 'general')
+        }
+    }
+
+    // Check if last assistant message indicates no data found
+    const lastAssistantMsg = messages.filter(m => m.role === 'assistant').slice(-1)[0]
+    const showGeneralModeHint = lastAssistantMsg?.mode === 'rag' &&
+        (lastAssistantMsg.content.includes("찾을 수 없") ||
+         lastAssistantMsg.content.includes("데이터가 없") ||
+         lastAssistantMsg.content.includes("No data found") ||
+         lastAssistantMsg.content.includes("not found in") ||
+         lastAssistantMsg.content.includes("couldn't find"))
+
     return (
         <div className="flex-1 flex flex-col min-h-0 h-full">
-            {/* AI Panel Header */}
+            {/* AI Panel Header with Mode Toggle */}
             <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <Bot className="w-5 h-5 text-purple-400" />
                     <h3 className="font-semibold text-slate-200">AI Assistant</h3>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-slate-400 hover:text-white">
-                    <X className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-3">
+                    {/* Mode Toggle */}
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="ai-mode-switch" className="text-[10px] text-slate-400 font-mono">
+                            {mode === 'rag' ? (
+                                <span className="flex items-center gap-1">
+                                    <Database className="w-3 h-3" /> RAG
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3" /> General
+                                </span>
+                            )}
+                        </Label>
+                        <Switch
+                            id="ai-mode-switch"
+                            checked={mode === 'general'}
+                            onCheckedChange={(c) => setMode(c ? 'general' : 'rag')}
+                            className="scale-75 data-[state=checked]:bg-purple-600"
+                        />
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-slate-400 hover:text-white">
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
             </div>
 
             {/* Quick Actions */}
@@ -515,15 +558,27 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
                         <div className="text-center text-slate-500 text-sm py-8">
                             <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p>Ask anything about this {type === 'antibodies' ? 'antibody' : 'reagent'}.</p>
-                            <p className="text-xs mt-1">Powered by Gemini 2.5 Flash + RAG</p>
-                            <p className="text-xs text-purple-400 mt-2">Quick Actions include PMID citations!</p>
+                            <p className="text-xs mt-1">Powered by Gemini 2.5 Flash</p>
+                            <div className="mt-3 p-2 bg-slate-800/50 rounded-lg text-xs">
+                                <p className="text-slate-400">
+                                    <Database className="w-3 h-3 inline mr-1" />
+                                    <strong>RAG Mode:</strong> Search internal knowledge base
+                                </p>
+                                <p className="text-slate-400 mt-1">
+                                    <Sparkles className="w-3 h-3 inline mr-1" />
+                                    <strong>General Mode:</strong> Use AI general knowledge
+                                </p>
+                            </div>
                         </div>
                     )}
                     {messages.map((msg, idx) => (
                         <div key={idx} className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}>
                             {msg.role === 'assistant' && (
-                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                                    <Bot className="w-3 h-3 text-purple-400" />
+                                <div className={cn(
+                                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+                                    msg.mode === 'general' ? "bg-purple-500/20" : "bg-blue-500/20"
+                                )}>
+                                    <Bot className={cn("w-3 h-3", msg.mode === 'general' ? "text-purple-400" : "text-blue-400")} />
                                 </div>
                             )}
                             <div className={cn(
@@ -533,13 +588,47 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
                                     : "bg-slate-800 text-slate-200"
                             )}>
                                 {msg.content}
+                                {msg.role === 'assistant' && msg.mode && (
+                                    <div className="mt-2 pt-2 border-t border-slate-700">
+                                        <Badge variant="outline" className={cn(
+                                            "text-[10px]",
+                                            msg.mode === 'general'
+                                                ? "border-purple-500/50 text-purple-400"
+                                                : "border-blue-500/50 text-blue-400"
+                                        )}>
+                                            {msg.mode === 'general' ? 'General LLM' : 'RAG Mode'}
+                                        </Badge>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
+
+                    {/* Suggestion to try General Mode */}
+                    {showGeneralModeHint && !loading && (
+                        <div className="p-3 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
+                            <div className="flex items-center gap-2 text-yellow-300 text-xs">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>No data found in internal database.</span>
+                            </div>
+                            <Button
+                                variant="link"
+                                className="text-yellow-400 h-auto p-0 text-xs underline mt-2"
+                                onClick={handleRetryWithGeneral}
+                            >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Try with General LLM?
+                            </Button>
+                        </div>
+                    )}
+
                     {loading && (
                         <div className="flex gap-3 justify-start">
-                            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                                <Bot className="w-3 h-3 text-purple-400" />
+                            <div className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+                                mode === 'general' ? "bg-purple-500/20" : "bg-blue-500/20"
+                            )}>
+                                <Bot className={cn("w-3 h-3", mode === 'general' ? "text-purple-400" : "text-blue-400")} />
                             </div>
                             <div className="bg-slate-800 rounded-lg px-3 py-2">
                                 <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
@@ -555,7 +644,7 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                    placeholder="Ask a question..."
+                    placeholder={mode === 'rag' ? "Search internal DB..." : "Ask general questions..."}
                     className="bg-slate-800 border-slate-700 text-slate-200 focus:ring-purple-500"
                     disabled={loading}
                 />
@@ -563,7 +652,7 @@ function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
                     size="icon"
                     onClick={() => handleSend()}
                     disabled={loading || !input.trim()}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className={mode === 'general' ? "bg-purple-600 hover:bg-purple-700" : "bg-blue-600 hover:bg-blue-700"}
                 >
                     <Send className="w-4 h-4" />
                 </Button>
