@@ -1,0 +1,9 @@
+2026-01-27 15:47:31,226 - INFO - 🚀 Starting Ambeed Toxin Crawler (Sequential Warm-up Mode).
+2026-01-27 15:47:31,784 - INFO - 🌐 Launching Browser (Headed Mode) for Toxins
+2026-01-27 15:48:09,776 - INFO - 🎯 [Target] Processing Page 1: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=1
+2026-01-27 15:48:16,898 - INFO - 🔎 Found 20 products on Page.
+2026-01-27 15:48:18,229 - WARNING - ⚠️ Page 1 blocked or empty. Please check browser.
+2026-01-27 15:48:58,763 - INFO - 🔎 Found 20 products on Page.
+2026-01-27 15:49:18,338 - INFO - 🎯 [Target] Processing Page 2: https://www.ambeed.com/adc-toxins.html?pagesize=20&pageindex=2
+2026-01-27 15:49:23,678 - INFO - 🔎 Found 20 products on Page.
+2026-01-27 15:49:26,019 - WARNING - ⚠️ Page 2 blocked or empty. Please check browser.

@@ -68,7 +68,7 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                 search: search,
                 missing_data_only: missingDataOnly ? 'true' : 'false'
             })
-            
+
             const res = await fetch(`${API_BASE_URL}/api/admin/inventory/knowledge?${params}`)
             if (res.ok) {
                 const json = await res.json()
@@ -104,7 +104,7 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ updates: editForm })
             })
-            
+
             if (res.ok) {
                 toast.success("Item updated")
                 setEditingItem(null)
@@ -124,8 +124,8 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
             <div className="flex gap-2 justify-between items-center mb-4">
                 <div className="relative w-72">
                     <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                    <Input 
-                        placeholder="Search articles..." 
+                    <Input
+                        placeholder="Search articles..."
                         className="pl-9 bg-slate-950 border-slate-700"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -140,7 +140,7 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                     </Button>
                 </div>
             </div>
-            
+
             <div className="rounded-md border border-slate-800 overflow-hidden">
                 <Table>
                     <TableHeader className="bg-slate-950">
@@ -169,10 +169,12 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                             data.map((item) => (
                                 <TableRow key={item.id} className="hover:bg-slate-800/50 transition-colors group border-slate-800/50">
                                     <TableCell className="font-medium text-slate-200 align-top py-4">
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 max-w-[300px]">
                                             <FileText className="w-4 h-4 text-slate-500 mt-1 shrink-0" />
-                                            <div>
-                                                {item.title}
+                                            <div className="min-w-0">
+                                                <div className="font-medium text-slate-200 line-clamp-2 break-words" title={item.title}>
+                                                    {item.title}
+                                                </div>
                                                 <div className="text-[10px] text-slate-500 font-mono mt-1">{item.created_at.slice(0, 10)}</div>
                                             </div>
                                         </div>
@@ -205,9 +207,9 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right align-top py-4">
-                                        <Button 
-                                            size="icon" variant="ghost" 
-                                            className="h-7 w-7 text-blue-400 hover:bg-blue-400/10 hover:text-blue-300 opacity-60 group-hover:opacity-100" 
+                                        <Button
+                                            size="icon" variant="ghost"
+                                            className="h-7 w-7 text-blue-400 hover:bg-blue-400/10 hover:text-blue-300 opacity-60 group-hover:opacity-100"
                                             title="Edit"
                                             onClick={() => openEdit(item)}
                                         >
@@ -243,29 +245,29 @@ export function KnowledgeTable({ missingDataOnly }: KnowledgeTableProps) {
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="title" className="text-right text-slate-400">Title</Label>
-                            <Textarea 
-                                id="title" 
-                                value={editForm.title || ''} 
-                                onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                                className="col-span-3 bg-slate-950 border-slate-700" 
+                            <Textarea
+                                id="title"
+                                value={editForm.title || ''}
+                                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                className="col-span-3 bg-slate-950 border-slate-700"
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="summary" className="text-right text-slate-400">Summary</Label>
-                            <Textarea 
-                                id="summary" 
-                                value={editForm.summary || ''} 
-                                onChange={(e) => setEditForm({...editForm, summary: e.target.value})}
-                                className="col-span-3 bg-slate-950 border-slate-700 min-h-[100px]" 
+                            <Textarea
+                                id="summary"
+                                value={editForm.summary || ''}
+                                onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
+                                className="col-span-3 bg-slate-950 border-slate-700 min-h-[100px]"
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="content" className="text-right text-slate-400">Content</Label>
-                            <Textarea 
-                                id="content" 
-                                value={editForm.content || ''} 
-                                onChange={(e) => setEditForm({...editForm, content: e.target.value})}
-                                className="col-span-3 bg-slate-950 border-slate-700 min-h-[150px]" 
+                            <Textarea
+                                id="content"
+                                value={editForm.content || ''}
+                                onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                                className="col-span-3 bg-slate-950 border-slate-700 min-h-[150px]"
                             />
                         </div>
                     </div>
