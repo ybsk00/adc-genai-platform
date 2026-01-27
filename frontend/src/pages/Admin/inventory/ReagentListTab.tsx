@@ -79,7 +79,7 @@ export function ReagentListTab({ onSelect, selectedId }: ReagentListTabProps) {
                 limit: limit.toString(),
                 search: search
             })
-            // 필터 추가
+            // Add status filter
             if (statusFilter === 'missing') {
                 params.append('missing_smiles', 'true')
             } else if (statusFilter === 'refined') {

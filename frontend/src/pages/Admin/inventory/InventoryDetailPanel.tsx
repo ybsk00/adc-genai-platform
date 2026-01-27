@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     X, Send, Bot, Sparkles, Loader2, Edit3, Save, XCircle,
     FileSearch, FlaskConical, BookOpen, Zap, CheckCircle2, AlertTriangle,
-    ExternalLink
+    ExternalLink, MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -21,30 +21,30 @@ interface InventoryDetailPanelProps {
     onUpdate?: (updatedItem: any) => void
 }
 
-// Quick Actions 프리셋
+// Quick Actions Presets (Localized)
 const QUICK_ACTIONS = {
     validate_smiles: {
-        label: "SMILES 검증",
+        label: "Validate SMILES",
         icon: CheckCircle2,
-        prompt: "이 SMILES 구조식이 화학적으로 유효한지 검증해줘. 문제가 있다면 수정된 SMILES를 제안해줘. 관련 PubChem/ChEMBL 레퍼런스 PMID가 있다면 함께 제시해줘.",
+        prompt: "Validate if this SMILES structure is chemically valid. If there are issues, suggest a corrected SMILES. Please include relevant PubChem/ChEMBL reference PMIDs if available.",
         color: "text-green-400"
     },
     find_literature: {
-        label: "문헌 검색",
+        label: "Literature Search",
         icon: BookOpen,
-        prompt: "이 화합물/항체에 대한 최신 연구 문헌을 찾아줘. 반드시 PMID 또는 DOI 링크를 포함해서 3개 이상의 학술 논문을 제시해줘.",
+        prompt: "Find the latest research literature for this compound/antibody. Please provide at least 3 academic papers with PMID or DOI links.",
         color: "text-blue-400"
     },
     suggest_linker: {
-        label: "링커 추천",
+        label: "Suggest Linker",
         icon: FlaskConical,
-        prompt: "이 페이로드/항체에 적합한 ADC 링커를 추천해줘. Cleavable vs Non-cleavable 링커의 장단점과 함께 구체적인 링커 구조(SMILES)와 관련 임상 사례(PMID)를 제시해줘.",
+        prompt: "Suggest suitable ADC linkers for this payload/antibody. Please explain the pros and cons of Cleavable vs Non-cleavable linkers and provide specific linker structures (SMILES) and relevant clinical cases (PMID).",
         color: "text-purple-400"
     },
     autofill_smiles: {
-        label: "SMILES 자동완성",
+        label: "Autofill SMILES",
         icon: Zap,
-        prompt: "이 화합물의 CAS 번호 또는 이름을 기반으로 PubChem에서 정확한 SMILES를 찾아줘. MW(분자량)와 함께 검증 결과를 알려줘.",
+        prompt: "Find the exact SMILES from PubChem based on this compound's CAS number or name. Please provide the MW (Molecular Weight) and validation results.",
         color: "text-yellow-400"
     }
 }
@@ -55,6 +55,11 @@ export function InventoryDetailPanel({ item, type, onClose, onUpdate }: Inventor
     const [saving, setSaving] = useState(false)
     const [activeTab, setActiveTab] = useState('details')
     const [suggestedSmiles, setSuggestedSmiles] = useState<string | null>(null)
+
+    // AI Panel State
+    const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
+    const [aiPanelKey, setAiPanelKey] = useState(0)
+    const [aiTrigger, setAiTrigger] = useState<string | undefined>(undefined)
 
     useEffect(() => {
         if (item) {
@@ -109,8 +114,17 @@ export function InventoryDetailPanel({ item, type, onClose, onUpdate }: Inventor
         }
     }
 
+    const toggleAI = () => {
+        if (!isAIPanelOpen) {
+            setAiPanelKey(prev => prev + 1)
+            setIsAIPanelOpen(true)
+        } else {
+            setIsAIPanelOpen(false)
+        }
+    }
+
     return (
-        <Card className="h-full bg-slate-900 border-slate-800 flex flex-col overflow-hidden">
+        <Card className="h-full bg-slate-900 border-slate-800 flex flex-col overflow-hidden relative">
             {/* Header */}
             <CardHeader className="flex flex-row items-center justify-between py-3 border-b border-slate-800 bg-slate-900/50">
                 <div className="flex-1 min-w-0">
@@ -168,10 +182,9 @@ export function InventoryDetailPanel({ item, type, onClose, onUpdate }: Inventor
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-800 rounded-none border-b border-slate-700">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-800 rounded-none border-b border-slate-700">
                     <TabsTrigger value="details" className="data-[state=active]:bg-slate-900">Details</TabsTrigger>
                     <TabsTrigger value="structure" className="data-[state=active]:bg-slate-900">Structure</TabsTrigger>
-                    <TabsTrigger value="ai" className="data-[state=active]:bg-slate-900">Ask AI</TabsTrigger>
                 </TabsList>
 
                 {/* Details Tab */}
@@ -191,19 +204,30 @@ export function InventoryDetailPanel({ item, type, onClose, onUpdate }: Inventor
                         onAccept={handleAcceptSuggestedSmiles}
                     />
                 </TabsContent>
-
-                {/* AI Assistant Tab */}
-                <TabsContent value="ai" className="flex-1 flex flex-col min-h-0 m-0">
-                    <AIAssistantPanel
-                        item={item}
-                        type={type}
-                        onSmilesGenerated={(smiles) => {
-                            setSuggestedSmiles(smiles)
-                            setActiveTab('structure')
-                        }}
-                    />
-                </TabsContent>
             </Tabs>
+
+            {/* AI Panel Slide-out */}
+            <div className={`absolute top-0 right-0 h-full w-[400px] bg-slate-950 border-l border-slate-800 shadow-2xl transform transition-transform duration-300 z-20 ${isAIPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                <AIAssistantPanel
+                    key={aiPanelKey}
+                    item={item}
+                    type={type}
+                    onSmilesGenerated={(smiles) => {
+                        setSuggestedSmiles(smiles)
+                        setActiveTab('structure')
+                    }}
+                    onClose={() => setIsAIPanelOpen(false)}
+                />
+            </div>
+
+            {/* Floating AI Toggle Button */}
+            <Button
+                className={`absolute bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-10 transition-all duration-300 ${isAIPanelOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+                onClick={toggleAI}
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}
+            >
+                <MessageSquare className="w-6 h-6 text-white" />
+            </Button>
         </Card>
     )
 }
@@ -324,7 +348,7 @@ function StructureComparisonView({ currentSmiles, suggestedSmiles, onAccept }: {
                         {currentSmiles ? (
                             <div className="text-center">
                                 <div className="font-mono text-xs text-slate-300 break-all">{currentSmiles}</div>
-                                {/* 실제 구조 이미지 렌더링은 RDKit.js나 외부 서비스 필요 */}
+                                {/* Visualization placeholder */}
                                 <div className="mt-2 text-xs text-slate-500">
                                     [Structure visualization requires RDKit.js]
                                 </div>
@@ -359,7 +383,7 @@ function StructureComparisonView({ currentSmiles, suggestedSmiles, onAccept }: {
                         ) : (
                             <div className="text-center text-slate-500">
                                 <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p className="text-xs">Use "SMILES 자동완성" in Ask AI</p>
+                                <p className="text-xs">Use "Autofill SMILES" in Ask AI</p>
                             </div>
                         )}
                     </div>
@@ -380,10 +404,11 @@ function StructureComparisonView({ currentSmiles, suggestedSmiles, onAccept }: {
 }
 
 // AI Assistant Panel with Quick Actions
-function AIAssistantPanel({ item, type, onSmilesGenerated }: {
+function AIAssistantPanel({ item, type, onSmilesGenerated, onClose }: {
     item: any,
     type: string,
-    onSmilesGenerated?: (smiles: string) => void
+    onSmilesGenerated?: (smiles: string) => void,
+    onClose: () => void
 }) {
     const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([])
     const [input, setInput] = useState('')
@@ -426,7 +451,7 @@ function AIAssistantPanel({ item, type, onSmilesGenerated }: {
                 const answer = data.answer || "No response generated."
                 setMessages(prev => [...prev, { role: 'assistant', content: answer }])
 
-                // SMILES 자동 추출 (AI 응답에서 SMILES 패턴 감지)
+                // SMILES extraction
                 const smilesMatch = answer.match(/SMILES[:\s]+([A-Za-z0-9@+\-\[\]\(\)\\\/=#$%]+)/i)
                 if (smilesMatch && onSmilesGenerated) {
                     onSmilesGenerated(smilesMatch[1])
@@ -448,7 +473,18 @@ function AIAssistantPanel({ item, type, onSmilesGenerated }: {
     }
 
     return (
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 h-full">
+            {/* AI Panel Header */}
+            <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-purple-400" />
+                    <h3 className="font-semibold text-slate-200">AI Assistant</h3>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                </Button>
+            </div>
+
             {/* Quick Actions */}
             <div className="p-3 border-b border-slate-800 bg-slate-900/50">
                 <div className="text-xs text-slate-500 mb-2">Quick Actions</div>

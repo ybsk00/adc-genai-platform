@@ -12,12 +12,12 @@ export default function TotalInventoryLayout() {
 
     return (
         <div className="h-[calc(100vh-4rem)] p-6 flex gap-6 bg-slate-950 text-slate-100 overflow-hidden">
-            {/* Left Panel: List View */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* Left Panel: List View (33%) */}
+            <div className="w-1/3 flex flex-col min-w-0">
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
                         <Database className="w-8 h-8 text-blue-400" />
-                        Total Inventory
+                        ADC Total Inventory
                     </h1>
                     <p className="text-slate-400 mt-2">
                         Manage Antibodies and Reagents with AI-powered analysis.
@@ -60,8 +60,8 @@ export default function TotalInventoryLayout() {
                 </Card>
             </div>
 
-            {/* Right Panel: Detail View */}
-            <div className="w-[400px] flex-shrink-0 flex flex-col">
+            {/* Right Panel: Detail View (Rest) */}
+            <div className="flex-1 flex flex-col min-w-0">
                 <InventoryDetailPanel
                     item={selectedItem}
                     type={activeTab as 'antibodies' | 'reagents'}
