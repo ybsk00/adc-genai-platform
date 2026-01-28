@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base, design_runs, assay_results
+from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base, design_runs, assay_results, design, uniprot, system, report
 from app.core.config import settings
 from app.services.scheduler_engine import scheduler_engine
 
@@ -55,6 +55,10 @@ app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"]
 app.include_router(knowledge_base.router, prefix="/api/knowledge-base", tags=["knowledge-base"])
 app.include_router(design_runs.router, prefix="/api/design-runs", tags=["design-runs"])
 app.include_router(assay_results.router, prefix="/api/assay-results", tags=["assay-results"])
+app.include_router(design.router, tags=["design-engine"])  # prefix already in router
+app.include_router(uniprot.router, prefix="/api/uniprot", tags=["uniprot"])
+app.include_router(system.router, prefix="/api/system", tags=["system"])
+app.include_router(report.router, prefix="/api/report", tags=["report"])
 
 
 @app.get("/health")
