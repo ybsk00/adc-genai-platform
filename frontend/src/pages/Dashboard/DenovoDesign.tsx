@@ -22,7 +22,12 @@ import {
   AlertTriangle,
   FlaskConical,
   Target,
-  Link2
+  Link2,
+  Atom,
+  Activity,
+  FileSearch,
+  Cpu,
+  ArrowRight
 } from 'lucide-react'
 import { useDesignSession, type Candidate } from '@/hooks/useDesignSession'
 
@@ -169,13 +174,13 @@ export default function DenovoDesign() {
   // Create radar metrics from calculated metrics
   const radarMetrics = calculatedMetrics
     ? createDefaultMetrics({
-        mw: calculatedMetrics.mw,
-        logP: calculatedMetrics.logP,
-        darMatch: calculatedMetrics.dar_match ? calculatedMetrics.dar_match * 100 : undefined,
-        goldenSetSim: calculatedMetrics.golden_set_similarity ? calculatedMetrics.golden_set_similarity * 100 : undefined,
-        tpsa: calculatedMetrics.tpsa,
-        hbd: calculatedMetrics.hbd
-      })
+      mw: calculatedMetrics.mw,
+      logP: calculatedMetrics.logP,
+      darMatch: calculatedMetrics.dar_match ? calculatedMetrics.dar_match * 100 : undefined,
+      goldenSetSim: calculatedMetrics.golden_set_similarity ? calculatedMetrics.golden_set_similarity * 100 : undefined,
+      tpsa: calculatedMetrics.tpsa,
+      hbd: calculatedMetrics.hbd
+    })
     : []
 
   // Map references for EvidenceHub
@@ -202,7 +207,7 @@ export default function DenovoDesign() {
   // === LEFT PANEL: Input Form ===
   const leftPanel = (
     <div className="space-y-4">
-      <Card>
+      <Card className="bg-[#0f172a] border-[#1e293b]">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Target className="w-4 h-4" />
@@ -333,9 +338,90 @@ export default function DenovoDesign() {
     </div>
   )
 
+  // Check if any visualization content is available
+  const hasVisualizationContent = digitalSeal || isHealerActive || currentSmiles || radarMetrics.length > 0 || candidates.length > 0 || sessionStatus === 'completed' || sessionStatus === 'manual_review'
+
   // === CENTER PANEL: Visualization ===
   const centerPanel = (
     <div className="space-y-4">
+      {/* Empty State - Welcome Guide */}
+      {!hasVisualizationContent && (
+        <Card className="bg-gradient-to-br from-[#0f172a] to-[#1e1b4b] border-[#1e293b]">
+          <CardContent className="p-8">
+            <div className="text-center space-y-6">
+              {/* Icon */}
+              <div className="flex justify-center">
+                <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <Atom className="w-10 h-10 text-purple-400 animate-pulse" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  AI-Powered ADC Design
+                </h3>
+                <p className="text-gray-400 text-sm max-w-md mx-auto">
+                  Multi-Agent 시스템이 최적의 ADC 후보물질을 설계합니다.
+                  왼쪽 패널에서 파라미터를 설정하고 디자인을 시작하세요.
+                </p>
+              </div>
+
+              {/* Process Steps */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mb-2">
+                    <Cpu className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <span className="text-xs text-gray-400 text-center">Alchemist</span>
+                  <span className="text-xs text-gray-500">분자 생성</span>
+                </div>
+                <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
+                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center mb-2">
+                    <Activity className="w-5 h-5 text-green-400" />
+                  </div>
+                  <span className="text-xs text-gray-400 text-center">Auditor</span>
+                  <span className="text-xs text-gray-500">속성 평가</span>
+                </div>
+                <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
+                    <FileSearch className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <span className="text-xs text-gray-400 text-center">Librarian</span>
+                  <span className="text-xs text-gray-500">문헌 검색</span>
+                </div>
+                <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
+                  <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center mb-2">
+                    <FlaskConical className="w-5 h-5 text-red-400" />
+                  </div>
+                  <span className="text-xs text-gray-400 text-center">Healer</span>
+                  <span className="text-xs text-gray-500">독성 제거</span>
+                </div>
+              </div>
+
+              {/* What you'll see */}
+              <div className="border-t border-slate-700 pt-6 mt-6">
+                <p className="text-xs text-gray-500 mb-3">디자인 시작 후 표시될 내용</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <Atom className="w-3 h-3 mr-1" />
+                    2D 분자 구조
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Activity className="w-3 h-3 mr-1" />
+                    Lipinski 레이더 차트
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <FlaskConical className="w-3 h-3 mr-1" />
+                    후보물질 목록
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Digital Seal Badge */}
       {digitalSeal && (
         <DigitalSealBadge
@@ -377,7 +463,7 @@ export default function DenovoDesign() {
 
       {/* Candidates Results */}
       {candidates.length > 0 && (
-        <Card>
+        <Card className="bg-[#0f172a] border-[#1e293b]">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <FlaskConical className="w-4 h-4" />
@@ -408,10 +494,10 @@ export default function DenovoDesign() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+          className="flex items-center gap-2 p-4 bg-green-900/20 border border-green-900/50 rounded-lg"
         >
           <CheckCircle2 className="w-5 h-5 text-green-500" />
-          <span className="text-green-700 font-medium">
+          <span className="text-green-400 font-medium">
             Design completed successfully! Review the candidates above.
           </span>
         </motion.div>
@@ -421,10 +507,10 @@ export default function DenovoDesign() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg"
+          className="flex items-center gap-2 p-4 bg-amber-900/20 border border-amber-900/50 rounded-lg"
         >
           <AlertTriangle className="w-5 h-5 text-amber-500" />
-          <span className="text-amber-700 font-medium">
+          <span className="text-amber-400 font-medium">
             This design requires manual expert review before proceeding.
           </span>
         </motion.div>
@@ -495,11 +581,10 @@ function CandidateCard({ candidate, index }: { candidate: Candidate; index: numb
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`p-4 rounded-lg border ${
-        candidate.is_masked
-          ? 'bg-gray-50 border-gray-200'
-          : 'bg-white border-slate-200'
-      }`}
+      className={`p-4 rounded-lg border ${candidate.is_masked
+        ? 'bg-slate-900/50 border-slate-800'
+        : 'bg-[#0f172a] border-[#1e293b]'
+        }`}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -521,22 +606,21 @@ function CandidateCard({ candidate, index }: { candidate: Candidate; index: numb
       </div>
 
       <div className="mt-3">
-        <Label className="text-xs text-gray-500">SMILES</Label>
+        <Label className="text-xs text-slate-500">SMILES</Label>
         <p
-          className={`font-mono text-sm mt-1 break-all ${
-            candidate.is_masked ? 'text-gray-400' : 'text-gray-700'
-          }`}
+          className={`font-mono text-sm mt-1 break-all ${candidate.is_masked ? 'text-slate-500' : 'text-slate-300'
+            }`}
         >
           {candidate.smiles}
         </p>
       </div>
 
       {!candidate.is_masked && candidate.metrics && (
-        <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t">
+        <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-800">
           {Object.entries(candidate.metrics).map(([key, value]) => (
             <div key={key} className="text-center">
-              <p className="text-xs text-gray-500 uppercase">{key}</p>
-              <p className="text-sm font-medium">
+              <p className="text-xs text-slate-500 uppercase">{key}</p>
+              <p className="text-sm font-medium text-slate-300">
                 {typeof value === 'number' ? value.toFixed(2) : value}
               </p>
             </div>

@@ -1,42 +1,41 @@
 import { motion } from 'framer-motion'
-import { Beaker, Database, FileText, Globe, Layers, Zap } from 'lucide-react'
 
 const features = [
     {
-        icon: Layers,
-        title: "In Silico 3D Modeling",
-        description: "AlphaFold3-based antibody-drug binding structure simulation and binding affinity prediction",
+        icon: "/icons/The_Auditor.png",
+        title: "The Auditor",
+        description: "Eliminates AI hallucinations by converting designs into executable Python code. Validates MW, stability, and synthesis scores in real-time.",
         color: "from-blue-500 to-cyan-500"
     },
     {
-        icon: Zap,
+        icon: "/icons/Predictive_Toxicology.png",
         title: "Predictive Toxicology",
-        description: "Off-target toxicity heatmap analysis and early detection of ocular/blood toxicity risks",
+        description: "Deep learning and biophysical simulations predict off-target toxicity and early ocular/blood risk heatmaps with 80%+ accuracy.",
         color: "from-purple-500 to-pink-500"
     },
     {
-        icon: Globe,
-        title: "IP Landscape Analysis",
-        description: "Real-time FTO traffic light system integrated with global patent databases",
+        icon: "/icons/IP_Risk_Reasoning.png",
+        title: "IP Risk Reasoning",
+        description: "AI-driven structural novelty analysis. Logic-based reasoning to navigate the patent landscape and ensure design freedom.",
         color: "from-green-500 to-emerald-500"
     },
     {
-        icon: FileText,
-        title: "Clinical Strategy",
-        description: "Automated Phase 1 protocol generation based on FDA guidelines and clinical success probability reports",
-        color: "from-indigo-500 to-violet-500"
-    },
-    {
-        icon: Database,
-        title: "Market Intelligence",
-        description: "Real-time tracking of global pipelines and competitor development status dashboard",
+        icon: "/icons/Competitive_Intelligence.png",
+        title: "Competitive Intelligence",
+        description: "Dynamic Relative Scoring (%) against industry gold standards like Enhertu and Trodelvy via real-time benchmarking.",
         color: "from-orange-500 to-red-500"
     },
     {
-        icon: Beaker,
-        title: "Golden Set Library",
-        description: "Comparative analysis library of FDA-approved reference drug mechanism data vs. in-house experimental data",
-        color: "from-yellow-500 to-amber-500"
+        icon: "/icons/The_Librarian.png",
+        title: "The Librarian",
+        description: "Real-time mapping of scientific evidence (PMID) across 30M+ papers to provide a solid logical foundation for every candidate.",
+        color: "from-indigo-500 to-violet-500"
+    },
+    {
+        icon: "/icons/In_Silico_3D_Modeling.png",
+        title: "In Silico 3D Modeling",
+        description: "Next-Gen engine for antibody-drug binding structure simulation and affinity prediction (AlphaFold 3 Integration - Roadmap).",
+        color: "from-blue-500 to-cyan-500"
     }
 ]
 
@@ -64,15 +63,15 @@ export function FeatureSection() {
                     >
                         <div className="relative h-full w-full transition-all duration-500 transform-style-3d group-hover:rotate-x-2 group-hover:-translate-y-4">
                             {/* Card Background with Glassmorphism & Gradient Border */}
-                            <div className="absolute inset-0 rounded-2xl bg-[#1E293B]/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
+                            <div className="absolute inset-0 rounded-2xl bg-[#0F172A]/70 backdrop-blur-[20px] border border-white/10 shadow-2xl overflow-hidden">
                                 {/* Top Gradient Bar */}
                                 <div className={`h-2 w-full bg-gradient-to-r ${feature.color}`} />
 
                                 <div className="p-8 h-full flex flex-col">
                                     {/* Icon Container - Floats on hover */}
-                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} p-0.5 mb-6 shadow-lg transform transition-transform duration-500 group-hover:scale-110 group-hover:translate-z-10`}>
-                                        <div className="w-full h-full bg-[#0F172A] rounded-[14px] flex items-center justify-center">
-                                            <feature.icon className="w-8 h-8 text-white" />
+                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} p-0.5 mb-6 shadow-lg transform transition-transform duration-500 group-hover:scale-110 group-hover:translate-z-10 animate-float`}>
+                                        <div className="w-full h-full bg-[#0F172A] rounded-[14px] flex items-center justify-center overflow-hidden">
+                                            <img src={feature.icon} alt={feature.title} className="w-full h-full object-cover" />
                                         </div>
                                     </div>
 
@@ -83,12 +82,6 @@ export function FeatureSection() {
                                     <p className="text-gray-400 leading-relaxed text-sm">
                                         {feature.description}
                                     </p>
-
-                                    {/* Bottom Action Hint - Removed as per request */}
-                                    {/* <div className="mt-auto pt-6 flex items-center text-sm font-medium text-gray-500 group-hover:text-white transition-colors">
-                                        <span>View Details</span>
-                                        <div className={`ml-2 w-8 h-[1px] bg-gradient-to-r ${feature.color}`} />
-                                    </div> */}
                                 </div>
 
                                 {/* Hover Glow Effect */}

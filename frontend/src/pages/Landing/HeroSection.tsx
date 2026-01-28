@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Download } from 'lucide-react'
 
 export function HeroSection() {
     return (
@@ -18,17 +18,16 @@ export function HeroSection() {
                 </div>
 
                 <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-tight text-white">
-                    Accelerate ADC <br />
-                    Discovery <br />
+                    Accelerate ADC Discovery: <br />
+                    From "Black Box" to <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                        from Months to <br />
-                        Minutes
+                        "Verified Reasoning"
                     </span>
                 </h1>
 
                 <p className="text-lg text-gray-400 max-w-xl leading-relaxed">
-                    Replace lab trial and error with AI simulation. <br />
-                    AstraForge accelerates your linker-payload optimization with 6 AI agents trained on FDA-approved data.
+                    Replace lab trial and error with Hallucination-Free AI Simulation. <br />
+                    AstraForge ensures every design is physically valid through real-time Python/RDKit code execution.
                 </p>
 
                 <div className="flex flex-wrap gap-4">
@@ -39,6 +38,15 @@ export function HeroSection() {
                     </Button>
                     <Button size="lg" variant="outline" className="border-white/10 text-white hover:bg-white/5 h-12 rounded-xl text-lg font-medium px-8" asChild>
                         <Link to="/signup">Request Demo</Link>
+                    </Button>
+                    <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-blue-400/30 text-blue-400 hover:bg-blue-400/10 h-12 rounded-xl text-lg font-medium px-8"
+                        onClick={() => window.open('#', '_blank')}
+                    >
+                        <Download className="mr-2 w-5 h-5" />
+                        Sample Report
                     </Button>
                 </div>
 

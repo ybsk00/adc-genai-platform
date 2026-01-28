@@ -1,0 +1,14 @@
+Placeholder for icons. Please place the following files here:
+- The_Auditor.png
+- Predictive_Toxicology.png
+- IP_Risk_Reasoning.png
+- Competitive_Intelligence.png
+- The_Librarian.png
+- In_Silico_3D_Modeling.png
+- For_Bio-Researchers.png
+- For_VC_Investors.png
+- For_CDMOs.png
+- Step_01.png
+- Step_02.png
+- Step_03.png
+- Step_04.png

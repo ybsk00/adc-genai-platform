@@ -235,7 +235,7 @@ export default function PreclinicalAudit() {
   const LeftPanel = (
     <ScrollArea className="h-full">
       <div className="space-y-4 p-4">
-        <Card>
+        <Card className="bg-[#0f172a] border-[#1e293b]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <FileCheck className="w-4 h-4" />
@@ -357,7 +357,7 @@ export default function PreclinicalAudit() {
     <ScrollArea className="h-full">
       <div className="space-y-4 p-4">
         {/* Molecule Viewer */}
-        <Card>
+        <Card className="bg-[#0f172a] border-[#1e293b]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center justify-between">
               <span>Candidate Structure</span>
@@ -388,7 +388,7 @@ export default function PreclinicalAudit() {
 
         {/* Detailed Audit Results */}
         {auditResults.length > 0 && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <FileCheck className="w-4 h-4" />
@@ -430,10 +430,10 @@ export default function PreclinicalAudit() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+            className="flex items-center gap-2 p-4 bg-green-900/20 border border-green-900/50 rounded-lg"
           >
             <CheckCircle2 className="w-5 h-5 text-green-500" />
-            <span className="text-green-700 font-medium">
+            <span className="text-green-400 font-medium">
               Audit completed successfully! All checks passed.
             </span>
           </motion.div>
@@ -443,10 +443,10 @@ export default function PreclinicalAudit() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg"
+            className="flex items-center gap-2 p-4 bg-red-900/20 border border-red-900/50 rounded-lg"
           >
             <XCircle className="w-5 h-5 text-red-500" />
-            <span className="text-red-700 font-medium">
+            <span className="text-red-400 font-medium">
               Audit completed with {auditSummary.fail} failed check(s). Review required.
             </span>
           </motion.div>
@@ -456,10 +456,10 @@ export default function PreclinicalAudit() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg"
+            className="flex items-center gap-2 p-4 bg-amber-900/20 border border-amber-900/50 rounded-lg"
           >
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <span className="text-amber-700 font-medium">
+            <span className="text-amber-400 font-medium">
               Audit flagged concerns requiring expert review.
             </span>
           </motion.div>
@@ -493,7 +493,7 @@ export default function PreclinicalAudit() {
 
         {/* Quick Export */}
         {sessionStatus === 'completed' && sessionId && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Export Options</CardTitle>
             </CardHeader>
@@ -555,10 +555,10 @@ export default function PreclinicalAudit() {
 // Audit Result Card Component
 function AuditResultCard({ result, index }: { result: AuditResult; index: number }) {
   const statusConfig = {
-    pass: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50 border-green-200' },
-    warning: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50 border-amber-200' },
-    fail: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50 border-red-200' },
-    info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-50 border-blue-200' }
+    pass: { icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-900/20 border-green-900/50' },
+    warning: { icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-900/20 border-amber-900/50' },
+    fail: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-900/20 border-red-900/50' },
+    info: { icon: Info, color: 'text-blue-400', bg: 'bg-blue-900/20 border-blue-900/50' }
   }
 
   const config = statusConfig[result.status]

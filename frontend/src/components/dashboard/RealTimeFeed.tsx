@@ -61,29 +61,29 @@ export function RealTimeFeed() {
 
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'clinical': return 'bg-blue-100 text-blue-700 border-blue-200'
-            case 'business': return 'bg-purple-100 text-purple-700 border-purple-200'
-            case 'regulatory': return 'bg-green-100 text-green-700 border-green-200'
-            default: return 'bg-gray-100 text-gray-700 border-gray-200'
+            case 'clinical': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+            case 'business': return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+            case 'regulatory': return 'bg-green-500/10 text-green-400 border-green-500/20'
+            default: return 'bg-slate-800 text-slate-400 border-slate-700'
         }
     }
 
     return (
-        <Card>
+        <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                        <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="flex items-center gap-2 text-base text-white">
+                        <TrendingUp className="w-5 h-5 text-blue-500" />
                         Real-time ADC Feed
                     </CardTitle>
-                    <CardDescription>AI-curated updates from 50+ sources</CardDescription>
+                    <CardDescription className="text-slate-400">AI-curated updates from 50+ sources</CardDescription>
                 </div>
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className={isRefreshing ? 'animate-spin' : ''}
+                    className={`text-slate-400 hover:text-white hover:bg-slate-800 ${isRefreshing ? 'animate-spin' : ''}`}
                 >
                     <RefreshCw className="w-4 h-4" />
                 </Button>
@@ -98,19 +98,19 @@ export function RealTimeFeed() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 layout
-                                className="p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                                className="p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors"
                             >
                                 <div className="flex justify-between items-start gap-2">
-                                    <p className="text-sm font-medium text-slate-800 leading-snug">
+                                    <p className="text-sm font-medium text-slate-200 leading-snug">
                                         {item.title}
                                     </p>
-                                    <ExternalLink className="w-3 h-3 text-slate-400 flex-shrink-0 mt-1" />
+                                    <ExternalLink className="w-3 h-3 text-slate-500 flex-shrink-0 mt-1" />
                                 </div>
                                 <div className="flex items-center gap-2 mt-2">
                                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${getTypeColor(item.type)}`}>
                                         {item.type}
                                     </Badge>
-                                    <span className="text-[10px] text-slate-400">
+                                    <span className="text-[10px] text-slate-500">
                                         {item.source} • {item.date}
                                     </span>
                                 </div>

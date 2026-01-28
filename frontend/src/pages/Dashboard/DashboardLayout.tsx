@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     LayoutDashboard,
     FlaskConical,
@@ -9,7 +9,11 @@ import {
     ChevronLeft,
     ChevronRight,
     LogOut,
-    CreditCard
+    CreditCard,
+    Beaker,
+    Sparkles,
+    Shield,
+    Factory
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -18,6 +22,12 @@ import { cn } from '@/lib/utils'
 const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: FlaskConical, label: 'ADC Builder', href: '/dashboard/builder' },
+    // Design Engine 4대 메뉴
+    { icon: Beaker, label: 'De novo Design', href: '/dashboard/denovo' },
+    { icon: Sparkles, label: 'Lead Optimization', href: '/dashboard/optimization' },
+    { icon: Shield, label: 'Pre-clinical Audit', href: '/dashboard/audit' },
+    { icon: Factory, label: 'CMC & Sourcing', href: '/dashboard/cmc' },
+    // 기존 메뉴
     { icon: Library, label: 'Golden Set', href: '/dashboard/library' },
     { icon: FileText, label: 'My Reports', href: '/dashboard/reports' },
     { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
@@ -26,6 +36,18 @@ const menuItems = [
 export function DashboardLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false)
     const location = useLocation()
+    const navigate = useNavigate()
+
+    // Logout handler
+    const handleLogout = useCallback(() => {
+        // Clear any stored auth data
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        sessionStorage.clear()
+
+        // Navigate to home page
+        navigate('/')
+    }, [navigate])
 
     // Debug log to verify dark mode code is running
     console.log('Rendering DashboardLayout (Dark Mode Version)')
@@ -119,7 +141,13 @@ export function DashboardLayout() {
                             <Avatar className="w-8 h-8">
                                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm">DR</AvatarFallback>
                             </Avatar>
-                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-slate-400 hover:text-white hover:bg-red-500/10"
+                                onClick={handleLogout}
+                                title="Logout"
+                            >
                                 <LogOut className="w-4 h-4" />
                             </Button>
                         </div>

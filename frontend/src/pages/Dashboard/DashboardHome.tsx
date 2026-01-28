@@ -8,25 +8,14 @@ import {
     Plus,
     Library,
     Clock,
-    CheckCircle,
-    XCircle,
-    Loader2
+    Beaker,
+    Sparkles,
+    Shield,
+    Factory,
+    ArrowRight,
+    Inbox
 } from 'lucide-react'
 import { RealTimeFeed } from '@/components/dashboard/RealTimeFeed'
-
-// Mock data for recent simulations
-const recentSimulations = [
-    { id: 'job_1', name: 'LIV-1 + MMAE Test', status: 'completed', grade: 'B+', date: '2026-01-17' },
-    { id: 'job_2', name: 'HER2 + DXd Analysis', status: 'processing', progress: 65, date: '2026-01-17' },
-    { id: 'job_3', name: 'TROP2 + SN-38', status: 'failed', error: 'Timeout', date: '2026-01-16' },
-    { id: 'job_4', name: 'EGFR + MMAF', status: 'completed', grade: 'A', date: '2026-01-15' },
-]
-
-const statusConfig = {
-    completed: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10' },
-    processing: { icon: Loader2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
-}
 
 /**
  * [Dev Note: Skeleton Loading]
@@ -155,6 +144,88 @@ export function DashboardHome() {
                 </Card>
             </motion.div>
 
+            {/* Design Engine - 4대 메뉴 */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Beaker className="w-5 h-5 text-purple-400" />
+                        AI Design Engine
+                    </h2>
+                    <Badge variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10">
+                        Multi-Agent System
+                    </Badge>
+                </div>
+                <div className="grid md:grid-cols-4 gap-3">
+                    {/* De novo Design */}
+                    <Link to="/dashboard/denovo">
+                        <Card className="bg-slate-900 border-slate-800 hover:border-purple-500/50 transition-all cursor-pointer group h-full">
+                            <CardContent className="p-4">
+                                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <Beaker className="w-5 h-5 text-purple-400" />
+                                </div>
+                                <h3 className="font-medium text-white mb-1">De novo Design</h3>
+                                <p className="text-xs text-slate-400 mb-3">AI-powered new ADC candidate generation</p>
+                                <div className="flex items-center text-purple-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Start Design <ArrowRight className="w-3 h-3 ml-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* Lead Optimization */}
+                    <Link to="/dashboard/optimization">
+                        <Card className="bg-slate-900 border-slate-800 hover:border-amber-500/50 transition-all cursor-pointer group h-full">
+                            <CardContent className="p-4">
+                                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <Sparkles className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <h3 className="font-medium text-white mb-1">Lead Optimization</h3>
+                                <p className="text-xs text-slate-400 mb-3">Optimize existing compound properties</p>
+                                <div className="flex items-center text-amber-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Start Optimization <ArrowRight className="w-3 h-3 ml-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* Pre-clinical Audit */}
+                    <Link to="/dashboard/audit">
+                        <Card className="bg-slate-900 border-slate-800 hover:border-blue-500/50 transition-all cursor-pointer group h-full">
+                            <CardContent className="p-4">
+                                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <Shield className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <h3 className="font-medium text-white mb-1">Pre-clinical Audit</h3>
+                                <p className="text-xs text-slate-400 mb-3">Safety & efficacy assessment</p>
+                                <div className="flex items-center text-blue-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Start Audit <ArrowRight className="w-3 h-3 ml-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* CMC & Sourcing */}
+                    <Link to="/dashboard/cmc">
+                        <Card className="bg-slate-900 border-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer group h-full">
+                            <CardContent className="p-4">
+                                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <Factory className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <h3 className="font-medium text-white mb-1">CMC & Sourcing</h3>
+                                <p className="text-xs text-slate-400 mb-3">Manufacturing & supplier analysis</p>
+                                <div className="flex items-center text-emerald-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Start Analysis <ArrowRight className="w-3 h-3 ml-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                </div>
+            </motion.div>
+
             {/* Recent Activity */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -170,45 +241,21 @@ export function DashboardHome() {
                         <CardDescription className="text-slate-400">Recent Simulation Status</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {recentSimulations.map((sim) => {
-                                const config = statusConfig[sim.status as keyof typeof statusConfig]
-                                const StatusIcon = config.icon
-                                return (
-                                    <Link
-                                        key={sim.id}
-                                        to={`/dashboard/result/${sim.id}`}
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${config.bg}`}>
-                                                <StatusIcon className={`w-4 h-4 ${config.color} ${sim.status === 'processing' ? 'animate-spin' : ''}`} />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-white">{sim.name}</p>
-                                                <p className="text-sm text-slate-400">{sim.date}</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            {sim.status === 'completed' && (
-                                                <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10">
-                                                    Grade: {sim.grade}
-                                                </Badge>
-                                            )}
-                                            {sim.status === 'processing' && (
-                                                <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-500/10">
-                                                    {sim.progress}%
-                                                </Badge>
-                                            )}
-                                            {sim.status === 'failed' && (
-                                                <Badge variant="outline" className="border-red-500/30 text-red-400 bg-red-500/10">
-                                                    {sim.error}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </Link>
-                                )
-                            })}
+                        {/* Empty State */}
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                                <Inbox className="w-8 h-8 text-slate-500" />
+                            </div>
+                            <h3 className="text-lg font-medium text-white mb-2">No recent activity</h3>
+                            <p className="text-slate-400 text-sm mb-4 max-w-sm">
+                                Start a new ADC simulation to see your activity here.
+                            </p>
+                            <Link to="/dashboard/builder">
+                                <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-500/10 cursor-pointer hover:bg-blue-500/20 transition-colors">
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    New Simulation
+                                </Badge>
+                            </Link>
                         </div>
                     </CardContent>
                 </Card>

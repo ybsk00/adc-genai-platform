@@ -3,4 +3,8 @@ export { DashboardHome } from './DashboardHome'
 export { ADCBuilder } from './ADCBuilder'
 export { ResultViewer } from './ResultViewer'
 export { GoldenSetLibrary } from './GoldenSetLibrary'
+export { default as DenovoDesign } from './DenovoDesign'
+export { default as LeadOptimization } from './LeadOptimization'
+export { default as PreclinicalAudit } from './PreclinicalAudit'
+export { default as CMCSourcing } from './CMCSourcing'
 

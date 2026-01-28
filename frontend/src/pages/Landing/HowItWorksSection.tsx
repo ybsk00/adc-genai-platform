@@ -1,33 +1,33 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Database, Cpu, FlaskConical, CheckCircle } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 const steps = [
     {
         id: '01',
         title: 'Sequence Input',
         description: 'Input Target Antibody Sequence',
-        icon: Database,
+        icon: "/icons/Step_01.png",
         color: 'text-blue-400'
     },
     {
         id: '02',
-        title: 'Multi-Agent Reasoning',
+        title: 'Code-Verified Reasoning',
         description: 'Simultaneous Analysis by 6 AI Agents',
-        icon: Cpu,
+        icon: "/icons/Step_02.png",
         color: 'text-purple-400'
     },
     {
         id: '03',
-        title: 'Linker-Payload Matching',
+        title: 'Relative Benchmarking',
         description: 'Optimal Linker/Payload Recommendation',
-        icon: FlaskConical,
+        icon: "/icons/Step_03.png",
         color: 'text-cyan-400'
     },
     {
         id: '04',
-        title: 'Top-Tier Candidates',
+        title: 'Certified 10-Page Report',
         description: 'Final Candidate Derivation',
-        icon: CheckCircle,
+        icon: "/icons/Step_04.png",
         color: 'text-green-400'
     }
 ]
@@ -61,8 +61,8 @@ export function HowItWorksSection() {
                             className="relative flex flex-col items-center text-center group"
                         >
                             {/* Step Number Bubble */}
-                            <div className={`w-24 h-24 rounded-full bg-[#0F172A] border-2 border-white/10 group-hover:border-white/30 flex items-center justify-center mb-6 relative z-10 transition-all duration-300 group-hover:scale-110 shadow-lg shadow-black/50`}>
-                                <step.icon className={`w-10 h-10 ${step.color}`} />
+                            <div className={`w-24 h-24 rounded-full bg-[#0F172A] border-2 border-white/10 group-hover:border-white/30 flex items-center justify-center mb-6 relative z-10 transition-all duration-300 group-hover:scale-110 shadow-lg shadow-black/50 overflow-hidden p-4`}>
+                                <img src={step.icon} alt={step.title} className="w-full h-full object-contain" />
                                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white border border-white/10">
                                     {step.id}
                                 </div>

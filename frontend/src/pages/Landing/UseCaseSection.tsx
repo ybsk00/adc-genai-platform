@@ -1,4 +1,4 @@
-import { Microscope, Briefcase, Factory } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export function UseCaseSection() {
     return (
@@ -14,19 +14,19 @@ export function UseCaseSection() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
                 {/* Bio-Researcher */}
-                <div className="group relative p-8 rounded-3xl bg-slate-900 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="group relative p-8 rounded-3xl bg-[#0F172A]/70 backdrop-blur-[20px] border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-2">
                     <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl" />
 
                     <div className="relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors">
-                            <Microscope className="w-7 h-7 text-blue-400" />
+                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors overflow-hidden">
+                            <img src="/icons/For_Bio-Researchers.png" alt="For Bio-Researchers" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For Bio-Researchers</h3>
                         <p className="text-blue-400 text-sm font-medium mb-4">Researchers</p>
 
                         <p className="text-gray-400 leading-relaxed">
-                            "Predict toxicity before synthesis to reduce experiment cycles."
+                            "Validate toxicity before synthesis to drastically reduce wet-lab experiment cycles and optimize candidate screening."
                         </p>
 
                         <ul className="mt-6 space-y-3">
@@ -43,19 +43,19 @@ export function UseCaseSection() {
                 </div>
 
                 {/* VC Investor */}
-                <div className="group relative p-8 rounded-3xl bg-slate-900 border border-white/10 hover:border-purple-500/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="group relative p-8 rounded-3xl bg-[#0F172A]/70 backdrop-blur-[20px] border border-white/10 hover:border-purple-500/50 transition-all duration-300 hover:-translate-y-2">
                     <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl" />
 
                     <div className="relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors">
-                            <Briefcase className="w-7 h-7 text-purple-400" />
+                        <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors overflow-hidden">
+                            <img src="/icons/For_VC_Investors.png" alt="For VC Investors" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For VC Investors</h3>
                         <p className="text-purple-400 text-sm font-medium mb-4">Venture Capital</p>
 
                         <p className="text-gray-400 leading-relaxed">
-                            "Verify technical feasibility and patent risks in 10 minutes for investment decisions."
+                            "Verify technical feasibility and patent risks in minutes to make data-driven, high-confidence investment decisions."
                         </p>
 
                         <ul className="mt-6 space-y-3">
@@ -72,19 +72,19 @@ export function UseCaseSection() {
                 </div>
 
                 {/* CDMO */}
-                <div className="group relative p-8 rounded-3xl bg-slate-900 border border-white/10 hover:border-green-500/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="group relative p-8 rounded-3xl bg-[#0F172A]/70 backdrop-blur-[20px] border border-white/10 hover:border-green-500/50 transition-all duration-300 hover:-translate-y-2">
                     <div className="absolute inset-0 bg-gradient-to-b from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl" />
 
                     <div className="relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6 group-hover:bg-green-500/20 transition-colors">
-                            <Factory className="w-7 h-7 text-green-400" />
+                        <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6 group-hover:bg-green-500/20 transition-colors overflow-hidden">
+                            <img src="/icons/For_CDMOs.png" alt="For CDMOs" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For CDMOs</h3>
                         <p className="text-green-400 text-sm font-medium mb-4">Contract Development & Manufacturing</p>
 
                         <p className="text-gray-400 leading-relaxed">
-                            "Propose data-driven optimal linker/payload combinations to clients."
+                            "Propose optimal linker/payload combinations with verified reasoning to increase client trust and development efficiency."
                         </p>
 
                         <ul className="mt-6 space-y-3">

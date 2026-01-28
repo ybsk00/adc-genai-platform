@@ -245,7 +245,7 @@ export default function CMCSourcing() {
   const LeftPanel = (
     <ScrollArea className="h-full">
       <div className="space-y-4 p-4">
-        <Card>
+        <Card className="bg-[#0f172a] border-[#1e293b]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Package className="w-4 h-4" />
@@ -405,7 +405,7 @@ export default function CMCSourcing() {
       <div className="space-y-4 p-4">
         {/* Molecule Viewer + SA Score */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Candidate Structure</span>
@@ -425,7 +425,7 @@ export default function CMCSourcing() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Synthetic Accessibility</CardTitle>
             </CardHeader>
@@ -454,7 +454,7 @@ export default function CMCSourcing() {
 
         {/* Synthesis Routes */}
         {synthesisRoutes.length > 0 && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="w-4 h-4" />
@@ -478,7 +478,7 @@ export default function CMCSourcing() {
 
         {/* Suppliers */}
         {suppliers.length > 0 && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -512,10 +512,10 @@ export default function CMCSourcing() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+            className="flex items-center gap-2 p-4 bg-green-900/20 border border-green-900/50 rounded-lg"
           >
             <CheckCircle2 className="w-5 h-5 text-green-500" />
-            <span className="text-green-700 font-medium">
+            <span className="text-green-400 font-medium">
               CMC analysis completed! Review synthesis routes and suppliers above.
             </span>
           </motion.div>
@@ -525,10 +525,10 @@ export default function CMCSourcing() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg"
+            className="flex items-center gap-2 p-4 bg-amber-900/20 border border-amber-900/50 rounded-lg"
           >
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <span className="text-amber-700 font-medium">
+            <span className="text-amber-400 font-medium">
               Complex synthesis detected. Expert review recommended.
             </span>
           </motion.div>
@@ -562,7 +562,7 @@ export default function CMCSourcing() {
 
         {/* Quick Export */}
         {sessionStatus === 'completed' && sessionId && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Export Options</CardTitle>
             </CardHeader>
@@ -582,7 +582,7 @@ export default function CMCSourcing() {
 
         {/* Cost Summary */}
         {bomItems.length > 0 && (
-          <Card>
+          <Card className="bg-[#0f172a] border-[#1e293b]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
@@ -647,9 +647,9 @@ export default function CMCSourcing() {
 // Synthesis Route Card Component
 function SynthesisRouteCard({ route, index }: { route: SynthesisRoute; index: number }) {
   const complexityConfig = {
-    low: { color: 'bg-green-100 text-green-700', label: 'Low Complexity' },
-    medium: { color: 'bg-amber-100 text-amber-700', label: 'Medium Complexity' },
-    high: { color: 'bg-red-100 text-red-700', label: 'High Complexity' }
+    low: { color: 'bg-green-900/20 text-green-400', label: 'Low Complexity' },
+    medium: { color: 'bg-amber-900/20 text-amber-400', label: 'Medium Complexity' },
+    high: { color: 'bg-red-900/20 text-red-400', label: 'High Complexity' }
   }
 
   const config = complexityConfig[route.complexity]
@@ -659,9 +659,8 @@ function SynthesisRouteCard({ route, index }: { route: SynthesisRoute; index: nu
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`p-4 rounded-lg border ${
-        route.is_masked ? 'bg-gray-50 border-gray-200' : 'bg-white border-slate-200'
-      }`}
+      className={`p-4 rounded-lg border ${route.is_masked ? 'bg-slate-800/50 border-slate-700' : 'bg-[#0f172a] border-[#1e293b]'
+        }`}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -709,9 +708,8 @@ function SupplierCard({ supplier, index }: { supplier: Supplier; index: number }
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`p-4 rounded-lg border ${
-        supplier.is_masked ? 'bg-gray-50 border-gray-200' : 'bg-white border-slate-200'
-      }`}
+      className={`p-4 rounded-lg border ${supplier.is_masked ? 'bg-slate-800/50 border-slate-700' : 'bg-[#0f172a] border-[#1e293b]'
+        }`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -736,9 +734,8 @@ function SupplierCard({ supplier, index }: { supplier: Supplier; index: number }
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
-                className={`w-4 h-4 ${
-                  i < supplier.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
-                }`}
+                className={`w-4 h-4 ${i < supplier.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
+                  }`}
               />
             ))}
           </div>
