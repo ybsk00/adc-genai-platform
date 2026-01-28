@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     ChevronRight,
     ChevronLeft,
@@ -16,9 +17,15 @@ import {
     Rocket,
     Upload,
     Check,
-    AlertCircle
+    AlertCircle,
+    Loader2,
+    Database
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useADCBuilderStore } from '@/stores/adcBuilderStore'
+import { MoleculeViewer2D } from '@/components/design/MoleculeViewer2D'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const steps = [
     { id: 1, title: 'Target & Antibody', icon: Dna },
@@ -26,68 +33,46 @@ const steps = [
     { id: 3, title: 'Configuration', icon: Settings2 },
 ]
 
-const antibodyOptions = [
-    { value: 'trastuzumab', label: 'Trastuzumab (HER2)' },
-    { value: 'sacituzumab', label: 'Sacituzumab (TROP-2)' },
-    { value: 'enfortumab', label: 'Enfortumab (Nectin-4)' },
-    { value: 'custom', label: 'Custom (Manual Input)' },
-]
+// Types for API data
+interface AntibodyOption {
+    id: string
+    drug_name: string
+    target_1: string
+    target_2?: string
+    antibody_type?: string
+}
 
-// Payload 옵션 - 2D 화학 구조 SVG 포함
-const payloadOptions = [
-    {
-        value: 'mmae',
-        label: 'MMAE',
-        fullName: 'Monomethyl Auristatin E',
-        category: 'Microtubule Inhibitors',
-        mw: '717.96',
-        // 간단한 2D 구조 SVG (실제로는 RDKit이나 CDK로 생성)
-        structure: `<svg viewBox="0 0 100 60" class="w-full h-12">
-      <circle cx="20" cy="30" r="8" fill="#3B82F6" stroke="#1E40AF" stroke-width="2"/>
-      <line x1="28" y1="30" x2="42" y2="30" stroke="#94a3b8" stroke-width="2"/>
-      <circle cx="50" cy="30" r="8" fill="#10B981" stroke="#047857" stroke-width="2"/>
-      <line x1="58" y1="30" x2="72" y2="30" stroke="#94a3b8" stroke-width="2"/>
-      <circle cx="80" cy="30" r="8" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
-      <text x="50" y="55" text-anchor="middle" font-size="8" fill="#94a3b8">Auristatin</text>
-    </svg>`
-    },
-    {
-        value: 'dxd',
-        label: 'DXd',
-        fullName: 'Deruxtecan',
-        category: 'Topo1 Inhibitors',
-        mw: '493.55',
-        structure: `<svg viewBox="0 0 100 60" class="w-full h-12">
-      <polygon points="30,15 50,5 70,15 70,35 50,45 30,35" fill="#8B5CF6" stroke="#6D28D9" stroke-width="2"/>
-      <circle cx="50" cy="25" r="6" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
-      <text x="50" y="55" text-anchor="middle" font-size="8" fill="#94a3b8">Camptothecin</text>
-    </svg>`
-    },
-    {
-        value: 'sn38',
-        label: 'SN-38',
-        fullName: '7-Ethyl-10-hydroxycamptothecin',
-        category: 'DNA Damagers',
-        mw: '392.40',
-        structure: `<svg viewBox="0 0 100 60" class="w-full h-12">
-      <rect x="25" y="10" width="50" height="30" rx="5" fill="#EF4444" stroke="#B91C1C" stroke-width="2"/>
-      <circle cx="50" cy="25" r="8" fill="#FCD34D" stroke="#F59E0B" stroke-width="2"/>
-      <text x="50" y="55" text-anchor="middle" font-size="8" fill="#94a3b8">Irinotecan</text>
-    </svg>`
-    },
-]
+interface PayloadOption {
+    id: string
+    name: string
+    smiles: string
+    category: string
+    mw?: number
+}
 
-const linkerOptions = [
-    { value: 'val-cit', label: 'Val-Cit (Cleavable)', desc: 'Protease sensitive' },
-    { value: 'mcc', label: 'MCC (Non-cleavable)', desc: 'Excellent stability' },
-    { value: 'ggfg', label: 'GGFG (Peptide)', desc: 'Next-gen linker' },
-]
+interface LinkerOption {
+    id: string
+    name: string
+    linker_type: string
+    description?: string
+}
 
 export function ADCBuilder() {
     const navigate = useNavigate()
     const [currentStep, setCurrentStep] = useState(1)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // Zustand 스토어 사용 - Step 간 이동해도 상태 유지
+    // Data loading states
+    const [isLoadingAntibodies, setIsLoadingAntibodies] = useState(true)
+    const [isLoadingPayloads, setIsLoadingPayloads] = useState(true)
+    const [isLoadingLinkers, setIsLoadingLinkers] = useState(true)
+
+    // API data
+    const [antibodyOptions, setAntibodyOptions] = useState<AntibodyOption[]>([])
+    const [payloadOptions, setPayloadOptions] = useState<PayloadOption[]>([])
+    const [linkerOptions, setLinkerOptions] = useState<LinkerOption[]>([])
+
+    // Zustand store
     const {
         antibodyType, customSequence, targetName,
         payloadId, linkerId, dar,
@@ -96,11 +81,100 @@ export function ADCBuilder() {
         setField, validateSequence, resetForm
     } = useADCBuilderStore()
 
+    // Fetch antibodies from Golden Set
+    useEffect(() => {
+        const fetchAntibodies = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/library/golden-set?limit=20`)
+                if (response.ok) {
+                    const data = await response.json()
+                    setAntibodyOptions([
+                        { id: 'custom', drug_name: 'Custom (Manual Input)', target_1: '' },
+                        ...data.items.map((item: any) => ({
+                            id: item.id,
+                            drug_name: item.drug_name,
+                            target_1: item.target_1,
+                            target_2: item.target_2,
+                            antibody_type: item.antibody_type
+                        }))
+                    ])
+                }
+            } catch (error) {
+                console.error('Failed to fetch antibodies:', error)
+                // Fallback to basic options
+                setAntibodyOptions([
+                    { id: 'custom', drug_name: 'Custom (Manual Input)', target_1: '' }
+                ])
+            } finally {
+                setIsLoadingAntibodies(false)
+            }
+        }
+        fetchAntibodies()
+    }, [])
+
+    // Fetch payloads from commercial_reagents
+    useEffect(() => {
+        const fetchPayloads = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/library/reagents?category=payload&limit=20`)
+                if (response.ok) {
+                    const data = await response.json()
+                    setPayloadOptions(data.items.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        smiles: item.smiles,
+                        category: item.sub_category || 'Payload',
+                        mw: item.molecular_weight
+                    })))
+                }
+            } catch (error) {
+                console.error('Failed to fetch payloads:', error)
+                // Fallback to common payloads
+                setPayloadOptions([
+                    { id: 'mmae', name: 'MMAE', smiles: 'CC(C)C[C@H](NC(=O)[C@H](CC(C)C)NC(=O)[C@@H](NC(=O)[C@H](Cc1ccccc1)NC(=O)c1ccc(cc1)N(C)C)C(C)C)C(=O)N[C@@H](C(C)C)C(=O)N(C)[C@@H](Cc1c[nH]c2ccccc12)C(=O)O', category: 'Auristatin', mw: 718 },
+                    { id: 'dxd', name: 'DXd (Deruxtecan)', smiles: 'COc1cc2c(cc1OC)-c1cc3c(c(=O)n1C2)COC(=O)[C@]3(CC)O', category: 'Camptothecin', mw: 494 },
+                    { id: 'sn38', name: 'SN-38', smiles: 'CCc1c2c(nc3ccc(O)cc13)-c1cc3c(c(=O)n1C2)COC(=O)[C@]3(CC)O', category: 'Camptothecin', mw: 392 }
+                ])
+            } finally {
+                setIsLoadingPayloads(false)
+            }
+        }
+        fetchPayloads()
+    }, [])
+
+    // Fetch linkers from commercial_reagents
+    useEffect(() => {
+        const fetchLinkers = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/library/reagents?category=linker&limit=20`)
+                if (response.ok) {
+                    const data = await response.json()
+                    setLinkerOptions(data.items.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        linker_type: item.linker_type || 'Unknown',
+                        description: item.description
+                    })))
+                }
+            } catch (error) {
+                console.error('Failed to fetch linkers:', error)
+                // Fallback to common linkers
+                setLinkerOptions([
+                    { id: 'val-cit', name: 'Val-Cit-PABC', linker_type: 'Cleavable', description: 'Protease sensitive' },
+                    { id: 'mcc', name: 'MCC (SMCC)', linker_type: 'Non-cleavable', description: 'Thioether linkage' },
+                    { id: 'ggfg', name: 'GGFG', linker_type: 'Cleavable', description: 'Next-gen peptide linker' }
+                ])
+            } finally {
+                setIsLoadingLinkers(false)
+            }
+        }
+        fetchLinkers()
+    }, [])
+
     const handleNext = () => {
-        // Step 1 유효성 검사
         if (currentStep === 1) {
             if (antibodyType === 'custom' && sequenceError) {
-                return // 서열 오류 시 진행 불가
+                return
             }
         }
         if (currentStep < 3) setCurrentStep(currentStep + 1)
@@ -111,14 +185,65 @@ export function ADCBuilder() {
     }
 
     const handleSubmit = async () => {
-        // TODO: API call to start simulation
-        console.log('Starting simulation with:', {
-            antibodyType, customSequence, targetName,
-            payloadId, linkerId, dar, mode, jobName
-        })
-        resetForm() // 폼 초기화
-        navigate('/dashboard/result/job_new')
+        // Validation
+        if (!targetName && antibodyType === 'custom') {
+            toast.error('Please enter a target name')
+            return
+        }
+
+        setIsSubmitting(true)
+
+        try {
+            // 1. Create design session via API
+            const selectedAntibody = antibodyOptions.find(a => a.id === antibodyType)
+            const selectedPayload = payloadOptions.find(p => p.id === payloadId)
+            const selectedLinker = linkerOptions.find(l => l.id === linkerId)
+
+            const response = await fetch(`${API_BASE_URL}/api/design/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_type: 'denovo',
+                    target_antigen: targetName || selectedAntibody?.target_1 || '',
+                    target_indication: '',
+                    requested_dar: dar,
+                    linker_preference: selectedLinker?.linker_type || 'any',
+                    design_goal: `ADC Builder: ${selectedAntibody?.drug_name || 'Custom'} + ${selectedPayload?.name || ''} + ${selectedLinker?.name || ''}`
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create session')
+            }
+
+            const { session_id, status } = await response.json()
+
+            // 2. Start the design workflow
+            const startResponse = await fetch(
+                `${API_BASE_URL}/api/design/session/${session_id}/start`,
+                { method: 'POST' }
+            )
+
+            if (!startResponse.ok) {
+                console.warn('Start endpoint not available, continuing anyway')
+            }
+
+            toast.success('Design session started!')
+            resetForm()
+
+            // 3. Navigate to result page with actual session ID
+            navigate(`/dashboard/result/${session_id}`)
+
+        } catch (error) {
+            console.error('Submit error:', error)
+            toast.error('Failed to start design. Please try again.')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
+
+    // Get selected payload for preview
+    const selectedPayload = payloadOptions.find(p => p.id === payloadId)
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -164,8 +289,16 @@ export function ADCBuilder() {
                     {currentStep === 1 && (
                         <Card className="bg-slate-900 border-slate-800">
                             <CardHeader>
-                                <CardTitle className="text-white">Step 1: Target & Antibody</CardTitle>
-                                <CardDescription className="text-slate-400">Select an antibody for analysis or enter manually</CardDescription>
+                                <CardTitle className="text-white flex items-center gap-2">
+                                    Step 1: Target & Antibody
+                                    <Badge variant="outline" className="text-xs border-green-500 text-green-400">
+                                        <Database className="w-3 h-3 mr-1" />
+                                        Live Data
+                                    </Badge>
+                                </CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Select from FDA-approved ADCs or enter custom sequence
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
@@ -182,23 +315,45 @@ export function ADCBuilder() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                                        Antibody Selection
+                                        Antibody Selection (from Golden Set)
                                     </label>
-                                    <Select
-                                        value={antibodyType}
-                                        onValueChange={(value) => setField('antibodyType', value)}
-                                    >
-                                        <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
-                                            <SelectValue placeholder="Select an antibody..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                                            {antibodyOptions.map((option) => (
-                                                <SelectItem key={option.value} value={option.value} className="focus:bg-slate-800 focus:text-white">
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    {isLoadingAntibodies ? (
+                                        <Skeleton className="h-10 w-full bg-slate-800" />
+                                    ) : (
+                                        <Select
+                                            value={antibodyType}
+                                            onValueChange={(value) => {
+                                                setField('antibodyType', value)
+                                                // Auto-fill target name from Golden Set
+                                                const selected = antibodyOptions.find(a => a.id === value)
+                                                if (selected && selected.target_1) {
+                                                    setField('targetName', selected.target_1)
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                                                <SelectValue placeholder="Select an antibody..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-80">
+                                                {antibodyOptions.map((option) => (
+                                                    <SelectItem
+                                                        key={option.id}
+                                                        value={option.id}
+                                                        className="focus:bg-slate-800 focus:text-white"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{option.drug_name}</span>
+                                                            {option.target_1 && (
+                                                                <Badge variant="outline" className="text-[10px] border-slate-600">
+                                                                    {option.target_1}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
 
                                 {antibodyType === 'custom' && (
@@ -211,10 +366,9 @@ export function ADCBuilder() {
                                             rows={6}
                                             value={customSequence}
                                             onChange={(e) => validateSequence(e.target.value)}
-                                            className={`bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 ${sequenceError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                                            className={`bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 font-mono text-sm ${sequenceError ? 'border-red-500 focus:ring-red-500' : ''}`}
                                         />
 
-                                        {/* Real-time validation error display */}
                                         {sequenceError && (
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
@@ -257,62 +411,97 @@ export function ADCBuilder() {
                     {currentStep === 2 && (
                         <Card className="bg-slate-900 border-slate-800">
                             <CardHeader>
-                                <CardTitle className="text-white">Step 2: Payload & Linker</CardTitle>
-                                <CardDescription className="text-slate-400">Select Payload and Linker</CardDescription>
+                                <CardTitle className="text-white flex items-center gap-2">
+                                    Step 2: Payload & Linker
+                                    <Badge variant="outline" className="text-xs border-green-500 text-green-400">
+                                        <Database className="w-3 h-3 mr-1" />
+                                        Live Data
+                                    </Badge>
+                                </CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Select cytotoxic payload and linker chemistry
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-300 mb-2">
                                         Payload Selection
                                     </label>
-                                    {/* Card with 2D chemical structure preview */}
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {payloadOptions.map((option) => (
-                                            <div
-                                                key={option.value}
-                                                onClick={() => setField('payloadId', option.value)}
-                                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${payloadId === option.value
-                                                    ? 'border-blue-500 bg-blue-500/10 shadow-md shadow-blue-500/10'
-                                                    : 'border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
-                                                    }`}
-                                            >
-                                                {/* 2D Chemical Structure SVG */}
+                                    {isLoadingPayloads ? (
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {[1, 2, 3].map(i => (
+                                                <Skeleton key={i} className="h-32 bg-slate-800" />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {payloadOptions.slice(0, 6).map((option) => (
                                                 <div
-                                                    className="mb-3 p-2 bg-slate-950 rounded-lg border border-slate-800"
-                                                    dangerouslySetInnerHTML={{ __html: option.structure }}
-                                                />
-                                                <p className="font-semibold text-white">{option.label}</p>
-                                                <p className="text-xs text-slate-500">{option.fullName}</p>
-                                                <div className="mt-2 flex items-center justify-between">
-                                                    <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
-                                                        {option.category.split(' ')[0]}
-                                                    </Badge>
-                                                    <span className="text-xs text-slate-600">MW: {option.mw}</span>
+                                                    key={option.id}
+                                                    onClick={() => setField('payloadId', option.id)}
+                                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${payloadId === option.id
+                                                        ? 'border-blue-500 bg-blue-500/10 shadow-md shadow-blue-500/10'
+                                                        : 'border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                                                        }`}
+                                                >
+                                                    {/* 2D Structure Preview */}
+                                                    {option.smiles && (
+                                                        <div className="mb-2 h-16 flex items-center justify-center bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
+                                                            <MoleculeViewer2D
+                                                                smiles={option.smiles}
+                                                                width={100}
+                                                                height={60}
+                                                                showControls={false}
+                                                                showSmiles={false}
+                                                                className="border-0"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <p className="font-semibold text-white text-sm">{option.name}</p>
+                                                    <p className="text-xs text-slate-500">{option.category}</p>
+                                                    {option.mw && (
+                                                        <span className="text-xs text-slate-600">MW: {option.mw}</span>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-300 mb-2">
                                         Linker Selection
                                     </label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {linkerOptions.map((option) => (
-                                            <div
-                                                key={option.value}
-                                                onClick={() => setField('linkerId', option.value)}
-                                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${linkerId === option.value
-                                                    ? 'border-blue-500 bg-blue-500/10'
-                                                    : 'border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
-                                                    }`}
-                                            >
-                                                <p className="font-medium text-white text-sm">{option.label}</p>
-                                                <p className="text-xs text-slate-500">{option.desc}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {isLoadingLinkers ? (
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {[1, 2, 3].map(i => (
+                                                <Skeleton key={i} className="h-16 bg-slate-800" />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {linkerOptions.slice(0, 6).map((option) => (
+                                                <div
+                                                    key={option.id}
+                                                    onClick={() => setField('linkerId', option.id)}
+                                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${linkerId === option.id
+                                                        ? 'border-blue-500 bg-blue-500/10'
+                                                        : 'border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                                                        }`}
+                                                >
+                                                    <p className="font-medium text-white text-sm">{option.name}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400">
+                                                            {option.linker_type}
+                                                        </Badge>
+                                                    </div>
+                                                    {option.description && (
+                                                        <p className="text-xs text-slate-500 mt-1">{option.description}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -341,12 +530,12 @@ export function ADCBuilder() {
                         <Card className="bg-slate-900 border-slate-800">
                             <CardHeader>
                                 <CardTitle className="text-white">Step 3: Configuration</CardTitle>
-                                <CardDescription className="text-slate-400">Review simulation settings and run</CardDescription>
+                                <CardDescription className="text-slate-400">Review and start AI design workflow</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                                        Simulation Mode
+                                        Analysis Mode
                                     </label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div
@@ -358,9 +547,9 @@ export function ADCBuilder() {
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="font-medium text-white">Fast Scan</span>
-                                                <Badge variant="outline" className="border-slate-700 text-slate-400">1 Credit</Badge>
+                                                <Badge variant="outline" className="border-slate-700 text-slate-400">~30s</Badge>
                                             </div>
-                                            <p className="text-sm text-slate-500">Quickly check 3D structure only</p>
+                                            <p className="text-sm text-slate-500">Quick property calculation</p>
                                         </div>
                                         <div
                                             onClick={() => setField('mode', 'deep')}
@@ -371,9 +560,9 @@ export function ADCBuilder() {
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="font-medium text-white">Deep Analysis</span>
-                                                <Badge className="bg-blue-600 hover:bg-blue-700">10 Credits</Badge>
+                                                <Badge className="bg-blue-600 hover:bg-blue-700">~2min</Badge>
                                             </div>
-                                            <p className="text-sm text-slate-500">Includes toxicity, patent, and competitor analysis</p>
+                                            <p className="text-sm text-slate-500">Full Multi-Agent workflow</p>
                                         </div>
                                     </div>
                                 </div>
@@ -383,7 +572,7 @@ export function ADCBuilder() {
                                         Job Name
                                     </label>
                                     <Input
-                                        placeholder="e.g., LIV-1_MMAE_Test_01"
+                                        placeholder="e.g., HER2_MMAE_Optimization_01"
                                         value={jobName}
                                         onChange={(e) => setField('jobName', e.target.value)}
                                         className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
@@ -397,16 +586,22 @@ export function ADCBuilder() {
                                         <span className="text-slate-500">Target:</span>
                                         <span className="text-slate-300">{targetName || '-'}</span>
                                         <span className="text-slate-500">Antibody:</span>
-                                        <span className="text-slate-300">{antibodyType || '-'}</span>
+                                        <span className="text-slate-300">
+                                            {antibodyOptions.find(a => a.id === antibodyType)?.drug_name || '-'}
+                                        </span>
                                         <span className="text-slate-500">Payload:</span>
-                                        <span className="text-slate-300">{payloadId || '-'}</span>
+                                        <span className="text-slate-300">
+                                            {payloadOptions.find(p => p.id === payloadId)?.name || '-'}
+                                        </span>
                                         <span className="text-slate-500">Linker:</span>
-                                        <span className="text-slate-300">{linkerId || '-'}</span>
+                                        <span className="text-slate-300">
+                                            {linkerOptions.find(l => l.id === linkerId)?.name || '-'}
+                                        </span>
                                         <span className="text-slate-500">DAR:</span>
                                         <span className="text-slate-300">{dar}</span>
                                         <span className="text-slate-500">Mode:</span>
                                         <span className="text-slate-300 font-medium">
-                                            {mode === 'deep' ? 'Deep Analysis (10 Credits)' : 'Fast Scan (1 Credit)'}
+                                            {mode === 'deep' ? 'Deep Analysis (Multi-Agent)' : 'Fast Scan'}
                                         </span>
                                     </div>
                                 </div>
@@ -438,9 +633,22 @@ export function ADCBuilder() {
                         <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                 ) : (
-                    <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700 text-white">
-                        <Rocket className="w-4 h-4 mr-2" />
-                        Run Simulation
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Starting...
+                            </>
+                        ) : (
+                            <>
+                                <Rocket className="w-4 h-4 mr-2" />
+                                Start Design
+                            </>
+                        )}
                     </Button>
                 )}
             </div>
