@@ -93,7 +93,16 @@ export function AdminLayout() {
                                     AD
                                 </AvatarFallback>
                             </Avatar>
-                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-slate-400 hover:text-white"
+                                onClick={async () => {
+                                    await supabase?.auth.signOut()
+                                    toast.success('로그아웃 되었습니다.')
+                                    navigate('/login')
+                                }}
+                            >
                                 <LogOut className="w-4 h-4" />
                             </Button>
                         </div>
