@@ -1335,9 +1335,611 @@ async def patch_inventory_item(table: str, id: str, req: PatchRequest, backgroun
         res = supabase.table(table).update(updates).eq("id", id).execute()
         
         return {"status": "success", "message": "Item updated and re-indexed", "data": res.data[0] if res.data else None}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# v2.2 Management - Engine Control & Emergency Brake
+# ============================================================
+
+class EngineConfigUpdate(BaseModel):
+    """엔진 설정 업데이트"""
+    useNimApi: Optional[bool] = None
+    fallbackEnabled: Optional[bool] = None
+
+
+class EmergencyStopRequest(BaseModel):
+    """긴급 정지 요청"""
+    activate: bool
+
+
+class BudgetConfigUpdate(BaseModel):
+    """예산 설정 업데이트"""
+    provider: str
+    dailyLimitUsd: Optional[float] = None
+    monthlyLimitUsd: Optional[float] = None
+    alertThresholdPct: Optional[int] = None
+    autoFallbackEnabled: Optional[bool] = None
+    alertEmail: Optional[str] = None
+
+
+@router.get("/engine/config")
+async def get_engine_config():
+    """AI 엔진 설정 조회"""
+    try:
+        result = {
+            "useNimApi": True,
+            "fallbackEnabled": True,
+            "emergencyStop": False
+        }
+
+        # system_config 테이블에서 조회
+        configs = ["USE_NIM_API", "FALLBACK_ENABLED", "EMERGENCY_STOP"]
+        for key in configs:
+            try:
+                res = supabase.table("system_config").select("value").eq("key", key).execute()
+                if res.data:
+                    val = res.data[0]["value"]
+                    if key == "USE_NIM_API":
+                        result["useNimApi"] = val == "true" or val == True
+                    elif key == "FALLBACK_ENABLED":
+                        result["fallbackEnabled"] = val == "true" or val == True
+                    elif key == "EMERGENCY_STOP":
+                        result["emergencyStop"] = val == "true" or val == True
+            except:
+                continue
+
+        return result
+    except Exception as e:
+        print(f"Engine config error: {e}")
+        return {
+            "useNimApi": True,
+            "fallbackEnabled": True,
+            "emergencyStop": False
+        }
+
+
+@router.post("/engine/switch")
+async def switch_engine(req: EngineConfigUpdate):
+    """AI 엔진 전환"""
+    try:
+        if req.useNimApi is not None:
+            supabase.table("system_config").upsert({
+                "key": "USE_NIM_API",
+                "value": "true" if req.useNimApi else "false",
+                "updated_at": datetime.utcnow().isoformat()
+            }).execute()
+
+            # Audit log
+            try:
+                supabase.table("admin_audit_logs").insert({
+                    "action_type": "ENGINE_SWITCH",
+                    "action_category": "system",
+                    "target_type": "system_config",
+                    "target_id": "USE_NIM_API",
+                    "after_value": {"useNimApi": req.useNimApi}
+                }).execute()
+            except:
+                pass
+
+        return {"status": "success", "useNimApi": req.useNimApi}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/budget/emergency-stop")
+async def emergency_stop(req: EmergencyStopRequest):
+    """긴급 정지 활성화/비활성화"""
+    try:
+        supabase.table("system_config").upsert({
+            "key": "EMERGENCY_STOP",
+            "value": "true" if req.activate else "false",
+            "updated_at": datetime.utcnow().isoformat()
+        }).execute()
+
+        # Audit log
+        try:
+            supabase.table("admin_audit_logs").insert({
+                "action_type": "EMERGENCY_STOP",
+                "action_category": "system",
+                "target_type": "system_config",
+                "target_id": "EMERGENCY_STOP",
+                "after_value": {"activated": req.activate}
+            }).execute()
+        except:
+            pass
+
+        return {
+            "status": "success",
+            "emergencyStop": req.activate,
+            "message": "Emergency stop activated" if req.activate else "Emergency stop deactivated"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/budget/status")
+async def get_budget_status():
+    """예산 상태 조회"""
+    try:
+        res = supabase.table("budget_configs").select("*").execute()
+
+        budgets = []
+        for item in (res.data or []):
+            budgets.append({
+                "apiProvider": item.get("api_provider"),
+                "dailyLimitUsd": float(item.get("daily_limit_usd", 0)),
+                "currentUsageUsd": float(item.get("current_usage_usd", 0)),
+                "monthlyLimitUsd": float(item.get("monthly_limit_usd", 0)),
+                "currentMonthlyUsd": float(item.get("current_monthly_usd", 0)),
+                "autoFallbackEnabled": item.get("auto_fallback_enabled", True),
+                "alertThresholdPct": item.get("alert_threshold_pct", 80),
+                "alertEmail": item.get("alert_email", "")
+            })
+
+        # Default budgets if none exist
+        if not budgets:
+            budgets = [
+                {
+                    "apiProvider": "nvidia_nim",
+                    "dailyLimitUsd": 500,
+                    "currentUsageUsd": 0,
+                    "monthlyLimitUsd": 10000,
+                    "currentMonthlyUsd": 0,
+                    "autoFallbackEnabled": True,
+                    "alertThresholdPct": 80,
+                    "alertEmail": ""
+                },
+                {
+                    "apiProvider": "gemini",
+                    "dailyLimitUsd": 200,
+                    "currentUsageUsd": 0,
+                    "monthlyLimitUsd": 4000,
+                    "currentMonthlyUsd": 0,
+                    "autoFallbackEnabled": True,
+                    "alertThresholdPct": 80,
+                    "alertEmail": ""
+                }
+            ]
+
+        return {"budgets": budgets}
+    except Exception as e:
+        print(f"Budget status error: {e}")
+        return {"budgets": []}
+
+
+@router.put("/budget/config")
+async def update_budget_config(req: BudgetConfigUpdate):
+    """예산 설정 업데이트"""
+    try:
+        updates = {}
+        if req.dailyLimitUsd is not None:
+            updates["daily_limit_usd"] = req.dailyLimitUsd
+        if req.monthlyLimitUsd is not None:
+            updates["monthly_limit_usd"] = req.monthlyLimitUsd
+        if req.alertThresholdPct is not None:
+            updates["alert_threshold_pct"] = req.alertThresholdPct
+        if req.autoFallbackEnabled is not None:
+            updates["auto_fallback_enabled"] = req.autoFallbackEnabled
+        if req.alertEmail is not None:
+            updates["alert_email"] = req.alertEmail
+
+        updates["updated_at"] = datetime.utcnow().isoformat()
+
+        supabase.table("budget_configs").update(updates).eq("api_provider", req.provider).execute()
+
+        # Audit log
+        try:
+            supabase.table("admin_audit_logs").insert({
+                "action_type": "BUDGET_UPDATE",
+                "action_category": "system",
+                "target_type": "budget_configs",
+                "target_id": req.provider,
+                "after_value": updates
+            }).execute()
+        except:
+            pass
+
+        return {"status": "success", "message": f"Budget config updated for {req.provider}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# v2.2 Management - Refinement Hub (Quarantine & Batch AI Fixer)
+# ============================================================
+
+@router.get("/refinement/quarantined")
+async def get_quarantined_data(
+    status: str = "all",
+    source: str = "all",
+    limit: int = 50,
+    offset: int = 0
+):
+    """격리 데이터 목록 조회"""
+    try:
+        query = supabase.table("quarantined_data").select("*", count="exact")
+
+        if status != "all":
+            query = query.eq("status", status)
+        if source != "all":
+            query = query.eq("source_table", source)
+
+        res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+
+        items = []
+        for item in (res.data or []):
+            items.append({
+                "id": item.get("id"),
+                "sourceTable": item.get("source_table"),
+                "sourceId": item.get("source_id"),
+                "errorType": item.get("error_type"),
+                "errorDetails": item.get("error_details"),
+                "originalData": item.get("original_data", {}),
+                "suggestedFix": item.get("suggested_fix"),
+                "status": item.get("status", "pending"),
+                "priority": item.get("priority", "normal"),
+                "createdAt": item.get("created_at")
+            })
+
+        return {"items": items, "total": res.count or 0}
+    except Exception as e:
+        print(f"Quarantine fetch error: {e}")
+        return {"items": [], "total": 0}
+
+
+@router.post("/refinement/quarantined/{item_id}/approve")
+async def approve_quarantined_item(item_id: str):
+    """격리 항목 수정 승인 및 적용"""
+    try:
+        # 1. Get quarantined item
+        res = supabase.table("quarantined_data").select("*").eq("id", item_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Item not found")
+
+        item = res.data[0]
+        source_table = item.get("source_table")
+        source_id = item.get("source_id")
+        suggested_fix = item.get("suggested_fix")
+
+        # 2. Apply fix to source table
+        if suggested_fix and source_id:
+            supabase.table(source_table).update(suggested_fix).eq("id", source_id).execute()
+
+        # 3. Update quarantined status
+        supabase.table("quarantined_data").update({
+            "status": "approved",
+            "reviewed_at": datetime.utcnow().isoformat()
+        }).eq("id", item_id).execute()
+
+        # Audit log
+        try:
+            supabase.table("admin_audit_logs").insert({
+                "action_type": "DATA_APPROVE",
+                "action_category": "data",
+                "target_type": "quarantined_data",
+                "target_id": item_id,
+                "before_value": item.get("original_data"),
+                "after_value": suggested_fix
+            }).execute()
+        except:
+            pass
+
+        return {"status": "success", "message": "Fix approved and applied"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/refinement/quarantined/{item_id}/reject")
+async def reject_quarantined_item(item_id: str):
+    """격리 항목 거부"""
+    try:
+        supabase.table("quarantined_data").update({
+            "status": "rejected",
+            "reviewed_at": datetime.utcnow().isoformat()
+        }).eq("id", item_id).execute()
+
+        return {"status": "success", "message": "Item rejected"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/refinement/quarantined/{item_id}/ai-suggest")
+async def generate_ai_suggestion(item_id: str):
+    """AI를 사용해 수정 제안 생성"""
+    try:
+        import google.generativeai as genai
+
+        # 1. Get quarantined item
+        res = supabase.table("quarantined_data").select("*").eq("id", item_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Item not found")
+
+        item = res.data[0]
+        original_data = item.get("original_data", {})
+        error_type = item.get("error_type")
+
+        # 2. Generate AI suggestion
+        if not settings.GOOGLE_API_KEY:
+            raise HTTPException(status_code=500, detail="API key not configured")
+
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+
+        prompt = f"""Fix the following data issue.
+
+Error Type: {error_type}
+Original Data: {json.dumps(original_data, ensure_ascii=False)}
+
+Provide a corrected version of the data in JSON format.
+Only output the corrected JSON, no explanation."""
+
+        response = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: model.generate_content(prompt)
+        )
+
+        # Parse response
+        try:
+            suggested_fix = json.loads(response.text.strip())
+        except:
+            suggested_fix = {"ai_suggestion": response.text.strip()}
+
+        # 3. Update quarantined item with suggestion
+        supabase.table("quarantined_data").update({
+            "suggested_fix": suggested_fix,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", item_id).execute()
+
+        return {"status": "success", "suggestion": suggested_fix}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/refinement/batch-fix")
+async def run_batch_ai_fix(background_tasks: BackgroundTasks, type: str = "target_normalization"):
+    """배치 AI 수정 작업 실행"""
+    try:
+        job_id = f"batch_{type}_{uuid4().hex[:8]}"
+
+        # Create job record (if table exists)
+        try:
+            supabase.table("sync_jobs").insert({
+                "id": job_id,
+                "status": "queued",
+                "source": f"batch_fix_{type}",
+                "started_at": datetime.utcnow().isoformat()
+            }).execute()
+        except:
+            pass
+
+        # For now, return immediately (actual batch processing would be in background)
+        return {
+            "status": "started",
+            "jobId": job_id,
+            "type": type,
+            "message": f"Batch {type} job started"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/refinement/health")
+async def get_data_health():
+    """데이터 건강 상태 조회"""
+    try:
+        # Use view if exists, otherwise calculate manually
+        metrics = []
+
+        tables = [
+            ("antibody_library", "target_normalized", "embedding"),
+            ("commercial_reagents", "target_normalized", "smiles"),
+            ("golden_set", "target", "orr_pct")
+        ]
+
+        for table_name, norm_field, extra_field in tables:
+            try:
+                total_res = supabase.table(table_name).select("id", count="exact").execute()
+                total = total_res.count or 0
+
+                norm_res = supabase.table(table_name).select("id", count="exact").not_.is_(norm_field, "null").execute()
+                normalized = norm_res.count or 0
+
+                extra_res = supabase.table(table_name).select("id", count="exact").not_.is_(extra_field, "null").execute()
+                extra_count = extra_res.count or 0
+
+                metrics.append({
+                    "sourceTable": table_name,
+                    "totalCount": total,
+                    "normalizedCount": normalized,
+                    "embeddedCount": extra_count,
+                    "normalizationRate": round((normalized / total * 100) if total > 0 else 0, 1),
+                    "embeddingRate": round((extra_count / total * 100) if total > 0 else 0, 1)
+                })
+            except Exception as table_error:
+                print(f"Error fetching health for {table_name}: {table_error}")
+                continue
+
+        return {"metrics": metrics}
+    except Exception as e:
+        print(f"Data health error: {e}")
+        return {"metrics": []}
+
+
+@router.get("/refinement/jobs")
+async def get_batch_jobs(limit: int = 10):
+    """배치 작업 목록 조회"""
+    try:
+        res = supabase.table("sync_jobs").select("*").order("started_at", desc=True).limit(limit).execute()
+
+        jobs = []
+        for item in (res.data or []):
+            jobs.append({
+                "id": item.get("id"),
+                "type": item.get("source", "unknown").replace("batch_fix_", ""),
+                "status": item.get("status"),
+                "totalItems": item.get("total_items", 0),
+                "processedItems": item.get("processed_items", 0),
+                "successCount": item.get("success_count", 0),
+                "errorCount": item.get("error_count", 0),
+                "startedAt": item.get("started_at"),
+                "completedAt": item.get("completed_at")
+            })
+
+        return {"jobs": jobs}
+    except Exception as e:
+        print(f"Jobs fetch error: {e}")
+        return {"jobs": []}
+
+
+# ============================================================
+# v2.2 Management - Audit & Lineage
+# ============================================================
+
+@router.get("/audit/logs")
+async def get_audit_logs(
+    category: str = "all",
+    action: str = "all",
+    dateRange: str = "7d",
+    limit: int = 50,
+    offset: int = 0
+):
+    """관리자 감사 로그 조회"""
+    try:
+        query = supabase.table("admin_audit_logs").select("*", count="exact")
+
+        if category != "all":
+            query = query.eq("action_category", category)
+        if action != "all":
+            query = query.eq("action_type", action)
+
+        # Date range filter
+        from datetime import timedelta
+        days = int(dateRange.replace("d", ""))
+        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        query = query.gte("created_at", cutoff)
+
+        res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+
+        logs = []
+        for item in (res.data or []):
+            logs.append({
+                "id": item.get("id"),
+                "adminId": item.get("admin_id"),
+                "adminEmail": item.get("admin_email", "admin@astraforge.io"),
+                "actionType": item.get("action_type"),
+                "actionCategory": item.get("action_category"),
+                "targetType": item.get("target_type"),
+                "targetId": item.get("target_id"),
+                "beforeValue": item.get("before_value"),
+                "afterValue": item.get("after_value"),
+                "reason": item.get("reason"),
+                "ipAddress": item.get("ip_address", "127.0.0.1"),
+                "userAgent": item.get("user_agent", ""),
+                "createdAt": item.get("created_at")
+            })
+
+        return {"logs": logs, "total": res.count or 0}
+    except Exception as e:
+        print(f"Audit logs error: {e}")
+        return {"logs": [], "total": 0}
+
+
+# ============================================================
+# v2.2 Management - Analytics & Cost
+# ============================================================
+
+@router.get("/analytics")
+async def get_analytics(range: str = "7d"):
+    """분석 데이터 조회"""
+    try:
+        from datetime import timedelta
+
+        days = int(range.replace("d", ""))
+        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+        # Cost summary from budget_configs
+        budget_res = supabase.table("budget_configs").select("*").execute()
+
+        costs = []
+        for item in (budget_res.data or []):
+            costs.append({
+                "provider": item.get("api_provider"),
+                "dailyCost": float(item.get("current_usage_usd", 0)),
+                "monthlyCost": float(item.get("current_monthly_usd", 0)),
+                "dailyLimit": float(item.get("daily_limit_usd", 500)),
+                "monthlyLimit": float(item.get("monthly_limit_usd", 10000)),
+                "trend": 0  # Would need historical data to calculate
+            })
+
+        # Usage data from api_usage_logs (if exists)
+        usage = []
+        try:
+            usage_res = supabase.table("api_usage_logs").select("*").gte("created_at", cutoff).order("created_at").execute()
+            # Aggregate by day
+            by_day = {}
+            for log in (usage_res.data or []):
+                day = log.get("created_at", "")[:10]
+                if day not in by_day:
+                    by_day[day] = {"totalCalls": 0, "totalTokens": 0, "totalCost": 0, "latencies": [], "errors": 0}
+                by_day[day]["totalCalls"] += 1
+                by_day[day]["totalTokens"] += log.get("tokens_input", 0) + log.get("tokens_output", 0)
+                by_day[day]["totalCost"] += float(log.get("cost_usd", 0))
+                by_day[day]["latencies"].append(log.get("latency_ms", 0))
+                if not log.get("success"):
+                    by_day[day]["errors"] += 1
+
+            for day, data in by_day.items():
+                avg_latency = sum(data["latencies"]) / len(data["latencies"]) if data["latencies"] else 0
+                error_rate = (data["errors"] / data["totalCalls"] * 100) if data["totalCalls"] > 0 else 0
+                usage.append({
+                    "date": day,
+                    "provider": "nvidia_nim",
+                    "totalCalls": data["totalCalls"],
+                    "totalTokens": data["totalTokens"],
+                    "totalCost": data["totalCost"],
+                    "avgLatency": int(avg_latency),
+                    "errorRate": round(error_rate, 1)
+                })
+        except:
+            pass
+
+        # Session stats from design_runs (if exists)
+        sessions = {
+            "totalSessions": 0,
+            "activeSessions": 0,
+            "avgDuration": 0,
+            "completionRate": 0,
+            "byStage": {}
+        }
+
+        try:
+            all_runs = supabase.table("design_runs").select("status, current_stage", count="exact").execute()
+            sessions["totalSessions"] = all_runs.count or 0
+
+            active_runs = supabase.table("design_runs").select("current_stage", count="exact").eq("status", "processing").execute()
+            sessions["activeSessions"] = active_runs.count or 0
+
+            # Group by stage
+            for run in (active_runs.data or []):
+                stage = run.get("current_stage", "unknown")
+                sessions["byStage"][stage] = sessions["byStage"].get(stage, 0) + 1
+
+            completed = supabase.table("design_runs").select("id", count="exact").eq("status", "completed").execute()
+            if sessions["totalSessions"] > 0:
+                sessions["completionRate"] = round((completed.count or 0) / sessions["totalSessions"] * 100, 1)
+        except:
+            pass
+
+        return {
+            "costs": costs,
+            "usage": usage,
+            "sessions": sessions
+        }
+    except Exception as e:
+        print(f"Analytics error: {e}")
+        return {"costs": [], "usage": [], "sessions": {}}
 
 
 

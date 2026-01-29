@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingPage } from './pages/Landing'
-import { DashboardLayout, DashboardHome, ADCBuilder, ResultViewer, GoldenSetLibrary, DenovoDesign, LeadOptimization, PreclinicalAudit, CMCSourcing } from './pages/Dashboard'
-import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage, DesignRunsPage, TotalInventoryLayout } from './pages/Admin'
+import { DashboardLayout, DashboardHome, ADCBuilder, ResultViewer, GoldenSetLibrary, DenovoDesign, LeadOptimization, PreclinicalAudit, CMCSourcing, NavigatorPage } from './pages/Dashboard'
+import { AdminLayout, AdminOverview, UserOperations, DataOperations, AITuning, UploadPage, DesignRunsPage, TotalInventoryLayout, EngineControlPage, RefinementHubPage, AuditLineagePage, AnalyticsCostPage } from './pages/Admin'
 import TotalDataInventory from './pages/Admin/TotalDataInventory'
 import { StagingAreaPage } from './pages/Admin/StagingAreaPage'
 import { GoldenSetLibraryPage } from './pages/Admin/GoldenSetLibraryPage'
@@ -33,6 +33,7 @@ function App() {
           {/* Dashboard Routes (Protected) */}
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<DashboardHome />} />
+            <Route path="navigator" element={<NavigatorPage />} />
             <Route path="builder" element={<ADCBuilder />} />
             <Route path="denovo" element={<DenovoDesign />} />
             <Route path="optimization" element={<LeadOptimization />} />
@@ -54,6 +55,11 @@ function App() {
             <Route path="upload" element={<UploadPage />} />
             <Route path="ai-tuning" element={<AITuning />} />
             <Route path="design-runs" element={<DesignRunsPage />} />
+            {/* v2.2 Management Routes */}
+            <Route path="engine-control" element={<EngineControlPage />} />
+            <Route path="refinement-hub" element={<RefinementHubPage />} />
+            <Route path="audit-lineage" element={<AuditLineagePage />} />
+            <Route path="analytics" element={<AnalyticsCostPage />} />
           </Route>
         </Routes>
         <Toaster />

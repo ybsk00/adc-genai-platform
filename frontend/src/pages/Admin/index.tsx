@@ -6,3 +6,9 @@ export { AITuning } from './AITuning'
 export { UploadPage } from './UploadPage'
 export { DesignRunsPage } from './DesignRunsPage'
 export { default as TotalInventoryLayout } from './inventory/TotalInventoryLayout'
+
+// v2.2 Management Pages
+export { EngineControlPage } from './EngineControlPage'
+export { RefinementHubPage } from './RefinementHubPage'
+export { AuditLineagePage } from './AuditLineagePage'
+export { AnalyticsCostPage } from './AnalyticsCostPage'
