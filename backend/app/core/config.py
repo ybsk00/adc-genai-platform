@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     
     # Google (Gemini)
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL_ID: str = "gemini-2.5-flash"
-    GEMINI_PRO_MODEL_ID: str = "gemini-2.0-flash"  # Phase 1 Fallback용
+    GEMINI_MODEL_ID: str = "gemini-2.0-flash"  # Fast model
+    GEMINI_PRO_MODEL_ID: str = "gemini-3-pro-preview"  # High reasoning model
 
     # NVIDIA NIM API (Phase 3)
     USE_NIM_API: bool = False  # Phase 1: False (Gemini Fallback)

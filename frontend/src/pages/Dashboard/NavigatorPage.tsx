@@ -16,6 +16,7 @@ import {
   NavigatorResult,
   type AgentLog,
 } from '@/components/navigator';
+import { AntibodySelectionModal } from '@/components/navigator/AntibodySelectionModal';
 import { API_BASE_URL } from '@/lib/api';
 
 // ============================================================================
@@ -99,6 +100,11 @@ export function NavigatorPage() {
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);  // FIXED: 실시간 에이전트 로그
+  
+  // Selection Gate State
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectionCandidates, setSelectionCandidates] = useState<AntibodyCandidate[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -131,7 +137,38 @@ export function NavigatorPage() {
     ]);
     setResult(null);
     setAgentLogs([]);  // FIXED
+    setShowSelectionModal(false);
+    setSelectionCandidates([]);
+    setCurrentSessionId(null);
   }, []);
+
+  // Handle Antibody Selection
+  const handleAntibodySelect = useCallback(async (antibodyId: string) => {
+    if (!currentSessionId) return;
+    
+    setShowSelectionModal(false);
+    // Keep isRunning true as we resume
+    
+    try {
+        // Resume Navigator via POST with selected_antibody_id
+        await fetch(`${API_BASE_URL}/api/design/navigator/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                disease_name: diseaseName,
+                session_id: currentSessionId,
+                selected_antibody_id: antibodyId
+            }),
+        });
+        
+        // SSE will pick up the progress as we didn't close it (or we can reconnect)
+        // Ideally, the backend updates the status to 'running' and the existing SSE loop continues.
+        
+    } catch (error) {
+        console.error('Failed to select antibody:', error);
+        toast.error('Failed to resume design');
+    }
+  }, [currentSessionId, diseaseName]);
 
   // Handle Navigator run with WebSocket streaming
   const handleNavigate = useCallback(async (disease: string) => {
@@ -157,6 +194,7 @@ export function NavigatorPage() {
       }
 
       const { session_id } = await response.json();
+      setCurrentSessionId(session_id);
 
       // Connect to SSE stream
       const eventSource = new EventSource(
@@ -169,6 +207,11 @@ export function NavigatorPage() {
           const data = JSON.parse(event.data);
 
           switch (data.type) {
+            // ... (existing cases) ...
+            
+            // [NEW] Handle Waiting for Selection (Backend might send this or we poll)
+            // Ideally backend sends a specific event, but if it relies on polling state change:
+            
             case 'step_start':
               setCurrentStep(data.step);
               setSteps((prev) => {
@@ -251,8 +294,9 @@ export function NavigatorPage() {
       };
 
       eventSource.onerror = () => {
-        eventSource.close();
-        // Fallback: poll for result
+        // Don't close immediately, might be temporary
+        // But if persistent, fall back to poll
+        // eventSource.close();
         pollForResult(session_id);
       };
 
@@ -263,9 +307,9 @@ export function NavigatorPage() {
     }
   }, [resetState]);
 
-  // Fallback polling if SSE fails
+  // Fallback polling if SSE fails (and for handling waiting state if SSE doesn't send it)
   const pollForResult = useCallback(async (sessionId: string) => {
-    const maxAttempts = 60;
+    const maxAttempts = 120; // Increased
     let attempts = 0;
 
     const poll = async () => {
@@ -273,6 +317,32 @@ export function NavigatorPage() {
         const response = await fetch(`${API_BASE_URL}/api/design/navigator/session/${sessionId}`);
         if (response.ok) {
           const data = await response.json();
+
+          // [NEW] Handle Waiting for Selection
+          if (data.status === 'waiting_for_selection') {
+             if (!showSelectionModal) {
+                 // Fetch candidates to show
+                 // Ideally they are in data, otherwise we rely on what we have or fetch again
+                 // NavigatorSession table has 'antibody_candidates'
+                 if (data.antibody_candidates && data.antibody_candidates.length > 0) {
+                     setSelectionCandidates(data.antibody_candidates);
+                     setShowSelectionModal(true);
+                     // Pause polling or slow it down? 
+                     // We can continue polling to detect when status changes back to running
+                 }
+             }
+             // Update step to completed for step 1
+             setSteps((prev) => {
+                const newSteps = [...prev];
+                newSteps[0] = { status: 'completed', message: 'Candidates found' };
+                return newSteps;
+             });
+          }
+          
+          if (data.status === 'running') {
+              // Close modal if open (means user selected)
+              if (showSelectionModal) setShowSelectionModal(false);
+          }
 
           if (data.status === 'completed') {
             setResult(data);
@@ -301,10 +371,17 @@ export function NavigatorPage() {
             setSteps((prev) => {
               const newSteps = [...prev];
               for (let i = 0; i < data.current_step; i++) {
-                newSteps[i] = { status: 'completed' };
+                if (newSteps[i].status !== 'completed') {
+                    newSteps[i] = { status: 'completed' };
+                }
               }
               if (newSteps[data.current_step - 1]) {
                 newSteps[data.current_step - 1] = { status: 'running' };
+              }
+              // Special case: if waiting, step 1 is done, step 2 not started
+              if (data.status === 'waiting_for_selection') {
+                  newSteps[0] = { status: 'completed' };
+                  newSteps[1] = { status: 'pending' }; // Waiting
               }
               return newSteps;
             });
@@ -315,16 +392,20 @@ export function NavigatorPage() {
       }
 
       attempts++;
-      if (attempts < maxAttempts && isRunning) {
+      // Stop polling if completed or failed or stopped manually
+      // Continue polling if waiting_for_selection to catch resume
+      if (attempts < maxAttempts && (isRunning || showSelectionModal)) {
         setTimeout(poll, 2000);
       } else if (attempts >= maxAttempts) {
-        toast.error('Navigator timeout');
-        setIsRunning(false);
+        if (isRunning) {
+            toast.error('Navigator timeout');
+            setIsRunning(false);
+        }
       }
     };
 
     poll();
-  }, [isRunning]);
+  }, [isRunning, showSelectionModal]);
 
   // Load a previous session
   const handleLoadSession = useCallback(async (sessionId: string) => {
@@ -374,6 +455,14 @@ export function NavigatorPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Selection Modal */}
+      <AntibodySelectionModal
+        open={showSelectionModal}
+        candidates={selectionCandidates}
+        onSelect={handleAntibodySelect}
+        isLoading={isRunning && !showSelectionModal} // Loading if running but modal closed? No, simple logic
+      />
 
       {/* Main Content */}
       <AnimatePresence mode="wait">
