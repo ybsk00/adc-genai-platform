@@ -1,6 +1,12 @@
 """
 The Alchemist Agent - ADC 후보 물질 설계
 Golden Set 기반 SMILES 생성 및 최적화
+
+Phase 1 Enhancement:
+- Gemini Pro 모델 사용 (config 기반)
+- Real-time Streaming UI 연동
+- Target Normalization 활용
+- 벡터 유사도 검색 지원
 """
 from typing import List, Dict, Any, Optional
 import logging
@@ -13,6 +19,7 @@ from app.agents.base_agent import BaseDesignAgent, AgentOutput
 from app.agents.design_state import DesignSessionState, CandidateStructure
 from app.core.config import settings
 from app.core.supabase import get_supabase_client
+from app.core.websocket_hub import websocket_hub
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +33,12 @@ class AlchemistAgent(BaseDesignAgent):
     2. 타겟/적응증에 맞는 후보 SMILES 생성
     3. DAR, Linker 선호도 반영
     4. 상위 N개 후보 반환
+
+    Phase 1 Enhancement:
+    - Config 기반 Gemini 모델 사용
+    - Target Normalization 활용
+    - Real-time Streaming 지원
+    - commercial_reagents 벡터 검색
     """
 
     name = "alchemist"
@@ -33,8 +46,8 @@ class AlchemistAgent(BaseDesignAgent):
     def __init__(self):
         super().__init__()
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
-            google_api_key=settings.GEMINI_API_KEY,
+            model=settings.GEMINI_PRO_MODEL_ID,  # config.py에서 관리
+            google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.3
         )
 
@@ -48,33 +61,95 @@ class AlchemistAgent(BaseDesignAgent):
         })
 
         try:
-            # 1. Golden Set에서 관련 구조 검색
+            # [Streaming] 시작 로그
+            await websocket_hub.stream_agent_log(
+                session_id, "info",
+                f"ADC 후보 설계 시작: {state['target_antigen']}",
+                emoji="⚗️", agent_name="alchemist"
+            )
+
+            # 1. [Phase 1] 타겟 정규화
+            normalized_target = await self._normalize_target(state["target_antigen"])
+            if normalized_target != state["target_antigen"]:
+                await websocket_hub.stream_agent_log(
+                    session_id, "info",
+                    f"타겟 정규화: '{state['target_antigen']}' → '{normalized_target}'",
+                    emoji="🔄", agent_name="alchemist"
+                )
+
+            # 2. Golden Set에서 관련 구조 검색
+            await websocket_hub.stream_progress(session_id, 10, "Golden Set 검색 중")
             golden_set_refs = await self._search_golden_set(
-                target=state["target_antigen"],
+                target=normalized_target,
                 indication=state["target_indication"],
                 limit=10
             )
-
-            # 2. LLM을 사용하여 후보 SMILES 생성
-            candidates = await self._generate_candidates(
-                state=state,
-                golden_set_refs=golden_set_refs
+            await websocket_hub.stream_agent_log(
+                session_id, "success",
+                f"Golden Set에서 {len(golden_set_refs)}개 참조 구조 발견",
+                emoji="✅", agent_name="alchemist"
             )
 
-            # 3. 결과 구성
+            # 3. [Phase 1] commercial_reagents에서 시약 검색
+            await websocket_hub.stream_progress(session_id, 30, "시약 라이브러리 검색 중")
+            reagent_refs = await self._search_commercial_reagents(
+                target=normalized_target,
+                limit=10
+            )
+            if reagent_refs:
+                await websocket_hub.stream_agent_log(
+                    session_id, "info",
+                    f"시약 라이브러리에서 {len(reagent_refs)}개 관련 시약 발견",
+                    emoji="🧪", agent_name="alchemist"
+                )
+
+            # 4. LLM을 사용하여 후보 SMILES 생성
+            await websocket_hub.stream_progress(session_id, 50, "AI 후보 생성 중")
+            await websocket_hub.stream_agent_log(
+                session_id, "info",
+                "Gemini Pro로 후보 SMILES 생성 중...",
+                emoji="🤖", agent_name="alchemist"
+            )
+            candidates = await self._generate_candidates(
+                state=state,
+                golden_set_refs=golden_set_refs,
+                reagent_refs=reagent_refs  # Phase 1: 시약 참조 추가
+            )
+
+            await websocket_hub.stream_progress(session_id, 90, "후보 검증 중")
+
+            # 5. 결과 구성
             primary_smiles = candidates[0]["smiles"] if candidates else ""
+
+            # [Streaming] 분자 업데이트
+            if primary_smiles:
+                await websocket_hub.stream_molecule_update(
+                    session_id,
+                    smiles=primary_smiles,
+                    molecule_name=f"Candidate 1 for {normalized_target}",
+                    validation_status="pending"
+                )
+
+            await websocket_hub.stream_progress(session_id, 100, "설계 완료")
+            await websocket_hub.stream_agent_log(
+                session_id, "success",
+                f"{len(candidates)}개 후보 SMILES 생성 완료",
+                emoji="✅", agent_name="alchemist"
+            )
 
             output = AgentOutput(
                 success=True,
                 data={
                     "primary_smiles": primary_smiles,
                     "candidates": candidates,
-                    "golden_set_refs": [g["id"] for g in golden_set_refs],
-                    "summary": f"Generated {len(candidates)} candidates based on {len(golden_set_refs)} Golden Set references"
+                    "golden_set_refs": [str(g["id"]) for g in golden_set_refs],
+                    "reagent_refs": [str(r["id"]) for r in reagent_refs] if reagent_refs else [],
+                    "normalized_target": normalized_target,
+                    "summary": f"Generated {len(candidates)} candidates based on {len(golden_set_refs)} Golden Set + {len(reagent_refs)} reagents"
                 },
-                reasoning=f"Target: {state['target_antigen']}, DAR: {state['requested_dar']}, "
-                         f"Found {len(golden_set_refs)} similar structures in Golden Set",
-                confidence_score=0.85 if golden_set_refs else 0.5,
+                reasoning=f"Target: {normalized_target}, DAR: {state['requested_dar']}, "
+                         f"Found {len(golden_set_refs)} Golden Set + {len(reagent_refs)} reagents",
+                confidence_score=0.85 if golden_set_refs else 0.6,
                 next_agent="coder"
             )
 
@@ -83,6 +158,11 @@ class AlchemistAgent(BaseDesignAgent):
 
         except Exception as e:
             logger.exception(f"[alchemist] Error: {e}")
+            await websocket_hub.stream_agent_log(
+                session_id, "error",
+                f"설계 오류: {str(e)}",
+                emoji="❌", agent_name="alchemist"
+            )
             await self._log_error(session_id, str(e))
             return AgentOutput(
                 success=False,
@@ -134,18 +214,22 @@ class AlchemistAgent(BaseDesignAgent):
     async def _generate_candidates(
         self,
         state: DesignSessionState,
-        golden_set_refs: List[Dict]
+        golden_set_refs: List[Dict],
+        reagent_refs: Optional[List[Dict]] = None
     ) -> List[CandidateStructure]:
         """
         LLM을 사용하여 후보 SMILES 생성
 
         Golden Set 참조와 사용자 요구사항을 기반으로 생성
+        [Phase 1] commercial_reagents 참조 추가
         """
         # Golden Set 정보 요약
         ref_summary = self._summarize_golden_set(golden_set_refs)
+        # [Phase 1] 시약 정보 요약
+        reagent_summary = self._summarize_reagents(reagent_refs) if reagent_refs else ""
 
         system_prompt = """You are an expert medicinal chemist specializing in Antibody-Drug Conjugates (ADCs).
-Your task is to design ADC payload-linker combinations based on FDA-approved ADC structures (Golden Set).
+Your task is to design ADC payload-linker combinations based on FDA-approved ADC structures and available reagents.
 
 IMPORTANT RULES:
 1. Generate valid SMILES strings that can be parsed by RDKit
@@ -153,6 +237,8 @@ IMPORTANT RULES:
 3. Respect the requested DAR (Drug-Antibody Ratio)
 4. Consider linker preference (cleavable vs non-cleavable)
 5. Prioritize structures similar to successful FDA-approved ADCs
+6. When possible, use SMILES from available reagents (they are validated)
+7. Ensure chemical feasibility and synthetic accessibility
 
 Return your response in JSON format:
 {
@@ -161,11 +247,22 @@ Return your response in JSON format:
             "smiles": "VALID_SMILES_STRING",
             "name": "Descriptive name",
             "rationale": "Why this structure was chosen",
-            "similarity_to_ref": "Which Golden Set drug it's based on",
-            "estimated_score": 0.0 to 1.0
+            "similarity_to_ref": "Which Golden Set drug or reagent it's based on",
+            "estimated_score": 0.0 to 1.0,
+            "based_on_reagent": true/false
         }
     ]
 }"""
+
+        # [Phase 1] 시약 참조 포함
+        reagent_section = ""
+        if reagent_summary:
+            reagent_section = f"""
+
+AVAILABLE REAGENTS (validated SMILES):
+{reagent_summary}
+
+Consider using these validated reagent SMILES as building blocks."""
 
         user_prompt = f"""Design ADC payload-linker candidates with these requirements:
 
@@ -176,7 +273,7 @@ LINKER PREFERENCE: {state['linker_preference']}
 DESIGN GOAL: {state['design_goal']}
 
 REFERENCE STRUCTURES (FDA-approved ADCs):
-{ref_summary}
+{ref_summary}{reagent_section}
 
 Generate 3-5 candidate structures ranked by predicted efficacy.
 Focus on structures similar to successful references but optimized for the target."""
@@ -254,3 +351,74 @@ Focus on structures similar to successful references but optimized for the targe
                     is_masked=tier == "free" and idx > 0
                 ))
         return candidates
+
+    # ============== Phase 1: Enhancement Methods ==============
+
+    async def _normalize_target(self, target: str) -> str:
+        """
+        [Phase 1] Target Normalization
+        target_synonyms 테이블을 사용하여 타겟명을 정규화합니다.
+        """
+        if not target:
+            return target
+
+        try:
+            result = self.supabase.rpc("normalize_target", {"input_target": target}).execute()
+            if result.data:
+                return result.data
+            return target
+        except Exception as e:
+            logger.warning(f"[alchemist] Target normalization failed: {e}")
+            return target
+
+    async def _search_commercial_reagents(
+        self,
+        target: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        [Phase 1] commercial_reagents에서 관련 시약 검색
+
+        target_normalized 컬럼을 활용한 검색
+        """
+        try:
+            # 정규화된 타겟으로 검색
+            result = self.supabase.table("commercial_reagents").select(
+                "id, ambeed_cat_no, product_name, category, target, target_normalized, "
+                "smiles_code, payload_smiles, linker_smiles"
+            ).or_(
+                f"target_normalized.ilike.%{target}%,target.ilike.%{target}%"
+            ).eq("smiles_validated", True).limit(limit).execute()
+
+            if result.data:
+                logger.info(f"[alchemist] Found {len(result.data)} reagents for target: {target}")
+                return result.data
+
+            # 카테고리 기반 fallback
+            result = self.supabase.table("commercial_reagents").select(
+                "id, ambeed_cat_no, product_name, category, target, "
+                "smiles_code, payload_smiles, linker_smiles"
+            ).or_(
+                "category.ilike.%payload%,category.ilike.%linker%"
+            ).eq("smiles_validated", True).limit(limit).execute()
+
+            return result.data or []
+
+        except Exception as e:
+            logger.error(f"[alchemist] Commercial reagents search error: {e}")
+            return []
+
+    def _summarize_reagents(self, reagents: List[Dict]) -> str:
+        """시약 참조 요약"""
+        if not reagents:
+            return ""
+
+        lines = []
+        for r in reagents[:5]:
+            smiles = r.get("payload_smiles") or r.get("linker_smiles") or r.get("smiles_code") or ""
+            lines.append(
+                f"- {r.get('product_name', r.get('ambeed_cat_no', 'Unknown'))}: "
+                f"Category={r.get('category', 'N/A')}, "
+                f"SMILES={smiles[:30]}..."
+            )
+        return "\n".join(lines)

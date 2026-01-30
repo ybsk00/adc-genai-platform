@@ -333,6 +333,157 @@ class WebSocketHub:
             "timestamp": datetime.utcnow().isoformat()
         })
 
+    # ====== Real-time Streaming UI Methods (Phase 1) ======
+
+    async def stream_agent_log(
+        self,
+        session_id: str,
+        level: str,
+        message: str,
+        emoji: str = "",
+        agent_name: str = "",
+        metadata: Optional[dict] = None
+    ) -> None:
+        """
+        에이전트 실시간 로그 스트리밍
+
+        Vibe-Coding 원칙: AI가 실제로 일하고 있다는 것을 사용자에게 시각적으로 보여줌
+
+        Args:
+            session_id: 세션 ID
+            level: 로그 레벨 (info, success, warning, error, debug)
+            message: 로그 메시지
+            emoji: 이모지 (선택)
+            agent_name: 에이전트 이름 (선택)
+            metadata: 추가 메타데이터 (선택)
+        """
+        await self.broadcast(session_id, {
+            "type": "agent_log",
+            "level": level,
+            "message": message,
+            "emoji": emoji,
+            "agent_name": agent_name,
+            "metadata": metadata or {},
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    async def stream_progress(
+        self,
+        session_id: str,
+        percentage: float,
+        operation: str,
+        sub_operation: str = "",
+        eta_seconds: Optional[int] = None
+    ) -> None:
+        """
+        작업 진행률 스트리밍
+
+        Args:
+            session_id: 세션 ID
+            percentage: 진행률 (0-100)
+            operation: 현재 작업명
+            sub_operation: 세부 작업명 (선택)
+            eta_seconds: 예상 남은 시간 (초, 선택)
+        """
+        await self.broadcast(session_id, {
+            "type": "stream_progress",
+            "percentage": min(100, max(0, percentage)),
+            "operation": operation,
+            "sub_operation": sub_operation,
+            "eta_seconds": eta_seconds,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    async def stream_engine_status(
+        self,
+        session_id: str,
+        engine_mode: str,
+        engine_name: str,
+        is_preview: bool = False,
+        capabilities: Optional[dict] = None
+    ) -> None:
+        """
+        현재 사용 중인 엔진 상태 브로드캐스트
+
+        Phase 1: Gemini 3.0 Pro Fallback
+        Phase 3: NVIDIA BioNeMo NIM
+
+        Args:
+            session_id: 세션 ID
+            engine_mode: 엔진 모드 (gemini-fallback, nvidia-nim)
+            engine_name: 엔진 이름
+            is_preview: 프리뷰 모드 여부
+            capabilities: 엔진 기능 목록
+        """
+        await self.broadcast(session_id, {
+            "type": "engine_status",
+            "mode": engine_mode,
+            "name": engine_name,
+            "is_preview": is_preview,
+            "capabilities": capabilities or {},
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    async def stream_code_execution(
+        self,
+        session_id: str,
+        agent_name: str,
+        code_snippet: str,
+        language: str = "python",
+        execution_status: str = "running",
+        output: str = "",
+        error: str = ""
+    ) -> None:
+        """
+        코드 실행 과정 스트리밍 (Vibe-Coding 시각화)
+
+        Args:
+            session_id: 세션 ID
+            agent_name: 실행 중인 에이전트
+            code_snippet: 실행 중인 코드 스니펫
+            language: 프로그래밍 언어
+            execution_status: 실행 상태 (running, success, error)
+            output: 실행 출력
+            error: 에러 메시지
+        """
+        await self.broadcast(session_id, {
+            "type": "code_execution",
+            "agent_name": agent_name,
+            "code_snippet": code_snippet[:500],  # 최대 500자로 제한
+            "language": language,
+            "execution_status": execution_status,
+            "output": output[:1000] if output else "",  # 출력도 제한
+            "error": error,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    async def stream_molecule_update(
+        self,
+        session_id: str,
+        smiles: str,
+        molecule_name: str = "",
+        properties: Optional[dict] = None,
+        validation_status: str = "pending"
+    ) -> None:
+        """
+        분자 구조 업데이트 스트리밍
+
+        Args:
+            session_id: 세션 ID
+            smiles: SMILES 문자열
+            molecule_name: 분자 이름
+            properties: 계산된 물성 (MW, LogP 등)
+            validation_status: 검증 상태 (pending, valid, invalid)
+        """
+        await self.broadcast(session_id, {
+            "type": "molecule_update",
+            "smiles": smiles,
+            "molecule_name": molecule_name,
+            "properties": properties or {},
+            "validation_status": validation_status,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
     def get_connection_count(self, session_id: str) -> int:
         """세션 연결 수 조회"""
         return len(self._connections.get(session_id, set()))

@@ -31,40 +31,66 @@ async def get_library_stats():
     return stats
 
 @router.get("/goldenset")
+@router.get("/golden-set")
 async def search_golden_set(
     target: Optional[str] = None,
     category: Optional[str] = None,
     review_required: Optional[bool] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
     page: int = 1,
     limit: int = 20
 ):
-    """골든셋 목록 검색 (Real DB)"""
+    """
+    골든셋 목록 검색 (Real DB)
+
+    - target: 타겟 항원 필터 (target_1, target_2)
+    - category: 카테고리 필터
+    - status: 상태 필터 (draft, approved, rejected)
+    - search: 이름 검색
+    """
     try:
-        query = supabase.table("golden_set_library").select("*", count="exact")
-        
+        query = supabase.table("golden_set_library").select(
+            "id, name, category, status, target_1, target_2, outcome_type, "
+            "dar, molecular_weight, canonical_smiles, payload_smiles, linker_smiles, "
+            "linker_type, antibody_format, orr_pct, os_months, pfs_months, "
+            "confidence_score, ai_refined, created_at, updated_at",
+            count="exact"
+        )
+
+        # 검색 필터
+        if search:
+            query = query.or_(f"name.ilike.%{search}%,category.ilike.%{search}%")
+
         if target:
-            query = query.ilike("properties->>target", f"%{target}%")
-            
+            # target_1 또는 target_2에서 검색
+            query = query.or_(f"target_1.ilike.%{target}%,target_2.ilike.%{target}%")
+
+        if category:
+            query = query.eq("category", category)
+
+        if status:
+            query = query.eq("status", status)
+
         if review_required is not None:
             query = query.eq("review_required", review_required)
-            
-        # Pagination
-            
-        # Pagination
+
+        # 정렬 및 페이지네이션
         start = (page - 1) * limit
         end = start + limit - 1
-        query = query.range(start, end)
-        
+        query = query.order("updated_at", desc=True).range(start, end)
+
         result = query.execute()
-        
+
+        # 응답 형식 통일 (items 키 사용)
         return {
             "items": result.data,
-            "total": result.count,
+            "total": result.count or 0,
             "page": page,
             "limit": limit
         }
     except Exception as e:
-        print(f"Search Error: {e}")
+        print(f"Golden Set Search Error: {e}")
         return {"items": [], "total": 0, "page": page, "limit": limit}
 
 
@@ -108,6 +134,7 @@ async def get_reagents(
     page: int = 1,
     limit: int = 20,
     search: Optional[str] = None,
+    category: Optional[str] = None,
     missing_smiles: Optional[bool] = None,
     ai_refined: Optional[bool] = None,
     manual_override: Optional[bool] = None,
@@ -115,16 +142,29 @@ async def get_reagents(
 ):
     """
     시약 라이브러리 조회 (Status 필터링 포함)
+
+    - category: 카테고리 필터 (payload, linker, antibody, target 등)
     - missing_smiles: SMILES가 없는 항목만
     - ai_refined: AI 정제된 항목만
     - manual_override: 수동 수정된 항목만
+    - source: 소스 필터 (Ambeed, MedChem Express 등)
     """
     try:
-        query = supabase.table("commercial_reagents").select("*", count="exact")
+        query = supabase.table("commercial_reagents").select(
+            "id, ambeed_cat_no, product_name, category, cas_number, "
+            "smiles_code, molecular_weight, formula, stock_status, "
+            "target, source_name, ai_refined, is_manual_override, "
+            "payload_smiles, linker_smiles, full_smiles, crawled_at",
+            count="exact"
+        )
 
         if search:
             # OR search on product_name, cas_number, ambeed_cat_no
             query = query.or_(f"product_name.ilike.%{search}%,cas_number.ilike.%{search}%,ambeed_cat_no.ilike.%{search}%")
+
+        # Category Filter (중요: payload, linker 구분)
+        if category:
+            query = query.ilike("category", f"%{category}%")
 
         # Status Filters
         if missing_smiles:
@@ -145,15 +185,16 @@ async def get_reagents(
 
         result = query.execute()
 
+        # 응답 형식 통일: items 키 사용 (프론트엔드 호환)
         return {
-            "data": result.data,
-            "total": result.count,
+            "items": result.data,
+            "total": result.count or 0,
             "page": page,
             "limit": limit
         }
     except Exception as e:
         print(f"Reagent Search Error: {e}")
-        return {"data": [], "total": 0, "page": page, "limit": limit}
+        return {"items": [], "total": 0, "page": page, "limit": limit}
 
 
 @router.post("/reagents/{id}/autofill-smiles")

@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Google (Gemini)
     GOOGLE_API_KEY: str = ""
     GEMINI_MODEL_ID: str = "gemini-2.5-flash"
+    GEMINI_PRO_MODEL_ID: str = "gemini-2.0-flash"  # Phase 1 Fallback용
+
+    # NVIDIA NIM API (Phase 3)
+    USE_NIM_API: bool = False  # Phase 1: False (Gemini Fallback)
+    NVIDIA_NIM_API_KEY: str = ""
+    NVIDIA_NIM_BASE_URL: str = "https://api.nvidia.com/nim/v1"
 
     # NCBI (PubMed)
     NCBI_EMAIL: str = "your-email@example.com"

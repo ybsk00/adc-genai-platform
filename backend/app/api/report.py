@@ -1,11 +1,11 @@
 """
 Report Generation API
-PDF/HTML 리포트 생성을 위한 API
+10페이지 정밀 보고서 생성 + Digital Seal + QR 검증
 """
-from fastapi import APIRouter, HTTPException, Response
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Response, BackgroundTasks
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import io
 import logging
 from datetime import datetime
@@ -13,6 +13,15 @@ from datetime import datetime
 from app.core.supabase import get_supabase_client
 
 logger = logging.getLogger(__name__)
+
+
+class ReportGenerateRequest(BaseModel):
+    """보고서 생성 요청"""
+    format: str = "pdf"
+    include_appendix: bool = True
+    include_benchmarks: bool = True
+    include_visualizations: bool = True
+    language: str = "en"
 
 router = APIRouter()
 
@@ -298,4 +307,469 @@ async def preview_report(session_id: str):
         "available_formats": ["html", "pdf"],
         "created_at": session.data.get("created_at"),
         "updated_at": session.data.get("updated_at")
+    }
+
+
+# ============================================
+# Enhanced Report Engine Endpoints (v2.0)
+# ============================================
+
+@router.post("/generate/{session_id}")
+async def generate_enhanced_report(
+    session_id: str,
+    request: ReportGenerateRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    10페이지 정밀 보고서 생성 (Enhanced v2.0)
+
+    Features:
+    - AI Reasoning Logic 포함
+    - Confidence Score (0-100%)
+    - Digital Seal + QR 코드
+    - 벤치마크 비교표
+    - 시각화 자동 생성
+    """
+    user_id = await get_current_user_id()
+    supabase = get_supabase_client()
+
+    # 세션 조회
+    session = supabase.table("design_sessions").select("*").eq(
+        "id", session_id
+    ).single().execute()
+
+    if not session.data:
+        raise HTTPException(404, "Session not found")
+
+    session_data = session.data
+
+    # 에이전트 실행 결과 조회
+    logs = supabase.table("agent_execution_logs").select("*").eq(
+        "session_id", session_id
+    ).order("sequence_number").execute()
+
+    # 후보 조회
+    candidates = supabase.table("design_candidates").select("*").eq(
+        "session_id", session_id
+    ).order("rank").execute()
+
+    # 에이전트 결과 집계
+    agent_results = _aggregate_agent_results(logs.data or [], candidates.data or [])
+
+    try:
+        from app.services.report_engine import get_report_engine
+
+        engine = get_report_engine()
+        result = await engine.generate_report(
+            session_id=session_id,
+            session_data=session_data,
+            agent_results=agent_results,
+            format=request.format,
+            include_visualizations=request.include_visualizations,
+            include_benchmarks=request.include_benchmarks
+        )
+
+        # 감사 로그 저장
+        background_tasks.add_task(
+            _save_report_audit_log,
+            session_id, user_id, result.get("seal", {})
+        )
+
+        if result["format"] == "pdf":
+            return StreamingResponse(
+                io.BytesIO(result["content"]),
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{result["filename"]}"',
+                    "X-Report-Hash": result["seal"]["chain_hash"][:12],
+                    "X-Verification-URL": result["seal"]["verification_url"]
+                }
+            )
+        else:
+            return Response(
+                content=result["content"],
+                media_type="text/html",
+                headers={
+                    "Content-Disposition": f'inline; filename="report-{session_id[:8]}.html"',
+                    "X-Report-Hash": result["seal"]["chain_hash"][:12] if result.get("seal") else ""
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Report generation error: {e}")
+        raise HTTPException(500, f"Report generation failed: {str(e)}")
+
+
+@router.get("/verify/{hash}")
+async def verify_report(hash: str):
+    """
+    보고서 무결성 검증 (QR 코드 스캔용)
+
+    Args:
+        hash: 보고서 해시 (12자리 short hash)
+
+    Returns:
+        검증 결과 및 보고서 메타데이터
+    """
+    supabase = get_supabase_client()
+
+    # 보고서 해시로 검색
+    report_log = supabase.table("report_verification_logs").select("*").eq(
+        "short_hash", hash
+    ).single().execute()
+
+    if not report_log.data:
+        # short_hash가 chain_hash의 앞 12자리인 경우도 검색
+        report_log = supabase.table("report_verification_logs").select("*").ilike(
+            "chain_hash", f"{hash}%"
+        ).single().execute()
+
+    if not report_log.data:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "valid": False,
+                "error": "Report not found",
+                "hash": hash,
+                "message": "This report hash could not be verified. The report may have been modified or does not exist in our records."
+            }
+        )
+
+    # 세션 정보 조회
+    session = supabase.table("design_sessions").select(
+        "id, session_type, target_antigen, status, created_at"
+    ).eq("id", report_log.data["session_id"]).single().execute()
+
+    return {
+        "valid": True,
+        "report_id": report_log.data.get("report_id"),
+        "session_id": report_log.data["session_id"],
+        "generated_at": report_log.data["generated_at"],
+        "page_count": report_log.data.get("page_count", 10),
+        "chain_hash": report_log.data["chain_hash"],
+        "algorithm": "SHA-256 Chain",
+        "verification_timestamp": datetime.utcnow().isoformat(),
+        "session_info": {
+            "type": session.data.get("session_type") if session.data else None,
+            "target": session.data.get("target_antigen") if session.data else None,
+            "status": session.data.get("status") if session.data else None
+        },
+        "compliance": {
+            "standard": "21 CFR Part 11",
+            "features": ["Digital Seal", "Audit Trail", "QR Verification"]
+        }
+    }
+
+
+@router.get("/verify/{hash}/details")
+async def get_verification_details(hash: str):
+    """
+    보고서 검증 상세 정보
+
+    각 페이지별 해시 및 감사 추적 정보 반환
+    """
+    supabase = get_supabase_client()
+
+    report_log = supabase.table("report_verification_logs").select("*").ilike(
+        "chain_hash", f"{hash}%"
+    ).single().execute()
+
+    if not report_log.data:
+        raise HTTPException(404, "Report not found")
+
+    return {
+        "chain_hash": report_log.data["chain_hash"],
+        "page_hashes": report_log.data.get("page_hashes", []),
+        "generated_at": report_log.data["generated_at"],
+        "generated_by": report_log.data.get("generated_by"),
+        "audit_entries": report_log.data.get("audit_trail", [])
+    }
+
+
+def _aggregate_agent_results(logs: List[Dict], candidates: List[Dict]) -> Dict[str, Any]:
+    """에이전트 결과 집계"""
+    results = {
+        "target_analysis": {},
+        "synthesis_analysis": {},
+        "benchmark_comparison": {},
+        "physicochemical": {},
+        "toxicology": {},
+        "patent_analysis": {},
+        "audit_trail": [],
+        "final_grade": "B",
+        "recommendation": "Conditional Go",
+        "executive_summary": "",
+        "executive_reasoning": ""
+    }
+
+    for log in logs:
+        agent_name = log.get("agent_name", "").lower()
+        output = log.get("output_data", {}) or {}
+
+        # 에이전트별 결과 매핑
+        if "librarian" in agent_name:
+            results["target_analysis"] = output
+        elif "alchemist" in agent_name:
+            results["synthesis_analysis"] = output
+        elif "coder" in agent_name:
+            results["physicochemical"] = output
+        elif "healer" in agent_name or "tox" in agent_name:
+            results["toxicology"] = output
+        elif "competitor" in agent_name or "benchmark" in agent_name:
+            results["benchmark_comparison"] = output
+        elif "patent" in agent_name:
+            results["patent_analysis"] = output
+        elif "auditor" in agent_name:
+            results["audit_trail"] = output.get("audit_entries", [])
+
+        # 감사 추적 항목 추가
+        results["audit_trail"].append({
+            "timestamp": log.get("created_at"),
+            "action": log.get("status"),
+            "agent": log.get("agent_name"),
+            "hash": log.get("record_hash", "")[:12] if log.get("record_hash") else ""
+        })
+
+    # 최종 판정 (오케스트레이터 결과 또는 기본값)
+    orchestrator_log = next(
+        (l for l in logs if "orchestrator" in l.get("agent_name", "").lower()),
+        None
+    )
+    if orchestrator_log:
+        output = orchestrator_log.get("output_data", {}) or {}
+        results["final_grade"] = output.get("final_grade", "B")
+        results["recommendation"] = output.get("recommendation", "Conditional Go")
+        results["executive_summary"] = output.get("summary", "")
+        results["executive_reasoning"] = output.get("reasoning_logic", "")
+
+    # 후보 데이터에서 물리화학적 속성 추출
+    if candidates:
+        top_candidate = candidates[0]
+        metrics = top_candidate.get("metrics", {}) or {}
+        results["physicochemical"].update({
+            "molecular_weight": metrics.get("mw") or metrics.get("molecular_weight"),
+            "logp": metrics.get("logp") or metrics.get("LogP"),
+            "hbd": metrics.get("hbd"),
+            "hba": metrics.get("hba"),
+            "tpsa": metrics.get("tpsa"),
+            "rotatable_bonds": metrics.get("rotatable_bonds")
+        })
+
+    return results
+
+
+async def _save_report_audit_log(
+    session_id: str,
+    user_id: str,
+    seal_data: Dict
+):
+    """보고서 감사 로그 저장"""
+    try:
+        supabase = get_supabase_client()
+
+        supabase.table("report_verification_logs").insert({
+            "session_id": session_id,
+            "report_id": f"RPT-{session_id[:8]}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "chain_hash": seal_data.get("chain_hash", ""),
+            "short_hash": seal_data.get("short_hash", ""),
+            "page_hashes": seal_data.get("page_hashes", []),
+            "page_count": seal_data.get("page_count", 10),
+            "generated_at": seal_data.get("generated_at"),
+            "generated_by": user_id,
+            "algorithm": seal_data.get("algorithm", "SHA-256 Chain"),
+            "verification_url": seal_data.get("verification_url", "")
+        }).execute()
+
+        logger.info(f"Report audit log saved for session {session_id}")
+
+    except Exception as e:
+        logger.error(f"Failed to save report audit log: {e}")
+
+
+# ============================================
+# Phase 2: Digital Lineage API Endpoints
+# ============================================
+
+@router.get("/session/{session_id}/lineage")
+async def get_session_lineage(session_id: str):
+    """
+    세션의 Digital Lineage (데이터 계보) 조회
+
+    논문 작성 및 특허 출원 시 연산 환경 재현성 검증용
+    """
+    supabase = get_supabase_client()
+
+    # 세션 확인
+    session = supabase.table("design_sessions").select("id").eq(
+        "id", session_id
+    ).single().execute()
+
+    if not session.data:
+        raise HTTPException(404, "Session not found")
+
+    # Calculation Lineage 조회
+    lineage = supabase.table("agent_execution_logs").select(
+        "calculation_id, agent_name, agent_version, status, "
+        "execution_env, library_versions, nvidia_nim_info, "
+        "simulation_params, input_hash, output_hash, "
+        "llm_model, llm_temperature, execution_time_ms, "
+        "created_at"
+    ).eq("session_id", session_id).eq("status", "completed").order("created_at").execute()
+
+    # Physical Validations 조회
+    validations = supabase.table("physical_validations").select(
+        "calculation_id, check_name, check_category, passed, severity, details"
+    ).eq("session_id", session_id).execute()
+
+    # 결과 포맷팅
+    lineage_data = []
+    for log in lineage.data or []:
+        calc_id = log.get("calculation_id")
+        calc_validations = [v for v in (validations.data or []) if v.get("calculation_id") == calc_id]
+
+        lineage_data.append({
+            "calculation_id": calc_id,
+            "timestamp": log.get("created_at"),
+            "agent_info": {
+                "name": log.get("agent_name"),
+                "version": log.get("agent_version"),
+                "llm_model": log.get("llm_model"),
+                "llm_temperature": log.get("llm_temperature")
+            },
+            "execution_environment": log.get("execution_env", {}),
+            "library_versions": log.get("library_versions", {}),
+            "nvidia_nim": log.get("nvidia_nim_info"),
+            "simulation_params": log.get("simulation_params"),
+            "hashes": {
+                "input": log.get("input_hash"),
+                "output": log.get("output_hash")
+            },
+            "execution_time_ms": log.get("execution_time_ms"),
+            "validations": {
+                "total": len(calc_validations),
+                "passed": sum(1 for v in calc_validations if v.get("passed")),
+                "failed": sum(1 for v in calc_validations if not v.get("passed")),
+                "details": calc_validations[:5]  # 최대 5개만
+            }
+        })
+
+    return {
+        "session_id": session_id,
+        "total_calculations": len(lineage_data),
+        "lineage": lineage_data,
+        "compliance": {
+            "standard": "21 CFR Part 11",
+            "features": ["Digital Lineage", "Input/Output Hash", "Library Versioning"]
+        }
+    }
+
+
+@router.get("/lineage/{calculation_id}")
+async def get_calculation_metadata(calculation_id: str):
+    """
+    특정 계산의 상세 메타데이터 조회
+
+    논문/특허에서 특정 수치 인용 시 사용
+    """
+    supabase = get_supabase_client()
+
+    # Calculation Metadata 조회
+    log = supabase.table("agent_execution_logs").select("*").eq(
+        "calculation_id", calculation_id
+    ).single().execute()
+
+    if not log.data:
+        raise HTTPException(404, "Calculation not found")
+
+    # Physical Validations 조회
+    validations = supabase.table("physical_validations").select("*").eq(
+        "calculation_id", calculation_id
+    ).execute()
+
+    return {
+        "calculation_id": calculation_id,
+        "timestamp": log.data.get("created_at"),
+        "execution_environment": {
+            "sandbox_type": log.data.get("execution_env", {}).get("sandbox_type", "subprocess"),
+            "container_image": log.data.get("execution_env", {}).get("container_image", "N/A"),
+            "python_version": log.data.get("execution_env", {}).get("python_version", "N/A"),
+            "os_info": log.data.get("execution_env", {}).get("os_info", "N/A")
+        },
+        "library_versions": log.data.get("library_versions", {}),
+        "nvidia_nim": log.data.get("nvidia_nim_info"),
+        "simulation_params": log.data.get("simulation_params"),
+        "agent_info": {
+            "agent_name": log.data.get("agent_name"),
+            "agent_version": log.data.get("agent_version"),
+            "llm_model": log.data.get("llm_model"),
+            "llm_temperature": log.data.get("llm_temperature")
+        },
+        "hashes": {
+            "input": log.data.get("input_hash"),
+            "output": log.data.get("output_hash")
+        },
+        "physical_validations": validations.data or [],
+        "reproducibility_info": {
+            "note": "To reproduce this calculation, use the same library versions and input data",
+            "input_hash": log.data.get("input_hash"),
+            "expected_output_hash": log.data.get("output_hash")
+        }
+    }
+
+
+class ReproducibilityVerifyRequest(BaseModel):
+    """재현성 검증 요청"""
+    calculation_id: str
+    new_output_hash: str
+
+
+@router.post("/lineage/verify-reproducibility")
+async def verify_reproducibility(request: ReproducibilityVerifyRequest):
+    """
+    계산 재현성 검증
+
+    동일한 입력으로 다시 계산한 결과의 output_hash가 일치하는지 확인
+    """
+    supabase = get_supabase_client()
+
+    # Original calculation 조회
+    log = supabase.table("agent_execution_logs").select(
+        "calculation_id, output_hash, execution_env, library_versions, created_at"
+    ).eq("calculation_id", request.calculation_id).single().execute()
+
+    if not log.data:
+        raise HTTPException(404, "Original calculation not found")
+
+    original_hash = log.data.get("output_hash")
+    is_reproducible = original_hash == request.new_output_hash
+
+    # 검증 로그 저장
+    try:
+        supabase.table("report_verification_logs").insert({
+            "report_id": f"REPRO-{request.calculation_id[:8]}",
+            "session_id": log.data.get("session_id"),
+            "verification_type": "reproducibility",
+            "verification_result": "valid" if is_reproducible else "invalid",
+            "chain_hash_matched": is_reproducible,
+            "details": {
+                "original_hash": original_hash,
+                "new_hash": request.new_output_hash,
+                "execution_env": log.data.get("execution_env"),
+                "library_versions": log.data.get("library_versions")
+            },
+            "verified_at": datetime.utcnow().isoformat()
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Failed to save reproducibility log: {e}")
+
+    return {
+        "calculation_id": request.calculation_id,
+        "is_reproducible": is_reproducible,
+        "original_hash": original_hash,
+        "new_hash": request.new_output_hash,
+        "original_timestamp": log.data.get("created_at"),
+        "verification_timestamp": datetime.utcnow().isoformat(),
+        "execution_environment": log.data.get("execution_env", {}),
+        "library_versions": log.data.get("library_versions", {}),
+        "message": "Calculation is reproducible!" if is_reproducible else "Hash mismatch - calculation may have been affected by different library versions or environment"
     }

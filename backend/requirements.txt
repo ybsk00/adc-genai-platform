@@ -45,6 +45,12 @@ redis==5.2.0
 weasyprint==63.0
 Jinja2==3.1.4
 
+# Report Visualization
+matplotlib==3.9.0
+scipy==1.12.0
+qrcode[pil]==7.4.2
+Pillow>=10.0.0
+
 # Scheduling & Async HTTP
 apscheduler==3.10.4
 aiohttp==3.10.10
