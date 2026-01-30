@@ -90,6 +90,11 @@ export function VirtualTrialChart({
   tgi,
   predictedORR,
 }: VirtualTrialChartProps) {
+  // 데이터 없으면 렌더링하지 않음
+  if ((!pkData || pkData.length === 0) && (!tumorData || tumorData.length === 0)) {
+    return null;
+  }
+
   // Calculate TGI from tumor data if not provided
   const calculatedTGI = tgi ?? (() => {
     if (tumorData.length < 2) return null;
@@ -131,8 +136,8 @@ export function VirtualTrialChart({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64" style={{ minWidth: 0, minHeight: 0 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
               <LineChart data={pkData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
@@ -226,8 +231,8 @@ export function VirtualTrialChart({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64" style={{ minWidth: 0, minHeight: 0 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
               <LineChart data={tumorData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
