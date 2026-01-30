@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { API_BASE_URL } from '@/lib/api'
 
 interface VerificationResult {
     valid: boolean
@@ -63,7 +64,7 @@ export default function VerifyReport() {
             setLoading(true)
             setError(null)
 
-            const response = await fetch(`/api/report/verify/${reportHash}`)
+            const response = await fetch(`${API_BASE_URL}/api/report/verify/${reportHash}`)
             const data = await response.json()
 
             setResult(data)

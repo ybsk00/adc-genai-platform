@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -111,7 +112,7 @@ export function AuditLineagePage() {
       if (filterAction !== 'all') params.append('action', filterAction);
       params.append('dateRange', dateRange);
 
-      const response = await fetch(`/api/admin/audit/logs?${params}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/audit/logs?${params}`);
       if (response.ok) {
         const data = await response.json();
         setAuditLogs(data.logs || []);

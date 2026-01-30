@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -87,7 +88,7 @@ export function AnalyticsCostPage() {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/analytics?range=${dateRange}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/analytics?range=${dateRange}`);
       if (response.ok) {
         const data = await response.json();
         setUsageData(data.usage || []);

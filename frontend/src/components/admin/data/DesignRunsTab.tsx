@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCw, Eye, FlaskConical, CheckCircle2, XCircle, Clock, FileJson } from 'lucide-react';
 import { toast } from "sonner";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app';
 
 interface DesignRun {
     id: string;

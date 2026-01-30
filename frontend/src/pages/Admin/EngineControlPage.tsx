@@ -29,6 +29,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -107,7 +108,7 @@ export function EngineControlPage() {
 
   const loadEngineConfig = async () => {
     try {
-      const response = await fetch('/api/admin/engine/config');
+      const response = await fetch(`${API_BASE_URL}/api/admin/engine/config`);
       if (response.ok) {
         const data = await response.json();
         setEngineConfig(data);
@@ -119,7 +120,7 @@ export function EngineControlPage() {
 
   const loadBudgetConfig = async () => {
     try {
-      const response = await fetch('/api/admin/budget/status');
+      const response = await fetch(`${API_BASE_URL}/api/admin/budget/status`);
       if (response.ok) {
         const data = await response.json();
         if (data.budgets) {
@@ -135,7 +136,7 @@ export function EngineControlPage() {
   const handleEngineSwitch = async (useNim: boolean) => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/admin/engine/switch', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/engine/switch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ useNimApi: useNim }),
@@ -161,7 +162,7 @@ export function EngineControlPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/admin/budget/emergency-stop', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/budget/emergency-stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activate: true }),
@@ -181,7 +182,7 @@ export function EngineControlPage() {
   const handleDeactivateEmergencyStop = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/admin/budget/emergency-stop', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/budget/emergency-stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activate: false }),
@@ -201,7 +202,7 @@ export function EngineControlPage() {
   const handleSaveBudget = async (provider: string, config: Partial<BudgetConfig>) => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/admin/budget/config', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/budget/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, ...config }),

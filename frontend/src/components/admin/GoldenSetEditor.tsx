@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/tooltip"
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { API_BASE_URL } from '@/lib/api'
 
 // API Response Type
 export type GoldenSetDraft = {
@@ -76,7 +77,7 @@ export function GoldenSetEditor() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const response = await fetch('/api/admin/goldenset/drafts')
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/drafts`)
             if (!response.ok) throw new Error('Failed to fetch drafts')
             const result = await response.json()
             setData(result)
@@ -94,7 +95,7 @@ export function GoldenSetEditor() {
 
     const handleApprove = async (id: string) => {
         try {
-            const response = await fetch(`/api/admin/goldenset/${id}/approve`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${id}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -114,7 +115,7 @@ export function GoldenSetEditor() {
         if (!selectedId || !rejectReason) return
 
         try {
-            const response = await fetch(`/api/admin/goldenset/${selectedId}/reject`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/goldenset/${selectedId}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: rejectReason })

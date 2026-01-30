@@ -41,7 +41,7 @@ import { EvidenceHub, type LiteratureReference, type GoldenSetReference } from '
 import { HealerAnimation } from '@/components/design/HealerAnimation'
 import { DigitalSealBadge } from '@/components/design/DigitalSealBadge'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app'
 
 interface OptimizationFormData {
   source_smiles: string

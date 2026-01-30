@@ -30,7 +30,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app'
 
 interface ReportExportProps {
   sessionId: string

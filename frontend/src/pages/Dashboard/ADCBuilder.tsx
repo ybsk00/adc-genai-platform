@@ -25,7 +25,7 @@ import { toast } from 'sonner'
 import { useADCBuilderStore } from '@/stores/adcBuilderStore'
 import { MoleculeViewer2D } from '@/components/design/MoleculeViewer2D'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app'
 
 const steps = [
     { id: 1, title: 'Target & Antibody', icon: Dna },

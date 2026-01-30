@@ -43,7 +43,7 @@ import {
 } from '@/components/design'
 import { useDesignSession } from '@/hooks/useDesignSession'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app'
 
 interface CMCFormData {
   candidate_smiles: string

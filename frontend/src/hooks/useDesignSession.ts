@@ -121,6 +121,50 @@ export interface DigitalSealInfo {
   isVerified: boolean
 }
 
+// Real-time Streaming UI Types (Phase 1)
+export interface StreamAgentLog {
+  level: 'info' | 'success' | 'warning' | 'error' | 'debug'
+  message: string
+  emoji?: string
+  agentName?: string
+  metadata?: Record<string, unknown>
+  timestamp: string
+}
+
+export interface StreamProgress {
+  percentage: number
+  operation: string
+  subOperation?: string
+  etaSeconds?: number
+  timestamp: string
+}
+
+export interface EngineStatusUpdate {
+  mode: 'gemini-fallback' | 'nvidia-nim'
+  name: string
+  isPreview: boolean
+  capabilities: Record<string, boolean>
+  timestamp: string
+}
+
+export interface CodeExecutionUpdate {
+  agentName: string
+  codeSnippet: string
+  language: string
+  executionStatus: 'running' | 'success' | 'error'
+  output?: string
+  error?: string
+  timestamp: string
+}
+
+export interface MoleculeUpdate {
+  smiles: string
+  moleculeName?: string
+  properties?: Record<string, number | string>
+  validationStatus: 'pending' | 'valid' | 'invalid'
+  timestamp: string
+}
+
 interface UseDesignSessionOptions {
   sessionId: string
   onAgentStatus?: (status: AgentStatus) => void
@@ -134,6 +178,12 @@ interface UseDesignSessionOptions {
   onLibrarianReferences?: (refs: LibrarianReference[], goldenSets: GoldenSetRef[]) => void
   onAuditorFeedback?: (feedback: AuditorFeedback) => void
   onDigitalSeal?: (seal: DigitalSealInfo) => void
+  // Real-time Streaming UI handlers (Phase 1)
+  onStreamAgentLog?: (log: StreamAgentLog) => void
+  onStreamProgress?: (progress: StreamProgress) => void
+  onEngineStatus?: (status: EngineStatusUpdate) => void
+  onCodeExecution?: (execution: CodeExecutionUpdate) => void
+  onMoleculeUpdate?: (molecule: MoleculeUpdate) => void
 }
 
 interface UseDesignSessionReturn {
@@ -154,12 +204,19 @@ interface UseDesignSessionReturn {
   goldenSetRefs: GoldenSetRef[]
   auditFeedback: AuditorFeedback | null
   digitalSeal: DigitalSealInfo | null
+  // Real-time Streaming UI state (Phase 1)
+  streamLogs: StreamAgentLog[]
+  streamProgress: StreamProgress | null
+  engineStatus: EngineStatusUpdate | null
+  codeExecutions: CodeExecutionUpdate[]
+  currentMolecule: MoleculeUpdate | null
   // Methods
   connect: () => void
   disconnect: () => void
 }
 
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://adc-backend-962229188169.asia-northeast3.run.app'
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || API_URL.replace(/^http/, 'ws')
 
 export function useDesignSession({
   sessionId,
@@ -172,7 +229,13 @@ export function useDesignSession({
   onHealerAction,
   onLibrarianReferences,
   onAuditorFeedback,
-  onDigitalSeal
+  onDigitalSeal,
+  // Real-time Streaming UI handlers (Phase 1)
+  onStreamAgentLog,
+  onStreamProgress,
+  onEngineStatus,
+  onCodeExecution,
+  onMoleculeUpdate
 }: UseDesignSessionOptions): UseDesignSessionReturn {
   const [isConnected, setIsConnected] = useState(false)
   const [agentLogs, setAgentLogs] = useState<AgentStatus[]>([])
@@ -192,6 +255,13 @@ export function useDesignSession({
   const [goldenSetRefs, setGoldenSetRefs] = useState<GoldenSetRef[]>([])
   const [auditFeedback, setAuditFeedback] = useState<AuditorFeedback | null>(null)
   const [digitalSeal, setDigitalSeal] = useState<DigitalSealInfo | null>(null)
+
+  // Real-time Streaming UI state (Phase 1)
+  const [streamLogs, setStreamLogs] = useState<StreamAgentLog[]>([])
+  const [streamProgress, setStreamProgress] = useState<StreamProgress | null>(null)
+  const [engineStatus, setEngineStatus] = useState<EngineStatusUpdate | null>(null)
+  const [codeExecutions, setCodeExecutions] = useState<CodeExecutionUpdate[]>([])
+  const [currentMolecule, setCurrentMolecule] = useState<MoleculeUpdate | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -364,6 +434,70 @@ export function useDesignSession({
             setDigitalSeal(seal)
             onDigitalSeal?.(seal)
             break
+
+          // Real-time Streaming UI events (Phase 1)
+          case 'agent_log':
+            const agentLog: StreamAgentLog = {
+              level: data.level,
+              message: data.message,
+              emoji: data.emoji,
+              agentName: data.agent_name,
+              metadata: data.metadata,
+              timestamp: data.timestamp
+            }
+            setStreamLogs(prev => [...prev.slice(-99), agentLog]) // Keep last 100 logs
+            onStreamAgentLog?.(agentLog)
+            break
+
+          case 'stream_progress':
+            const progressUpdate: StreamProgress = {
+              percentage: data.percentage,
+              operation: data.operation,
+              subOperation: data.sub_operation,
+              etaSeconds: data.eta_seconds,
+              timestamp: data.timestamp
+            }
+            setStreamProgress(progressUpdate)
+            onStreamProgress?.(progressUpdate)
+            break
+
+          case 'engine_status':
+            const engineStatusUpdate: EngineStatusUpdate = {
+              mode: data.mode,
+              name: data.name,
+              isPreview: data.is_preview,
+              capabilities: data.capabilities || {},
+              timestamp: data.timestamp
+            }
+            setEngineStatus(engineStatusUpdate)
+            onEngineStatus?.(engineStatusUpdate)
+            break
+
+          case 'code_execution':
+            const codeExec: CodeExecutionUpdate = {
+              agentName: data.agent_name,
+              codeSnippet: data.code_snippet,
+              language: data.language,
+              executionStatus: data.execution_status,
+              output: data.output,
+              error: data.error,
+              timestamp: data.timestamp
+            }
+            setCodeExecutions(prev => [...prev.slice(-19), codeExec]) // Keep last 20
+            onCodeExecution?.(codeExec)
+            break
+
+          case 'molecule_update':
+            const moleculeUpdate: MoleculeUpdate = {
+              smiles: data.smiles,
+              moleculeName: data.molecule_name,
+              properties: data.properties,
+              validationStatus: data.validation_status,
+              timestamp: data.timestamp
+            }
+            setCurrentMolecule(moleculeUpdate)
+            onMoleculeUpdate?.(moleculeUpdate)
+            break
         }
       } catch (e) {
         // Handle pong or non-JSON messages
@@ -439,6 +573,12 @@ export function useDesignSession({
     goldenSetRefs,
     auditFeedback,
     digitalSeal,
+    // Real-time Streaming UI state (Phase 1)
+    streamLogs,
+    streamProgress,
+    engineStatus,
+    codeExecutions,
+    currentMolecule,
     // Methods
     connect,
     disconnect

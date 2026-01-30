@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -117,7 +118,7 @@ export function RefinementHubPage() {
 
   const loadQuarantinedData = async () => {
     try {
-      const response = await fetch('/api/admin/refinement/quarantined');
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/quarantined`);
       if (response.ok) {
         const data = await response.json();
         setQuarantinedItems(data.items || []);
@@ -168,7 +169,7 @@ export function RefinementHubPage() {
 
   const loadDataHealth = async () => {
     try {
-      const response = await fetch('/api/admin/refinement/health');
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/health`);
       if (response.ok) {
         const data = await response.json();
         setDataHealth(data.metrics || []);
@@ -207,7 +208,7 @@ export function RefinementHubPage() {
 
   const loadBatchJobs = async () => {
     try {
-      const response = await fetch('/api/admin/refinement/jobs');
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/jobs`);
       if (response.ok) {
         const data = await response.json();
         setBatchJobs(data.jobs || []);
@@ -246,7 +247,7 @@ export function RefinementHubPage() {
   const handleRunBatchAIFix = async (type: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/refinement/batch-fix', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/batch-fix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
@@ -267,7 +268,7 @@ export function RefinementHubPage() {
 
   const handleApproveItem = async (itemId: string) => {
     try {
-      const response = await fetch(`/api/admin/refinement/quarantined/${itemId}/approve`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/quarantined/${itemId}/approve`, {
         method: 'POST',
       });
 
@@ -283,7 +284,7 @@ export function RefinementHubPage() {
 
   const handleRejectItem = async (itemId: string) => {
     try {
-      const response = await fetch(`/api/admin/refinement/quarantined/${itemId}/reject`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/quarantined/${itemId}/reject`, {
         method: 'POST',
       });
 
@@ -301,7 +302,7 @@ export function RefinementHubPage() {
   const handleGenerateAISuggestion = async (itemId: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/refinement/quarantined/${itemId}/ai-suggest`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/refinement/quarantined/${itemId}/ai-suggest`, {
         method: 'POST',
       });
 

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
+import { API_BASE_URL } from '@/lib/api'
 
 interface DataSourceSettingsDialogProps {
     open: boolean
@@ -26,7 +27,7 @@ export function DataSourceSettingsDialog({ open, onOpenChange, sourceId, sourceN
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch(`/api/scheduler/settings/${sourceId}`)
+            const response = await fetch(`${API_BASE_URL}/api/scheduler/settings/${sourceId}`)
             if (response.ok) {
                 const data = await response.json()
                 setAutoSync(data.auto_sync)
@@ -40,7 +41,7 @@ export function DataSourceSettingsDialog({ open, onOpenChange, sourceId, sourceN
     const handleSave = async () => {
         setLoading(true)
         try {
-            const response = await fetch('/api/scheduler/settings', {
+            const response = await fetch(`${API_BASE_URL}/api/scheduler/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
