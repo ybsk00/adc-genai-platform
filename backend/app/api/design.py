@@ -810,7 +810,8 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                 result = await run_one_click_navigator_v2(
                     disease_name=request.disease_name,
                     session_id=session_id,
-                    user_id=user_id
+                    user_id=user_id,
+                    selected_antibody_id=request.selected_antibody_id
                 )
 
                 # FIXED: 에이전트 로그 저장

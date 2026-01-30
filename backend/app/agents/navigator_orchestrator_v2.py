@@ -107,10 +107,11 @@ class NavigatorOrchestratorV2:
         self,
         disease_name: str,
         session_id: Optional[str] = None,
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        selected_antibody_id: Optional[str] = None
     ) -> NavigatorResultV2:
         """
-        Navigator V2 실행 - 실제 에이전트 호출
+        Navigator V2 실행 - 실제 에이전트 호출 + Selection Gate
         """
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -165,6 +166,41 @@ class NavigatorOrchestratorV2:
                 pmid_references=pmid_refs,
                 confidence_score=librarian_result.confidence_score
             )
+
+            # [SELECTION GATE] 사용자 선택 대기
+            if not selected_antibody_id and len(antibody_candidates) > 0:
+                self.supabase.table("navigator_sessions").update({
+                    "status": "waiting_for_selection",
+                    "antibody_candidates": antibody_candidates,
+                    "current_step": 1
+                }).eq("id", session_id).execute()
+                
+                await self._broadcast_step(session_id, 1, "Waiting for user selection...")
+                
+                # Return partial result
+                return NavigatorResultV2(
+                    session_id=session_id,
+                    disease_name=disease_name,
+                    antibody_candidates=antibody_candidates,
+                    golden_combination={},
+                    calculated_metrics={},
+                    physics_verified=False,
+                    virtual_trial={},
+                    agent_logs=self.agent_logs,
+                    data_lineage={"status": "waiting"},
+                    execution_time_seconds=(datetime.utcnow() - start_time).total_seconds(),
+                    warnings=warnings
+                )
+
+            # [RESUME] 선택된 항체로 필터링
+            if selected_antibody_id:
+                selected = [ab for ab in antibody_candidates if ab["id"] == selected_antibody_id]
+                if selected:
+                    antibody_candidates = selected
+                    # Update target in state for downstream agents
+                    state["target_antigen"] = selected[0].get("target_protein", disease_name)
+                    await self._log_agent_event(session_id, "orchestrator", 1, "resume", 
+                                              f"Resuming with selected antibody: {selected[0].get('name')}")
             
             # ═══════════════════════════════════════════════════════════
             # Step 2: Alchemist - Golden Combination
@@ -634,16 +670,18 @@ def get_navigator_orchestrator_v2() -> NavigatorOrchestratorV2:
 async def run_one_click_navigator_v2(
     disease_name: str,
     session_id: Optional[str] = None,
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
+    selected_antibody_id: Optional[str] = None
 ) -> NavigatorResultV2:
     """
     One-Click ADC Navigator V2 실행
     
-    실제 에이전트 호출 + DesignSessionState 공유
+    실제 에이전트 호출 + DesignSessionState 공유 + Selection Gate
     """
     orchestrator = get_navigator_orchestrator_v2()
     return await orchestrator.run_navigator_v2(
         disease_name=disease_name,
         session_id=session_id,
-        user_id=user_id
+        user_id=user_id,
+        selected_antibody_id=selected_antibody_id
     )
