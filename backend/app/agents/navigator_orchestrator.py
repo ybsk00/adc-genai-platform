@@ -540,8 +540,21 @@ class NavigatorOrchestrator:
 
         except Exception as e:
             logger.error(f"[navigator] Antibody search error: {e}")
-            # Fallback
-            return await self._direct_antibody_search(disease_name, top_k)
+            # Fallback - convert dicts to AntibodyCandidate objects
+            fallback_dicts = await self._direct_antibody_search(disease_name, top_k)
+            return [
+                AntibodyCandidate(
+                    antibody_id=str(ab.get("id", "")),
+                    name=ab.get("name", "Unknown"),
+                    target_protein=ab.get("target_protein", "Unknown"),
+                    isotype=ab.get("isotype"),
+                    related_diseases=ab.get("related_disease"),
+                    full_spec=ab.get("full_spec"),
+                    clinical_score=ab.get("clinical_score", 0.5),
+                    match_confidence=ab.get("combined_score", 0.5)
+                )
+                for ab in fallback_dicts
+            ]
 
     async def _direct_antibody_search(
         self,

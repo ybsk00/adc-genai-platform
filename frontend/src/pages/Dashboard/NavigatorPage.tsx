@@ -418,8 +418,8 @@ export function NavigatorPage() {
                                   : 'bg-slate-700 text-slate-400'
                               }
                             >
-                              {session.status === 'completed' && session.predicted_orr
-                                ? `ORR ${session.predicted_orr.toFixed(1)}%`
+                              {session.status === 'completed' && session.predicted_orr != null
+                                ? `ORR ${Number(session.predicted_orr).toFixed(1)}%`
                                 : session.status}
                             </Badge>
                           </div>
