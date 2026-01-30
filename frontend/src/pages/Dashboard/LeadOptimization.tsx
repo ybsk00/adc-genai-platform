@@ -363,8 +363,8 @@ export default function LeadOptimization() {
                   Lead Compound Optimization
                 </h3>
                 <p className="text-gray-400 text-sm max-w-md mx-auto">
-                  기존 ADC 후보물질의 속성을 AI가 최적화합니다.
-                  SMILES를 입력하고 개선할 속성을 선택하세요.
+                  AI optimizes properties of existing ADC candidates.
+                  Enter SMILES and select properties to optimize.
                 </p>
               </div>
 
@@ -375,7 +375,7 @@ export default function LeadOptimization() {
                     <FlaskConical className="w-6 h-6 text-blue-400" />
                   </div>
                   <span className="text-sm text-gray-300">Original</span>
-                  <span className="text-xs text-gray-500">기존 구조</span>
+                  <span className="text-xs text-gray-500">Original Structure</span>
                 </div>
 
                 <ArrowLeftRight className="w-8 h-8 text-amber-500" />
@@ -385,7 +385,7 @@ export default function LeadOptimization() {
                     <Zap className="w-6 h-6 text-green-400" />
                   </div>
                   <span className="text-sm text-gray-300">Optimized</span>
-                  <span className="text-xs text-gray-500">개선된 구조</span>
+                  <span className="text-xs text-gray-500">Optimized Structure</span>
                 </div>
               </div>
 
@@ -411,11 +411,11 @@ export default function LeadOptimization() {
 
               {/* What you'll see */}
               <div className="border-t border-slate-700 pt-6 mt-6">
-                <p className="text-xs text-gray-500 mb-3">최적화 시작 후 표시될 내용</p>
+                <p className="text-xs text-gray-500 mb-3">What you'll see after starting optimization</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <Badge variant="outline" className="text-xs">
                     <ArrowLeftRight className="w-3 h-3 mr-1" />
-                    Before/After 비교
+                    Before/After Comparison
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     <TrendingUp className="w-3 h-3 mr-1" />
@@ -423,7 +423,7 @@ export default function LeadOptimization() {
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     <FlaskConical className="w-3 h-3 mr-1" />
-                    최적화 후보 목록
+                    Optimized Candidates
                   </Badge>
                 </div>
               </div>

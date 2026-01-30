@@ -486,23 +486,70 @@ class NavigatorOrchestrator:
     # Step 1: Target & Antibody Match (Real Data)
     # =========================================================================
 
+    # 질환명 한글→영문 매핑
+    DISEASE_NAME_MAP = {
+        "유방암": "Breast Cancer",
+        "폐암": "Lung Cancer",
+        "위암": "Gastric Cancer",
+        "대장암": "Colorectal Cancer",
+        "방광암": "Bladder Cancer",
+        "자궁경부암": "Cervical Cancer",
+        "난소암": "Ovarian Cancer",
+        "림프종": "Lymphoma",
+        "백혈병": "Leukemia",
+        "흑색종": "Melanoma",
+        "다발성골수종": "Multiple Myeloma",
+        "전립선암": "Prostate Cancer",
+        "간암": "Liver Cancer",
+        "췌장암": "Pancreatic Cancer",
+        "두경부암": "Head and Neck Cancer",
+        "삼중음성유방암": "Triple-Negative Breast Cancer",
+        "비소세포폐암": "Non-Small Cell Lung Cancer",
+    }
+
     async def _find_all_targets_for_disease(self, disease_name: str) -> List[Dict[str, Any]]:
         """
         질환에 대한 모든 타겟 단백질을 실제 DB에서 검색
-        golden_set → target_synonyms → antibody_library 순으로 조회
+        golden_set_library → antibody_library → Gemini AI 순으로 조회
         """
         targets = {}  # canonical_name -> {data}
 
+        # 한글 질환명 → 영문 변환
+        normalized_disease = self.DISEASE_NAME_MAP.get(disease_name.strip(), disease_name)
+        # 추가 검색 키워드 생성
+        search_terms = [normalized_disease]
+        if normalized_disease != disease_name:
+            search_terms.append(disease_name)
+        # "Breast Cancer" → "breast" 도 추가
+        base_term = normalized_disease.split()[0] if normalized_disease else disease_name
+        if base_term.lower() not in [s.lower() for s in search_terms]:
+            search_terms.append(base_term)
+
+        logger.info(f"[navigator] Searching targets for disease: '{disease_name}' → terms: {search_terms}")
+
         try:
             # 1. golden_set_library에서 해당 질환의 타겟 검색 (rejected 제외)
-            gs_result = self.supabase.table("golden_set_library").select(
-                "name, target_1, target_2, category, orr_pct, pfs_months, os_months, "
-                "status, dar, properties, linker_type"
-            ).neq("status", "rejected").or_(
-                f"name.ilike.%{disease_name}%,category.ilike.%{disease_name}%"
-            ).execute()
+            # description, category, name 모두에서 검색
+            all_gs_data = []
+            for term in search_terms:
+                gs_result = self.supabase.table("golden_set_library").select(
+                    "name, target_1, target_2, category, description, orr_pct, pfs_months, os_months, "
+                    "outcome_type, dar, properties, linker_type"
+                ).neq("status", "rejected").or_(
+                    f"description.ilike.%{term}%,category.ilike.%{term}%"
+                ).execute()
+                all_gs_data.extend(gs_result.data or [])
 
-            for row in (gs_result.data or []):
+            # 중복 제거 (name 기준)
+            seen_names = set()
+            unique_gs = []
+            for row in all_gs_data:
+                name = row.get("name", "")
+                if name not in seen_names:
+                    seen_names.add(name)
+                    unique_gs.append(row)
+
+            for row in unique_gs:
                 props = row.get("properties") or {}
                 for target_col in ["target_1", "target_2"]:
                     t = row.get(target_col)
@@ -536,12 +583,15 @@ class NavigatorOrchestrator:
 
             logger.info(f"[navigator] Found {len(targets)} targets from golden_set_library for '{disease_name}'")
 
-            # 2. antibody_library에서 추가 타겟 검색
-            ab_result = self.supabase.table("antibody_library").select(
-                "target_normalized, related_disease"
-            ).ilike("related_disease", f"%{disease_name}%").limit(50).execute()
+            # 2. antibody_library에서 추가 타겟 검색 (영문 질환명으로)
+            ab_data = []
+            for term in search_terms:
+                ab_result = self.supabase.table("antibody_library").select(
+                    "target_normalized, related_disease"
+                ).ilike("related_disease", f"%{term}%").limit(30).execute()
+                ab_data.extend(ab_result.data or [])
 
-            for row in (ab_result.data or []):
+            for row in ab_data:
                 t = row.get("target_normalized")
                 if t and t.strip():
                     canonical = t.strip().upper()

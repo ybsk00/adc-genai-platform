@@ -362,8 +362,8 @@ export default function DenovoDesign() {
                   AI-Powered ADC Design
                 </h3>
                 <p className="text-gray-400 text-sm max-w-md mx-auto">
-                  Multi-Agent 시스템이 최적의 ADC 후보물질을 설계합니다.
-                  왼쪽 패널에서 파라미터를 설정하고 디자인을 시작하세요.
+                  Multi-Agent system designs optimal ADC candidates.
+                  Set parameters in the left panel and start the design.
                 </p>
               </div>
 
@@ -374,46 +374,46 @@ export default function DenovoDesign() {
                     <Cpu className="w-5 h-5 text-blue-400" />
                   </div>
                   <span className="text-xs text-gray-400 text-center">Alchemist</span>
-                  <span className="text-xs text-gray-500">분자 생성</span>
+                  <span className="text-xs text-gray-500">Molecule Generation</span>
                 </div>
                 <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
                   <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center mb-2">
                     <Activity className="w-5 h-5 text-green-400" />
                   </div>
                   <span className="text-xs text-gray-400 text-center">Auditor</span>
-                  <span className="text-xs text-gray-500">속성 평가</span>
+                  <span className="text-xs text-gray-500">Property Evaluation</span>
                 </div>
                 <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
                   <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
                     <FileSearch className="w-5 h-5 text-amber-400" />
                   </div>
                   <span className="text-xs text-gray-400 text-center">Librarian</span>
-                  <span className="text-xs text-gray-500">문헌 검색</span>
+                  <span className="text-xs text-gray-500">Literature Search</span>
                 </div>
                 <div className="flex flex-col items-center p-4 rounded-lg bg-slate-800/50">
                   <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center mb-2">
                     <FlaskConical className="w-5 h-5 text-red-400" />
                   </div>
                   <span className="text-xs text-gray-400 text-center">Healer</span>
-                  <span className="text-xs text-gray-500">독성 제거</span>
+                  <span className="text-xs text-gray-500">Toxicity Removal</span>
                 </div>
               </div>
 
               {/* What you'll see */}
               <div className="border-t border-slate-700 pt-6 mt-6">
-                <p className="text-xs text-gray-500 mb-3">디자인 시작 후 표시될 내용</p>
+                <p className="text-xs text-gray-500 mb-3">What you'll see after starting design</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <Badge variant="outline" className="text-xs">
                     <Atom className="w-3 h-3 mr-1" />
-                    2D 분자 구조
+                    2D Molecular Structure
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     <Activity className="w-3 h-3 mr-1" />
-                    Lipinski 레이더 차트
+                    Lipinski Radar Chart
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     <FlaskConical className="w-3 h-3 mr-1" />
-                    후보물질 목록
+                    Candidate List
                   </Badge>
                 </div>
               </div>
