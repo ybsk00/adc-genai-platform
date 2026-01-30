@@ -53,8 +53,8 @@ class SessionStatusResponse(BaseModel):
 
 async def get_current_user_id() -> str:
     """현재 사용자 ID 조회 (TODO: JWT 인증 연동)"""
-    # 개발용 더미 - 실제로는 JWT에서 추출
-    return "dev-user-id"
+    # 개발용 더미 UUID - 실제로는 JWT에서 추출
+    return "00000000-0000-0000-0000-000000000000"
 
 
 async def get_user_tier(user_id: str) -> str:
