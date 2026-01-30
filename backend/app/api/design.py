@@ -787,16 +787,22 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
     try:
         # 세션 생성 또는 조회
         if not request.session_id:
-            supabase.table("navigator_sessions").insert({
+            insert_data = {
                 "id": session_id,
                 "user_id": user_id,
                 "disease_name": request.disease_name,
                 "status": "running",
                 "current_step": 0,
                 "total_steps": 5,
-                "agent_logs": [],  # FIXED: 실시간 로그 저장
                 "created_at": datetime.utcnow().isoformat()
-            }).execute()
+            }
+            # agent_logs/warnings 컬럼이 있으면 포함 (DB 마이그레이션 후)
+            try:
+                supabase.table("navigator_sessions").insert({
+                    **insert_data, "agent_logs": [], "warnings": []
+                }).execute()
+            except Exception:
+                supabase.table("navigator_sessions").insert(insert_data).execute()
         else:
             supabase.table("navigator_sessions").update({
                 "status": "running",
@@ -844,15 +850,22 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                     "calculated_metrics": result.calculated_metrics,
                     "physics_verified": result.physics_verified,
                     "virtual_trial": result.virtual_trial,
-                    "agent_logs": agent_logs,
                     "lineage_data": result.data_lineage,
                     "predicted_orr": result.virtual_trial.get("predicted_orr", 0) if isinstance(result.virtual_trial, dict) else getattr(result.virtual_trial, "predicted_orr", 0),
-                    "warnings": result.warnings,
                     "current_step": 5,
                     "completed_at": datetime.utcnow().isoformat()
                 }
 
-                supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
+                # agent_logs/warnings 컬럼 존재 시 포함
+                try:
+                    supabase.table("navigator_sessions").update({
+                        **update_data,
+                        "agent_logs": agent_logs,
+                        "warnings": result.warnings
+                    }).eq("id", session_id).execute()
+                except Exception:
+                    logger.warning("[navigator-bg] agent_logs/warnings columns missing, saving without them")
+                    supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
 
             except Exception as e:
                 logger.exception(f"[navigator-bg] Error: {e}")

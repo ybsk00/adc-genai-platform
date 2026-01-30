@@ -181,11 +181,20 @@ class NavigatorOrchestratorV2:
 
             # [SELECTION GATE] 사용자 선택 대기
             if not selected_antibody_id and len(antibody_candidates) > 0:
-                self.supabase.table("navigator_sessions").update({
-                    "status": "waiting_for_selection",
-                    "antibody_candidates": antibody_candidates,
-                    "current_step": 1
-                }).eq("id", session_id).execute()
+                try:
+                    self.supabase.table("navigator_sessions").update({
+                        "status": "waiting_for_selection",
+                        "antibody_candidates": antibody_candidates,
+                        "current_step": 1
+                    }).eq("id", session_id).execute()
+                except Exception as gate_err:
+                    # CHECK constraint에 waiting_for_selection 미포함 시 fallback
+                    logger.warning(f"[navigator-v2] Selection gate update failed: {gate_err}")
+                    self.supabase.table("navigator_sessions").update({
+                        "status": "running",
+                        "antibody_candidates": antibody_candidates,
+                        "current_step": 1
+                    }).eq("id", session_id).execute()
                 
                 await self._broadcast_step(session_id, 1, "Waiting for user selection...")
                 
