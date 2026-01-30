@@ -12,6 +12,7 @@ AstraForge Enhancement Specification v2.2
 """
 
 import logging
+import json
 import uuid
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ from enum import Enum
 from app.core.supabase import get_supabase_client
 from app.core.websocket_hub import websocket_hub
 from app.services.rag_service import RAGService
+from app.core.gemini import get_gemini_model
 
 logger = logging.getLogger(__name__)
 
@@ -311,9 +313,12 @@ class NavigatorOrchestrator:
                 "primary_target": state.target_protein
             })
 
+            # 모든 고유 타겟 표시
+            unique_targets = list(set(ab.target_protein for ab in antibody_candidates))
+            targets_display = ", ".join(unique_targets[:5])
             await self._broadcast_step(
                 state, 1,
-                f"✅ {len(antibody_candidates)}개 항체 후보 발견 (타겟: {state.target_protein})"
+                f"✅ {len(antibody_candidates)}개 항체 후보 발견 (타겟: {targets_display})"
             )
 
             # ═══════════════════════════════════════════════════════════
@@ -367,7 +372,7 @@ class NavigatorOrchestrator:
             state.combined_smiles = combined_smiles
 
             # 물성 계산
-            metrics = await self._calculate_properties(combined_smiles)
+            metrics = await self._calculate_properties(combined_smiles, golden_combo)
             state.calculated_metrics = metrics
 
             await self._update_db_step(state, 3, {
@@ -478,148 +483,353 @@ class NavigatorOrchestrator:
             raise
 
     # =========================================================================
-    # Step 1: Target & Antibody Match
+    # Step 1: Target & Antibody Match (Real Data)
     # =========================================================================
+
+    async def _find_all_targets_for_disease(self, disease_name: str) -> List[Dict[str, Any]]:
+        """
+        질환에 대한 모든 타겟 단백질을 실제 DB에서 검색
+        golden_set → target_synonyms → antibody_library 순으로 조회
+        """
+        targets = {}  # canonical_name -> {data}
+
+        try:
+            # 1. golden_set에서 해당 질환의 타겟 검색
+            gs_result = self.supabase.table("golden_set").select(
+                "drug_name, target_1, target_2, indication, orr_pct, pfs_months, os_months, "
+                "clinical_status, dar, payload_class, linker_type, mechanism_of_action"
+            ).ilike("indication", f"%{disease_name}%").execute()
+
+            for row in (gs_result.data or []):
+                for target_col in ["target_1", "target_2"]:
+                    t = row.get(target_col)
+                    if t and t.strip():
+                        canonical = t.strip().upper()
+                        if canonical not in targets:
+                            targets[canonical] = {
+                                "canonical_name": canonical,
+                                "display_name": t.strip(),
+                                "source": "golden_set",
+                                "clinical_data": [],
+                                "drug_count": 0,
+                                "best_orr": 0,
+                                "best_phase": ""
+                            }
+                        targets[canonical]["drug_count"] += 1
+                        targets[canonical]["clinical_data"].append({
+                            "drug_name": row.get("drug_name"),
+                            "orr_pct": row.get("orr_pct"),
+                            "pfs_months": row.get("pfs_months"),
+                            "os_months": row.get("os_months"),
+                            "clinical_status": row.get("clinical_status"),
+                            "dar": row.get("dar"),
+                            "payload_class": row.get("payload_class"),
+                            "linker_type": row.get("linker_type"),
+                        })
+                        orr = row.get("orr_pct") or 0
+                        if orr > targets[canonical]["best_orr"]:
+                            targets[canonical]["best_orr"] = orr
+                            targets[canonical]["best_phase"] = row.get("clinical_status", "")
+
+            logger.info(f"[navigator] Found {len(targets)} targets from golden_set for '{disease_name}'")
+
+            # 2. antibody_library에서 추가 타겟 검색
+            ab_result = self.supabase.table("antibody_library").select(
+                "target_normalized, related_disease"
+            ).ilike("related_disease", f"%{disease_name}%").limit(50).execute()
+
+            for row in (ab_result.data or []):
+                t = row.get("target_normalized")
+                if t and t.strip():
+                    canonical = t.strip().upper()
+                    if canonical not in targets:
+                        targets[canonical] = {
+                            "canonical_name": canonical,
+                            "display_name": t.strip(),
+                            "source": "antibody_library",
+                            "clinical_data": [],
+                            "drug_count": 0,
+                            "best_orr": 0,
+                            "best_phase": ""
+                        }
+                    targets[canonical]["drug_count"] += 1
+
+        except Exception as e:
+            logger.error(f"[navigator] Target discovery error: {e}")
+
+        # 타겟이 없으면 Gemini AI로 추천
+        if not targets:
+            targets = await self._gemini_suggest_targets(disease_name)
+
+        # drug_count + best_orr 기준 정렬
+        sorted_targets = sorted(
+            targets.values(),
+            key=lambda x: (x["best_orr"], x["drug_count"]),
+            reverse=True
+        )
+        return sorted_targets
+
+    async def _gemini_suggest_targets(self, disease_name: str) -> Dict[str, Dict]:
+        """Gemini AI로 질환의 타겟 단백질 추천"""
+        targets = {}
+        try:
+            model = get_gemini_model(temperature=0.1)
+            prompt = (
+                f"For the disease '{disease_name}', list the top 3-5 molecular targets "
+                f"used in ADC (Antibody-Drug Conjugate) therapy. "
+                f"Return ONLY a JSON array of objects with fields: "
+                f"target_name, rationale (1 sentence). No markdown."
+            )
+            response = await model.ainvoke(prompt)
+            content = response.content.strip()
+            # Parse JSON from response
+            if content.startswith("["):
+                suggested = json.loads(content)
+            else:
+                # Try to extract JSON array
+                start = content.find("[")
+                end = content.rfind("]") + 1
+                if start >= 0 and end > start:
+                    suggested = json.loads(content[start:end])
+                else:
+                    suggested = []
+
+            for item in suggested:
+                name = item.get("target_name", "").strip().upper()
+                if name:
+                    targets[name] = {
+                        "canonical_name": name,
+                        "display_name": item.get("target_name", name),
+                        "source": "gemini_ai",
+                        "clinical_data": [],
+                        "drug_count": 0,
+                        "best_orr": 0,
+                        "best_phase": "",
+                        "rationale": item.get("rationale", "")
+                    }
+        except Exception as e:
+            logger.error(f"[navigator] Gemini target suggestion error: {e}")
+        return targets
 
     async def _find_antibodies_by_disease(
         self,
         disease_name: str,
-        top_k: int = 3
+        top_k: int = 5
     ) -> List[AntibodyCandidate]:
-        """질환명 기반 최적 항체 검색"""
+        """
+        질환명 기반 최적 항체 검색 (실제 데이터 연결)
+        1. 질환의 모든 타겟 발견
+        2. 타겟별로 antibody_library + golden_set 검색
+        3. 실제 임상 데이터로 clinical_score 계산
+        """
+        all_candidates = []
+
         try:
-            # 1. 질환명 임베딩 생성
-            disease_embedding = await self.rag_service.generate_embedding(
-                f"Disease: {disease_name}, treatment target proteins, therapeutic antibodies"
-            )
+            # 1. 질환에 대한 모든 타겟 발견
+            disease_targets = await self._find_all_targets_for_disease(disease_name)
+            logger.info(f"[navigator] Targets for '{disease_name}': {[t['display_name'] for t in disease_targets]}")
 
-            # 2. antibody_library 벡터 검색
-            results = self.supabase.rpc("match_antibody_by_disease", {
-                "query_embedding": disease_embedding,
-                "match_threshold": 0.5,
-                "match_count": top_k * 2  # 후보 풀
-            }).execute()
+            if not disease_targets:
+                logger.warning(f"[navigator] No targets found for '{disease_name}', using vector search fallback")
+                return await self._vector_search_antibodies(disease_name, top_k)
 
-            antibodies = results.data or []
+            # 2. 타겟별로 항체 검색
+            for target_info in disease_targets[:6]:  # 상위 6개 타겟
+                target_name = target_info["display_name"]
+                canonical = target_info["canonical_name"]
 
-            # 3. 임상 데이터 기반 재순위화
-            scored_antibodies = []
-            for ab in antibodies:
-                clinical_score = self._calculate_clinical_score(ab)
-                scored_antibodies.append({
-                    **ab,
-                    "clinical_score": clinical_score,
-                    "combined_score": ab.get("similarity", 0.5) * 0.4 + clinical_score * 0.6
-                })
+                # antibody_library에서 해당 타겟의 항체 검색
+                try:
+                    ab_result = self.supabase.table("antibody_library").select(
+                        "id, product_name, target_normalized, isotype, related_disease, full_spec, clinical_score"
+                    ).ilike(
+                        "target_normalized", f"%{target_name}%"
+                    ).limit(5).execute()
 
-            # 4. Top K 선정
-            top_antibodies = sorted(
-                scored_antibodies,
-                key=lambda x: x["combined_score"],
-                reverse=True
-            )[:top_k]
+                    for ab in (ab_result.data or []):
+                        # 실제 임상 점수 계산
+                        clinical_score = await self._calculate_clinical_score_real(
+                            target_name=target_name,
+                            clinical_data=target_info.get("clinical_data", [])
+                        )
+                        # similarity = target match quality
+                        target_match = 1.0 if ab.get("target_normalized", "").upper() == canonical else 0.7
+                        combined = target_match * 0.3 + clinical_score * 0.7
 
-            # 5. Fallback: 벡터 검색 결과 없으면 직접 검색
-            if not top_antibodies:
-                logger.info(f"[navigator] Vector search empty, trying direct search for: {disease_name}")
-                top_antibodies = await self._direct_antibody_search(disease_name, top_k)
+                        all_candidates.append(AntibodyCandidate(
+                            antibody_id=str(ab.get("id", "")),
+                            name=ab.get("product_name", "Unknown"),
+                            target_protein=target_name,
+                            isotype=ab.get("isotype"),
+                            related_diseases=ab.get("related_disease"),
+                            full_spec=ab.get("full_spec"),
+                            clinical_score=clinical_score,
+                            match_confidence=round(combined, 4)
+                        ))
+                except Exception as e:
+                    logger.warning(f"[navigator] Antibody search for target '{target_name}' error: {e}")
 
-            return [
-                AntibodyCandidate(
-                    antibody_id=str(ab.get("id", "")),
-                    name=ab.get("name", "Unknown"),
-                    target_protein=ab.get("target_protein", "Unknown"),
-                    isotype=ab.get("isotype"),
-                    related_diseases=ab.get("related_disease"),
-                    full_spec=ab.get("full_spec"),
-                    clinical_score=ab.get("clinical_score", 0.5),
-                    match_confidence=ab.get("combined_score", ab.get("similarity", 0.5))
-                )
-                for ab in top_antibodies
-            ]
+                # golden_set에서도 해당 타겟의 ADC 약물 추가
+                for cd in target_info.get("clinical_data", []):
+                    drug_name = cd.get("drug_name", "")
+                    if drug_name and not any(c.name == drug_name for c in all_candidates):
+                        clinical_score = await self._calculate_clinical_score_real(
+                            target_name=target_name,
+                            clinical_data=[cd]
+                        )
+                        all_candidates.append(AntibodyCandidate(
+                            antibody_id=f"gs-{drug_name}",
+                            name=drug_name,
+                            target_protein=target_name,
+                            isotype=None,
+                            related_diseases=disease_name,
+                            full_spec=None,
+                            clinical_score=clinical_score,
+                            match_confidence=round(clinical_score * 0.9, 4)
+                        ))
+
+            # 3. 중복 제거 후 점수순 정렬
+            seen = set()
+            unique = []
+            for c in all_candidates:
+                key = f"{c.name}:{c.target_protein}"
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(c)
+
+            unique.sort(key=lambda x: x.match_confidence, reverse=True)
+
+            if unique:
+                return unique[:top_k]
+
+            # Fallback: 벡터 검색
+            return await self._vector_search_antibodies(disease_name, top_k)
 
         except Exception as e:
             logger.error(f"[navigator] Antibody search error: {e}")
-            # Fallback - convert dicts to AntibodyCandidate objects
-            fallback_dicts = await self._direct_antibody_search(disease_name, top_k)
-            return [
-                AntibodyCandidate(
+            return await self._vector_search_antibodies(disease_name, top_k)
+
+    async def _vector_search_antibodies(
+        self,
+        disease_name: str,
+        top_k: int
+    ) -> List[AntibodyCandidate]:
+        """벡터 유사도 기반 항체 검색 (fallback)"""
+        try:
+            disease_embedding = await self.rag_service.generate_embedding(
+                f"Disease: {disease_name}, treatment target proteins, therapeutic antibodies"
+            )
+            results = self.supabase.rpc("match_antibody_by_disease", {
+                "query_embedding": disease_embedding,
+                "match_threshold": 0.4,
+                "match_count": top_k * 2
+            }).execute()
+
+            antibodies = results.data or []
+            candidates = []
+            for ab in antibodies:
+                candidates.append(AntibodyCandidate(
                     antibody_id=str(ab.get("id", "")),
-                    name=ab.get("name", "Unknown"),
-                    target_protein=ab.get("target_protein", "Unknown"),
+                    name=ab.get("name", ab.get("product_name", "Unknown")),
+                    target_protein=ab.get("target_protein", ab.get("target_normalized", "Unknown")),
                     isotype=ab.get("isotype"),
                     related_diseases=ab.get("related_disease"),
                     full_spec=ab.get("full_spec"),
                     clinical_score=ab.get("clinical_score", 0.5),
-                    match_confidence=ab.get("combined_score", 0.5)
-                )
-                for ab in fallback_dicts
-            ]
+                    match_confidence=ab.get("similarity", 0.5)
+                ))
+            return candidates[:top_k] if candidates else await self._direct_antibody_search_fallback(disease_name, top_k)
 
-    async def _direct_antibody_search(
+        except Exception as e:
+            logger.error(f"[navigator] Vector search error: {e}")
+            return await self._direct_antibody_search_fallback(disease_name, top_k)
+
+    async def _direct_antibody_search_fallback(
         self,
         disease_name: str,
         top_k: int
-    ) -> List[Dict[str, Any]]:
-        """직접 키워드 검색 (fallback)"""
+    ) -> List[AntibodyCandidate]:
+        """직접 키워드 검색 최종 fallback"""
         try:
+            # antibody_library 검색
             result = self.supabase.table("antibody_library").select(
-                "id, product_name, target_normalized, isotype, related_disease, full_spec"
-            ).ilike(
-                "related_disease", f"%{disease_name}%"
-            ).limit(top_k).execute()
+                "id, product_name, target_normalized, isotype, related_disease"
+            ).ilike("related_disease", f"%{disease_name}%").limit(top_k).execute()
 
             if result.data:
                 return [
-                    {
-                        "id": ab["id"],
-                        "name": ab["product_name"],
-                        "target_protein": ab.get("target_normalized", "Unknown"),
-                        "isotype": ab.get("isotype"),
-                        "related_disease": ab.get("related_disease"),
-                        "full_spec": ab.get("full_spec"),
-                        "clinical_score": 0.5,
-                        "combined_score": 0.5
-                    }
-                    for ab in result.data
+                    AntibodyCandidate(
+                        antibody_id=str(ab["id"]),
+                        name=ab["product_name"],
+                        target_protein=ab.get("target_normalized", "Unknown"),
+                        isotype=ab.get("isotype"),
+                        related_diseases=ab.get("related_disease"),
+                        clinical_score=0.5,
+                        match_confidence=0.5
+                    ) for ab in result.data
                 ]
 
-            # Golden Set에서 검색
+            # golden_set 검색
             gs_result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, indication"
-            ).ilike(
-                "indication", f"%{disease_name}%"
-            ).limit(top_k).execute()
+                "id, drug_name, target_1, indication, orr_pct, pfs_months, os_months, clinical_status"
+            ).ilike("indication", f"%{disease_name}%").limit(top_k).execute()
 
             return [
-                {
-                    "id": gs["id"],
-                    "name": gs["drug_name"],
-                    "target_protein": gs.get("target_1", "Unknown"),
-                    "isotype": None,
-                    "related_disease": gs.get("indication"),
-                    "full_spec": None,
-                    "clinical_score": 0.7,
-                    "combined_score": 0.7
-                }
-                for gs in (gs_result.data or [])
+                AntibodyCandidate(
+                    antibody_id=str(gs["id"]),
+                    name=gs["drug_name"],
+                    target_protein=gs.get("target_1", "Unknown"),
+                    related_diseases=gs.get("indication"),
+                    clinical_score=self.scorer.calculate_score({
+                        "orr_pct": gs.get("orr_pct", 0),
+                        "pfs_months": gs.get("pfs_months", 0),
+                        "os_months": gs.get("os_months", 0),
+                        "clinical_phase": gs.get("clinical_status", "")
+                    }),
+                    match_confidence=0.7
+                ) for gs in (gs_result.data or [])
             ]
-
         except Exception as e:
-            logger.error(f"[navigator] Direct search error: {e}")
+            logger.error(f"[navigator] Direct search fallback error: {e}")
             return []
 
-    def _calculate_clinical_score(self, ab: Dict[str, Any]) -> float:
-        """항체의 임상 점수 계산"""
-        return self.scorer.calculate_score({
-            "orr_pct": ab.get("orr_pct", 0),
-            "pfs_months": 0,
-            "os_months": ab.get("os_months", 0),
-            "clinical_phase": "Phase 2"
-        })
+    async def _calculate_clinical_score_real(
+        self,
+        target_name: str,
+        clinical_data: List[Dict[str, Any]]
+    ) -> float:
+        """실제 임상 데이터 기반 clinical score 계산"""
+        if not clinical_data:
+            # golden_set에서 해당 타겟의 임상 데이터 직접 조회
+            try:
+                result = self.supabase.table("golden_set").select(
+                    "orr_pct, pfs_months, os_months, clinical_status"
+                ).or_(
+                    f"target_1.ilike.%{target_name}%,target_2.ilike.%{target_name}%"
+                ).order("orr_pct", desc=True).limit(5).execute()
+                clinical_data = result.data or []
+            except Exception as e:
+                logger.warning(f"[navigator] Clinical data fetch error: {e}")
+                return 0.5
+
+        if not clinical_data:
+            return 0.3  # 임상 데이터 없음
+
+        # 최고 성능 데이터 기준 점수 계산
+        best_score = 0.0
+        for cd in clinical_data:
+            score = self.scorer.calculate_score({
+                "orr_pct": cd.get("orr_pct", 0) or 0,
+                "pfs_months": cd.get("pfs_months", 0) or 0,
+                "os_months": cd.get("os_months", 0) or 0,
+                "clinical_phase": cd.get("clinical_status", "") or ""
+            })
+            best_score = max(best_score, score)
+
+        return round(best_score, 4)
 
     # =========================================================================
-    # Step 2: Golden Combination
+    # Step 2: Golden Combination (Real Data - golden_set first)
     # =========================================================================
 
     async def _generate_golden_combination(
@@ -627,148 +837,278 @@ class NavigatorOrchestrator:
         target_protein: str,
         antibody_candidates: List[AntibodyCandidate]
     ) -> GoldenCombination:
-        """임상 데이터 기반 최적 링커-페이로드 조합 생성"""
+        """
+        실제 임상 데이터 기반 최적 링커-페이로드 조합 생성
+        우선순위: golden_set(FDA 승인) → commercial_reagents → Gemini AI 추천
+        """
         try:
-            # 1. 타겟에 대한 성공적인 시약 조합 검색
-            # commercial_reagents는 target, target_normalized 컬럼 사용
-            result = self.supabase.table("commercial_reagents").select(
-                "*"
+            best_combo = None
+            source = "none"
+
+            # ── 1순위: golden_set에서 FDA 승인/임상 ADC 조합 검색 ──
+            gs_result = self.supabase.table("golden_set").select(
+                "id, drug_name, target_1, target_2, indication, "
+                "linker_smiles, linker_type, payload_smiles, payload_class, "
+                "dar, orr_pct, pfs_months, os_months, clinical_status, mechanism_of_action"
             ).or_(
-                f"target.ilike.%{target_protein}%,target_normalized.ilike.%{target_protein}%"
-            ).not_.is_("orr_pct", "null").order(
-                "orr_pct", desc=True
-            ).limit(20).execute()
+                f"target_1.ilike.%{target_protein}%,target_2.ilike.%{target_protein}%"
+            ).order("orr_pct", desc=True).limit(10).execute()
 
-            reagent_combos = result.data or []
+            gs_combos = gs_result.data or []
 
-            # 2. 임상 데이터 가중치 스코어링
-            scored_combos = []
-            for combo in reagent_combos:
-                score = self.scorer.calculate_score(combo)
-                scored_combos.append({**combo, "weighted_score": score})
+            if gs_combos:
+                # 임상 점수로 재순위화
+                scored = []
+                for combo in gs_combos:
+                    score = self.scorer.calculate_score({
+                        "orr_pct": combo.get("orr_pct", 0) or 0,
+                        "pfs_months": combo.get("pfs_months", 0) or 0,
+                        "os_months": combo.get("os_months", 0) or 0,
+                        "clinical_phase": combo.get("clinical_status", "") or ""
+                    })
+                    scored.append({**combo, "weighted_score": score})
 
-            # 3. 상위 조합 선정
-            if scored_combos:
-                best_combo = max(scored_combos, key=lambda x: x["weighted_score"])
-            else:
-                # Fallback: Golden Set에서 가져오기
-                best_combo = await self._fallback_golden_set_combo(target_protein)
+                best_combo = max(scored, key=lambda x: x["weighted_score"])
+                source = "golden_set"
+                logger.info(f"[navigator] Golden combo from golden_set: {best_combo.get('drug_name')} (score={best_combo['weighted_score']:.3f})")
 
-            # 4. Golden Combination 구성
-            linker_smiles = best_combo.get("linker_smiles", "")
-            payload_smiles = best_combo.get("payload_smiles", "")
+            # ── 2순위: commercial_reagents에서 시약 검색 ──
+            if not best_combo or not best_combo.get("linker_smiles"):
+                try:
+                    cr_result = self.supabase.table("commercial_reagents").select(
+                        "id, product_name, target_normalized, smiles_code, "
+                        "payload_smiles, linker_smiles, linker_type, payload_class"
+                    ).or_(
+                        f"target_normalized.ilike.%{target_protein}%"
+                    ).not_.is_("smiles_code", "null").limit(10).execute()
 
-            # 기본 SMILES (없는 경우)
-            if not linker_smiles:
-                linker_smiles = "CC(=O)NCCCCC(=O)O"  # MC linker 예시
-            if not payload_smiles:
-                payload_smiles = "CC(C)CC(NC(=O)C)C(=O)NC"  # DM1-like 예시
+                    cr_data = cr_result.data or []
+                    if cr_data and not best_combo:
+                        # commercial_reagents에서 조합 구성
+                        best_cr = cr_data[0]
+                        best_combo = {
+                            "id": best_cr.get("id", ""),
+                            "drug_name": best_cr.get("product_name", "Commercial Design"),
+                            "linker_smiles": best_cr.get("linker_smiles", best_cr.get("smiles_code", "")),
+                            "linker_type": best_cr.get("linker_type", "cleavable"),
+                            "payload_smiles": best_cr.get("payload_smiles", ""),
+                            "payload_class": best_cr.get("payload_class", "Unknown"),
+                            "dar": 4,
+                            "orr_pct": None,
+                            "pfs_months": None,
+                            "os_months": None,
+                            "weighted_score": 0.4
+                        }
+                        source = "commercial_reagents"
+                    elif cr_data and best_combo:
+                        # golden_set 조합에 누락된 SMILES를 commercial_reagents로 보충
+                        if not best_combo.get("linker_smiles"):
+                            for cr in cr_data:
+                                if cr.get("linker_smiles"):
+                                    best_combo["linker_smiles"] = cr["linker_smiles"]
+                                    break
+                        if not best_combo.get("payload_smiles"):
+                            for cr in cr_data:
+                                if cr.get("payload_smiles"):
+                                    best_combo["payload_smiles"] = cr["payload_smiles"]
+                                    break
+                except Exception as e:
+                    logger.warning(f"[navigator] Commercial reagent search error: {e}")
+
+            # ── 3순위: golden_set 전체에서 최고 성능 조합 ──
+            if not best_combo:
+                any_gs = self.supabase.table("golden_set").select(
+                    "id, drug_name, target_1, linker_smiles, linker_type, "
+                    "payload_smiles, payload_class, dar, orr_pct, pfs_months, os_months, "
+                    "clinical_status, mechanism_of_action"
+                ).not_.is_("linker_smiles", "null").order(
+                    "orr_pct", desc=True
+                ).limit(1).execute()
+
+                if any_gs.data:
+                    best_combo = any_gs.data[0]
+                    best_combo["weighted_score"] = self.scorer.calculate_score({
+                        "orr_pct": best_combo.get("orr_pct", 0) or 0,
+                        "pfs_months": best_combo.get("pfs_months", 0) or 0,
+                        "os_months": best_combo.get("os_months", 0) or 0,
+                        "clinical_phase": best_combo.get("clinical_status", "") or ""
+                    })
+                    source = "golden_set_global"
+                    logger.info(f"[navigator] Using global best from golden_set: {best_combo.get('drug_name')}")
+
+            # ── 4순위: Gemini AI 추천 ──
+            if not best_combo:
+                best_combo = await self._gemini_suggest_combination(target_protein)
+                source = "gemini_ai"
+
+            # Golden Combination 구성
+            linker_smiles = best_combo.get("linker_smiles", "") or ""
+            payload_smiles = best_combo.get("payload_smiles", "") or ""
 
             return GoldenCombination(
                 antibody=antibody_candidates[0],
                 linker=LinkerSpec(
                     id=str(best_combo.get("linker_id", best_combo.get("id", ""))),
                     smiles=linker_smiles,
-                    type=best_combo.get("linker_type", "cleavable"),
-                    cleavable=best_combo.get("is_cleavable", True)
+                    type=best_combo.get("linker_type", "cleavable") or "cleavable",
+                    cleavable=best_combo.get("linker_type", "cleavable") != "non-cleavable"
                 ),
                 payload=PayloadSpec(
                     id=str(best_combo.get("payload_id", best_combo.get("id", ""))),
                     smiles=payload_smiles,
-                    class_name=best_combo.get("payload_class", "Maytansinoid"),
-                    mechanism=best_combo.get("mechanism_of_action", "Microtubule inhibitor")
+                    class_name=best_combo.get("payload_class", "Unknown") or "Unknown",
+                    mechanism=best_combo.get("mechanism_of_action", "") or ""
                 ),
-                dar=best_combo.get("dar", 4),
+                dar=best_combo.get("dar", 4) or 4,
                 historical_performance={
                     "orr_pct": best_combo.get("orr_pct"),
                     "pfs_months": best_combo.get("pfs_months"),
                     "os_months": best_combo.get("os_months"),
-                    "source_drug": best_combo.get("drug_name")
+                    "source_drug": best_combo.get("drug_name", ""),
+                    "clinical_status": best_combo.get("clinical_status", ""),
+                    "data_source": source
                 },
                 confidence_score=best_combo.get("weighted_score", 0.5)
             )
 
         except Exception as e:
             logger.error(f"[navigator] Golden combination error: {e}")
-            # Fallback
             return await self._fallback_golden_combination(antibody_candidates)
 
-    async def _fallback_golden_set_combo(self, target_protein: str) -> Dict[str, Any]:
-        """Golden Set에서 조합 가져오기"""
-        result = self.supabase.table("golden_set").select(
-            "id, drug_name, target_1, linker_smiles, linker_type, "
-            "payload_smiles, payload_class, dar, orr_pct, os_months, mechanism_of_action"
-        ).or_(
-            f"target_1.ilike.%{target_protein}%,target_2.ilike.%{target_protein}%"
-        ).order("orr_pct", desc=True).limit(1).execute()
+    async def _gemini_suggest_combination(self, target_protein: str) -> Dict[str, Any]:
+        """Gemini AI로 최적 ADC 조합 추천"""
+        try:
+            model = get_gemini_model(temperature=0.1)
+            prompt = (
+                f"You are an ADC (Antibody-Drug Conjugate) design expert.\n"
+                f"For target protein '{target_protein}', suggest the optimal ADC combination.\n"
+                f"Return ONLY a JSON object with these fields:\n"
+                f"- drug_name: suggested ADC name\n"
+                f"- linker_type: 'cleavable' or 'non-cleavable'\n"
+                f"- payload_class: e.g. 'MMAE', 'DXd', 'DM1', 'SN-38'\n"
+                f"- mechanism_of_action: mechanism description\n"
+                f"- dar: Drug-to-Antibody Ratio (integer 2-8)\n"
+                f"- rationale: 1-2 sentences explaining the choice\n"
+                f"No markdown, just JSON."
+            )
+            response = await model.ainvoke(prompt)
+            content = response.content.strip()
 
-        if result.data:
-            return result.data[0]
+            # Parse JSON
+            if content.startswith("{"):
+                data = json.loads(content)
+            else:
+                start = content.find("{")
+                end = content.rfind("}") + 1
+                data = json.loads(content[start:end]) if start >= 0 else {}
 
-        # 기본값
-        return {
-            "id": "",
-            "drug_name": "Default Design",
-            "linker_smiles": "CC(=O)NCCCCC(=O)O",
-            "linker_type": "cleavable",
-            "payload_smiles": "CC(C)CC(NC(=O)C)C(=O)NC",
-            "payload_class": "Maytansinoid",
-            "dar": 4,
-            "orr_pct": 40,
-            "os_months": 12
-        }
+            return {
+                "id": "gemini-suggested",
+                "drug_name": data.get("drug_name", f"AI-Designed {target_protein}-ADC"),
+                "linker_type": data.get("linker_type", "cleavable"),
+                "payload_class": data.get("payload_class", "MMAE"),
+                "mechanism_of_action": data.get("mechanism_of_action", ""),
+                "dar": data.get("dar", 4),
+                "orr_pct": None,
+                "pfs_months": None,
+                "os_months": None,
+                "weighted_score": 0.3,
+                "linker_smiles": "",
+                "payload_smiles": ""
+            }
+        except Exception as e:
+            logger.error(f"[navigator] Gemini combination suggestion error: {e}")
+            return {
+                "id": "fallback",
+                "drug_name": f"Designed for {target_protein}",
+                "linker_type": "cleavable",
+                "payload_class": "MMAE",
+                "dar": 4,
+                "weighted_score": 0.2,
+                "linker_smiles": "",
+                "payload_smiles": ""
+            }
 
     async def _fallback_golden_combination(
         self,
         antibody_candidates: List[AntibodyCandidate]
     ) -> GoldenCombination:
-        """기본 Golden Combination"""
+        """최종 fallback: golden_set에서 가장 높은 점수 조합"""
+        try:
+            result = self.supabase.table("golden_set").select(
+                "id, drug_name, target_1, linker_smiles, linker_type, "
+                "payload_smiles, payload_class, dar, orr_pct, pfs_months, os_months, "
+                "clinical_status, mechanism_of_action"
+            ).not_.is_("orr_pct", "null").order(
+                "orr_pct", desc=True
+            ).limit(1).execute()
+
+            if result.data:
+                best = result.data[0]
+                score = self.scorer.calculate_score({
+                    "orr_pct": best.get("orr_pct", 0) or 0,
+                    "pfs_months": best.get("pfs_months", 0) or 0,
+                    "os_months": best.get("os_months", 0) or 0,
+                    "clinical_phase": best.get("clinical_status", "") or ""
+                })
+                return GoldenCombination(
+                    antibody=antibody_candidates[0] if antibody_candidates else AntibodyCandidate(
+                        antibody_id="default", name="Unknown", target_protein="Unknown"
+                    ),
+                    linker=LinkerSpec(
+                        id=str(best.get("id", "")),
+                        smiles=best.get("linker_smiles", "") or "",
+                        type=best.get("linker_type", "cleavable") or "cleavable"
+                    ),
+                    payload=PayloadSpec(
+                        id=str(best.get("id", "")),
+                        smiles=best.get("payload_smiles", "") or "",
+                        class_name=best.get("payload_class", "Unknown") or "Unknown",
+                        mechanism=best.get("mechanism_of_action", "") or ""
+                    ),
+                    dar=best.get("dar", 4) or 4,
+                    historical_performance={
+                        "orr_pct": best.get("orr_pct"),
+                        "pfs_months": best.get("pfs_months"),
+                        "os_months": best.get("os_months"),
+                        "source_drug": best.get("drug_name", ""),
+                        "data_source": "golden_set_fallback"
+                    },
+                    confidence_score=score
+                )
+        except Exception as e:
+            logger.error(f"[navigator] Fallback golden combination DB error: {e}")
+
+        # Absolute last resort - no hardcoded mock values
         return GoldenCombination(
             antibody=antibody_candidates[0] if antibody_candidates else AntibodyCandidate(
-                antibody_id="default",
-                name="Default Antibody",
-                target_protein="HER2"
+                antibody_id="default", name="Unknown", target_protein="Unknown"
             ),
-            linker=LinkerSpec(
-                id="default-linker",
-                smiles="CC(=O)NCCCCC(=O)O",
-                type="cleavable",
-                cleavable=True
-            ),
-            payload=PayloadSpec(
-                id="default-payload",
-                smiles="CC(C)CC(NC(=O)C)C(=O)NC",
-                class_name="Maytansinoid",
-                mechanism="Microtubule inhibitor"
-            ),
+            linker=LinkerSpec(id="none", smiles="", type="unknown"),
+            payload=PayloadSpec(id="none", smiles="", class_name="Unknown"),
             dar=4,
-            historical_performance={
-                "orr_pct": 40,
-                "pfs_months": 6,
-                "os_months": 12,
-                "source_drug": "Reference Design"
-            },
-            confidence_score=0.5
+            historical_performance={"data_source": "no_data_available"},
+            confidence_score=0.1
         )
 
     # =========================================================================
-    # Step 3: Property Calculation
+    # Step 3: Property Calculation (Real Data)
     # =========================================================================
 
     def _combine_adc_structure(self, golden_combo: GoldenCombination) -> str:
         """ADC 구조를 SMILES로 조합"""
-        # 간단한 조합: linker + payload
-        linker_smiles = golden_combo.linker.smiles
-        payload_smiles = golden_combo.payload.smiles
+        linker_smiles = golden_combo.linker.smiles or ""
+        payload_smiles = golden_combo.payload.smiles or ""
 
-        # 실제로는 결합점을 고려한 조합이 필요
-        # 여기서는 단순 연결로 처리
-        combined = f"{linker_smiles}.{payload_smiles}"
+        parts = [s for s in [linker_smiles, payload_smiles] if s]
+        return ".".join(parts) if parts else ""
 
-        return combined
-
-    async def _calculate_properties(self, smiles: str) -> Dict[str, Any]:
-        """분자 물성 계산"""
+    async def _calculate_properties(
+        self,
+        smiles: str,
+        golden_combo: Optional[GoldenCombination] = None
+    ) -> Dict[str, Any]:
+        """분자 물성 계산 + PK 추정 (실제 데이터 기반)"""
         properties = {
             "molecular_weight": 0,
             "logp": 0,
@@ -776,39 +1116,111 @@ class NavigatorOrchestrator:
             "hba": 0,
             "tpsa": 0,
             "rotatable_bonds": 0,
-            "pk_parameters": {}
+            "pk_parameters": {},
+            "smiles_valid": False
         }
 
+        # RDKit 물성 계산
         try:
             from rdkit import Chem
             from rdkit.Chem import Descriptors, Crippen
 
-            # SMILES 파싱 (조합 구조에서 첫 번째 성분)
-            mol = Chem.MolFromSmiles(smiles.split(".")[0])
-            if mol:
-                properties["molecular_weight"] = Descriptors.MolWt(mol)
-                properties["logp"] = Crippen.MolLogP(mol)
-                properties["hbd"] = Descriptors.NumHDonors(mol)
-                properties["hba"] = Descriptors.NumHAcceptors(mol)
-                properties["tpsa"] = Descriptors.TPSA(mol)
-                properties["rotatable_bonds"] = Descriptors.NumRotatableBonds(mol)
+            # 각 SMILES 성분 개별 계산
+            total_mw = 0
+            total_logp = 0
+            valid_count = 0
 
-            # PK 파라미터 (예측 기반)
-            properties["pk_parameters"] = {
-                "half_life_hours": 100 + (properties["molecular_weight"] / 10),
-                "clearance_ml_h_kg": 0.05,
-                "volume_of_distribution_l_kg": 0.05
-            }
+            for smi in smiles.split("."):
+                smi = smi.strip()
+                if not smi:
+                    continue
+                mol = Chem.MolFromSmiles(smi)
+                if mol:
+                    valid_count += 1
+                    mw = Descriptors.MolWt(mol)
+                    total_mw += mw
+                    total_logp += Crippen.MolLogP(mol)
+                    properties["hbd"] += Descriptors.NumHDonors(mol)
+                    properties["hba"] += Descriptors.NumHAcceptors(mol)
+                    properties["tpsa"] += Descriptors.TPSA(mol)
+                    properties["rotatable_bonds"] += Descriptors.NumRotatableBonds(mol)
+
+            if valid_count > 0:
+                properties["molecular_weight"] = round(total_mw, 2)
+                properties["logp"] = round(total_logp, 2)
+                properties["smiles_valid"] = True
 
         except ImportError:
             logger.warning("[navigator] RDKit not available")
         except Exception as e:
             logger.error(f"[navigator] Property calculation error: {e}")
 
+        # PK 파라미터 추정 (payload class + DAR 기반)
+        properties["pk_parameters"] = await self._estimate_pk_parameters(golden_combo)
+
         return properties
 
+    async def _estimate_pk_parameters(
+        self,
+        golden_combo: Optional[GoldenCombination] = None
+    ) -> Dict[str, Any]:
+        """
+        PK 파라미터 추정
+        golden_set의 유사 ADC 레퍼런스 기반 + payload class/DAR 보정
+        """
+        # 기본 ADC PK 범위 (문헌 기반)
+        # 일반적인 ADC: half-life 3-6일, CL 5-20 mL/day/kg, Vd 50-100 mL/kg
+        pk = {
+            "half_life_hours": 96,       # 4일
+            "clearance_ml_h_kg": 0.35,   # ~8.4 mL/day/kg
+            "volume_of_distribution_l_kg": 0.07,  # 70 mL/kg
+            "estimation_source": "default"
+        }
+
+        if not golden_combo:
+            return pk
+
+        payload_class = (golden_combo.payload.class_name or "").upper()
+        dar = golden_combo.dar or 4
+
+        # Payload class별 PK 보정 (문헌 기반)
+        pk_by_payload = {
+            "MMAE": {"half_life_hours": 96, "clearance_ml_h_kg": 0.30, "vd": 0.06},
+            "MMAF": {"half_life_hours": 120, "clearance_ml_h_kg": 0.25, "vd": 0.05},
+            "DXD": {"half_life_hours": 144, "clearance_ml_h_kg": 0.20, "vd": 0.07},
+            "DM1": {"half_life_hours": 84, "clearance_ml_h_kg": 0.40, "vd": 0.08},
+            "DM4": {"half_life_hours": 96, "clearance_ml_h_kg": 0.35, "vd": 0.07},
+            "SN-38": {"half_life_hours": 144, "clearance_ml_h_kg": 0.22, "vd": 0.06},
+            "MAYTANSINOID": {"half_life_hours": 90, "clearance_ml_h_kg": 0.38, "vd": 0.07},
+            "AURISTATIN": {"half_life_hours": 100, "clearance_ml_h_kg": 0.32, "vd": 0.06},
+            "CAMPTOTHECIN": {"half_life_hours": 140, "clearance_ml_h_kg": 0.22, "vd": 0.06},
+            "PBD": {"half_life_hours": 72, "clearance_ml_h_kg": 0.50, "vd": 0.09},
+        }
+
+        for key, values in pk_by_payload.items():
+            if key in payload_class:
+                pk["half_life_hours"] = values["half_life_hours"]
+                pk["clearance_ml_h_kg"] = values["clearance_ml_h_kg"]
+                pk["volume_of_distribution_l_kg"] = values["vd"]
+                pk["estimation_source"] = f"payload_class:{key}"
+                break
+
+        # DAR 보정: 높은 DAR → 더 빠른 클리어런스
+        if dar > 4:
+            pk["clearance_ml_h_kg"] *= (1 + (dar - 4) * 0.1)
+            pk["half_life_hours"] *= (1 - (dar - 4) * 0.05)
+        elif dar < 4:
+            pk["clearance_ml_h_kg"] *= (1 - (4 - dar) * 0.05)
+            pk["half_life_hours"] *= (1 + (4 - dar) * 0.03)
+
+        pk["half_life_hours"] = round(pk["half_life_hours"], 1)
+        pk["clearance_ml_h_kg"] = round(pk["clearance_ml_h_kg"], 4)
+        pk["volume_of_distribution_l_kg"] = round(pk["volume_of_distribution_l_kg"], 4)
+
+        return pk
+
     # =========================================================================
-    # Step 5: Virtual Trial
+    # Step 5: Virtual Trial (Real Data + Gemini AI)
     # =========================================================================
 
     async def _run_virtual_trial(
@@ -817,39 +1229,128 @@ class NavigatorOrchestrator:
         pk_params: Dict[str, Any],
         disease_name: str
     ) -> VirtualTrialResult:
-        """가상 임상 시뮬레이션"""
-        # 역사적 성능 데이터 기반 예측
+        """
+        가상 임상 시뮬레이션 (실제 데이터 기반)
+        1. golden_set에서 동일/유사 타겟의 실제 임상 데이터 조회
+        2. 레퍼런스 약물 대비 예측값 계산
+        3. Gemini AI로 정교한 예측
+        """
         historical = golden_combo.historical_performance or {}
-        base_orr = historical.get("orr_pct", 40) or 40
-        base_pfs = historical.get("pfs_months", 6) or 6
-        base_os = historical.get("os_months", 12) or 12
-
-        # 간단한 예측 모델 (실제로는 더 복잡한 모델 사용)
+        target = golden_combo.antibody.target_protein
         confidence_factor = golden_combo.confidence_score
-        predicted_orr = base_orr * (0.8 + 0.4 * confidence_factor)
-        predicted_pfs = base_pfs * (0.9 + 0.2 * confidence_factor)
-        predicted_os = base_os * (0.9 + 0.2 * confidence_factor)
 
-        # PK 데이터 시뮬레이션
-        half_life = pk_params.get("half_life_hours", 100)
+        # ── 1. golden_set에서 해당 타겟+질환의 실제 임상 레퍼런스 수집 ──
+        reference_data = []
+        try:
+            ref_result = self.supabase.table("golden_set").select(
+                "drug_name, target_1, indication, orr_pct, pfs_months, os_months, "
+                "clinical_status, dar, payload_class, linker_type"
+            ).or_(
+                f"target_1.ilike.%{target}%,target_2.ilike.%{target}%"
+            ).not_.is_("orr_pct", "null").order("orr_pct", desc=True).limit(10).execute()
+            reference_data = ref_result.data or []
+        except Exception as e:
+            logger.warning(f"[navigator] Reference data fetch error: {e}")
+
+        # ── 2. 실제 레퍼런스 기반 예측 ──
+        if reference_data:
+            # 실제 임상 데이터의 통계
+            orr_values = [r["orr_pct"] for r in reference_data if r.get("orr_pct")]
+            pfs_values = [r["pfs_months"] for r in reference_data if r.get("pfs_months")]
+            os_values = [r["os_months"] for r in reference_data if r.get("os_months")]
+
+            # 가중 평균 (최고 성능에 가중치)
+            if orr_values:
+                base_orr = orr_values[0]  # 최고 ORR (이미 정렬됨)
+                avg_orr = sum(orr_values) / len(orr_values)
+                # 예측: 최고값과 평균의 가중 평균
+                predicted_orr = base_orr * 0.6 + avg_orr * 0.4
+            else:
+                predicted_orr = historical.get("orr_pct") or 30
+
+            if pfs_values:
+                base_pfs = max(pfs_values)
+                avg_pfs = sum(pfs_values) / len(pfs_values)
+                predicted_pfs = base_pfs * 0.5 + avg_pfs * 0.5
+            else:
+                predicted_pfs = historical.get("pfs_months") or 5
+
+            if os_values:
+                base_os = max(os_values)
+                avg_os = sum(os_values) / len(os_values)
+                predicted_os = base_os * 0.5 + avg_os * 0.5
+            else:
+                predicted_os = historical.get("os_months") or 10
+
+            # 신뢰도 보정
+            predicted_orr = predicted_orr * (0.85 + 0.15 * confidence_factor)
+            predicted_pfs = predicted_pfs * (0.9 + 0.1 * confidence_factor)
+            predicted_os = predicted_os * (0.9 + 0.1 * confidence_factor)
+
+            confidence = min(0.95, 0.5 + len(reference_data) * 0.05)
+            data_source = "golden_set_reference"
+
+            logger.info(
+                f"[navigator] Virtual trial from {len(reference_data)} references: "
+                f"ORR={predicted_orr:.1f}%, PFS={predicted_pfs:.1f}mo, OS={predicted_os:.1f}mo"
+            )
+        else:
+            # 레퍼런스 없음 - Gemini AI 예측
+            ai_prediction = await self._gemini_predict_trial(
+                target=target,
+                disease_name=disease_name,
+                payload_class=golden_combo.payload.class_name,
+                linker_type=golden_combo.linker.type,
+                dar=golden_combo.dar
+            )
+            predicted_orr = ai_prediction.get("orr", 25)
+            predicted_pfs = ai_prediction.get("pfs", 4)
+            predicted_os = ai_prediction.get("os", 9)
+            confidence = 0.3  # AI 예측은 낮은 신뢰도
+            data_source = "gemini_ai_prediction"
+
+        # ── 3. PK 데이터 시뮬레이션 (실제 PK 파라미터 기반) ──
+        half_life = pk_params.get("half_life_hours", 96)
+        clearance = pk_params.get("clearance_ml_h_kg", 0.35)
+        vd = pk_params.get("volume_of_distribution_l_kg", 0.07)
+
+        # 2-구획 모델 근사 (α, β phase)
+        alpha_half = half_life * 0.1   # 분포상 반감기 (~10%)
+        beta_half = half_life           # 소실상 반감기
         pk_data = []
-        for t in range(0, 169, 24):  # 0-168시간 (1주일)
-            conc = 100 * (0.5 ** (t / half_life))
-            free_payload = conc * 0.1  # 10% free payload
+        for t in range(0, 505, 24):  # 0-504시간 (3주, 일반 ADC 투여 간격)
+            # 2-구획 모델: C(t) = A*exp(-αt) + B*exp(-βt)
+            alpha_comp = 70 * (0.5 ** (t / max(alpha_half, 1)))
+            beta_comp = 30 * (0.5 ** (t / max(beta_half, 1)))
+            conc = alpha_comp + beta_comp
+
+            # Free payload release (DAR-dependent)
+            dar = golden_combo.dar or 4
+            release_rate = 0.02 + (dar - 2) * 0.005  # DAR 높을수록 더 많은 release
+            free_payload = conc * release_rate * (1 + t / 500)  # 시간에 따라 증가
+            free_payload = min(free_payload, conc * 0.15)  # 최대 15%
+
             pk_data.append({
                 "time_hours": t,
                 "concentration": round(conc, 2),
-                "free_payload": round(free_payload, 2)
+                "free_payload": round(free_payload, 3)
             })
 
-        # 종양 데이터 시뮬레이션
+        # ── 4. 종양 성장 억제 시뮬레이션 ──
         tumor_data = []
-        initial_volume = 1000
-        tgi = predicted_orr  # TGI는 ORR과 유사하게 설정
-        for day in range(0, 29, 7):  # 0-28일
-            control = initial_volume * (1.5 ** (day / 7))
-            treated = initial_volume * (1 - tgi / 100 * day / 28)
-            treated = max(treated, initial_volume * 0.1)  # 최소 10%
+        initial_volume = 100  # mm³ (일반적 종양 이식 크기)
+        doubling_time = 5     # 일 (종양 배가 시간)
+        tgi = min(predicted_orr * 1.1, 95)  # TGI ≈ ORR * 1.1 (상한 95%)
+
+        for day in range(0, 43, 3):  # 0-42일 (6주)
+            # 대조군: 지수 성장
+            control = initial_volume * (2 ** (day / doubling_time))
+
+            # 치료군: TGI 적용 (시그모이드 반응)
+            effect = tgi / 100 * (1 - 0.5 ** (day / 7))  # 7일 후 50% 효과
+            treated = initial_volume * (2 ** (day / doubling_time)) * (1 - effect)
+            treated = max(treated, initial_volume * 0.05)  # 최소 5% 잔존
+
             tumor_data.append({
                 "day": day,
                 "control": round(control, 1),
@@ -862,9 +1363,50 @@ class NavigatorOrchestrator:
             predicted_os_months=round(predicted_os, 1),
             pk_data=pk_data,
             tumor_data=tumor_data,
-            patient_population=disease_name,
-            confidence=golden_combo.confidence_score
+            patient_population=f"{disease_name} ({data_source}, {len(reference_data)} refs)",
+            confidence=round(confidence, 2)
         )
+
+    async def _gemini_predict_trial(
+        self,
+        target: str,
+        disease_name: str,
+        payload_class: str,
+        linker_type: str,
+        dar: int
+    ) -> Dict[str, float]:
+        """Gemini AI로 가상 임상 결과 예측"""
+        try:
+            model = get_gemini_model(temperature=0.1)
+            prompt = (
+                f"You are a clinical oncology expert. Predict clinical trial outcomes for:\n"
+                f"- Disease: {disease_name}\n"
+                f"- Target: {target}\n"
+                f"- Payload class: {payload_class}\n"
+                f"- Linker type: {linker_type}\n"
+                f"- DAR: {dar}\n\n"
+                f"Based on published ADC clinical data, predict:\n"
+                f"Return ONLY a JSON object with: orr (%), pfs (months), os (months), rationale (1 sentence).\n"
+                f"Be realistic based on existing ADC trial data. No markdown."
+            )
+            response = await model.ainvoke(prompt)
+            content = response.content.strip()
+
+            if content.startswith("{"):
+                data = json.loads(content)
+            else:
+                start = content.find("{")
+                end = content.rfind("}") + 1
+                data = json.loads(content[start:end]) if start >= 0 else {}
+
+            return {
+                "orr": float(data.get("orr", 25)),
+                "pfs": float(data.get("pfs", 4)),
+                "os": float(data.get("os", 9))
+            }
+        except Exception as e:
+            logger.error(f"[navigator] Gemini trial prediction error: {e}")
+            return {"orr": 25, "pfs": 4, "os": 9}
 
     # =========================================================================
     # Database Operations
@@ -967,23 +1509,30 @@ class NavigatorOrchestrator:
     # =========================================================================
 
     async def _collect_lineage(self, state: NavigatorState) -> Dict[str, Any]:
-        """Digital Lineage 수집"""
-        return {
+        """Digital Lineage 수집 (데이터 출처 추적 포함)"""
+        combo = state.golden_combination
+        lineage = {
             "pipeline": "one_click_adc_navigator",
-            "version": "1.0.0",
+            "version": "2.0.0",
             "execution_timestamp": state.started_at.isoformat(),
             "disease_input": state.disease_name,
             "steps_completed": state.step.value,
-            "agents_invoked": [
-                "librarian",
-                "alchemist",
-                "coder",
-                "auditor"
-            ],
+            "agents_invoked": ["librarian", "alchemist", "coder", "auditor"],
             "antibody_count": len(state.antibody_candidates),
             "physics_verified": state.physics_verified,
-            "confidence_score": state.golden_combination.confidence_score if state.golden_combination else 0
+            "confidence_score": combo.confidence_score if combo else 0,
+            "targets_found": list(set(ab.target_protein for ab in state.antibody_candidates)),
+            "data_sources": {
+                "golden_set": True,
+                "antibody_library": True,
+                "commercial_reagents": True,
+                "gemini_ai": True
+            }
         }
+        if combo and combo.historical_performance:
+            lineage["combination_source"] = combo.historical_performance.get("data_source", "unknown")
+            lineage["reference_drug"] = combo.historical_performance.get("source_drug", "")
+        return lineage
 
 
 # ============================================================================
