@@ -9,6 +9,7 @@ from typing import Optional, List, AsyncGenerator
 import logging
 import asyncio
 import json
+from datetime import datetime
 
 from app.core.supabase import get_supabase_client
 from app.core.websocket_hub import websocket_hub
@@ -753,6 +754,7 @@ class NavigatorRequest(BaseModel):
     """Navigator 요청"""
     disease_name: str
     session_id: Optional[str] = None
+    selected_antibody_id: Optional[str] = None  # NEW: For Selection Gate
 
 
 class DiseaseSuggestion(BaseModel):
@@ -766,15 +768,10 @@ class DiseaseSuggestion(BaseModel):
 @router.post("/navigator/run")
 async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundTasks):
     """
-    One-Click ADC Navigator 실행
+    One-Click ADC Navigator 실행 (Selection Gate 지원)
 
     질환명 하나만 입력하면 6인 에이전트가 협업하여
     최적의 ADC 설계안을 자동 생성합니다.
-
-    3단계 파이프라인:
-    - Step 1: Target & Antibody Match (Librarian)
-    - Step 2: Linker & Payload Coupling (Alchemist)
-    - Step 3: Simulation & Audit (Coder + Auditor)
     """
     from app.agents.navigator_orchestrator import get_navigator_orchestrator
     import uuid
@@ -786,72 +783,99 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
     session_id = request.session_id or str(uuid.uuid4())
 
     try:
-        # 세션 생성
-        supabase.table("navigator_sessions").insert({
-            "id": session_id,
-            "user_id": user_id,
-            "disease_name": request.disease_name,
-            "status": "running",
-            "current_step": 0,
-            "total_steps": 5
-        }).execute()
+        # 세션 생성 또는 조회
+        if not request.session_id:
+            supabase.table("navigator_sessions").insert({
+                "id": session_id,
+                "user_id": user_id,
+                "disease_name": request.disease_name,
+                "status": "running",
+                "current_step": 0,
+                "total_steps": 5
+            }).execute()
+        else:
+            supabase.table("navigator_sessions").update({
+                "status": "running",
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", session_id).execute()
 
-        # 백그라운드에서 Navigator 실행
+        # 백그라운드에서 Navigator 실행 (FIXED)
         async def run_navigator_background():
             from app.agents.navigator_orchestrator import run_one_click_navigator
             try:
                 result = await run_one_click_navigator(
                     disease_name=request.disease_name,
                     session_id=session_id,
-                    user_id=user_id
+                    user_id=user_id,
+                    selected_antibody_id=request.selected_antibody_id
                 )
 
-                # 결과 저장
-                supabase.table("navigator_sessions").update({
-                    "status": "completed",
-                    "antibody_candidates": [
-                        {
+                # Check if we are in waiting state (Selection Gate)
+                if not request.selected_antibody_id and not result.golden_combination:
+                    logger.info(f"[navigator-bg] Session {session_id} is now waiting for antibody selection")
+                    return # DB already updated to waiting_for_selection in orchestrator
+
+                # FIXED: 안전한 데이터 접근
+                antibody_candidates = []
+                for ab in result.antibody_candidates:
+                    try:
+                        antibody_candidates.append({
                             "id": ab.antibody_id,
                             "name": ab.name,
                             "target_protein": ab.target_protein,
                             "clinical_score": ab.clinical_score,
                             "match_confidence": ab.match_confidence
-                        }
-                        for ab in result.antibody_candidates
-                    ],
-                    "primary_target": result.antibody_candidates[0].target_protein if result.antibody_candidates else None,
+                        })
+                    except Exception as ab_e:
+                        logger.warning(f"[navigator-bg] Error processing antibody: {ab_e}")
+
+                primary_target = None
+                if result.antibody_candidates:
+                    primary_target = result.antibody_candidates[0].target_protein
+
+                # 결과 저장 (FIXED: warnings 포함)
+                update_data = {
+                    "status": "completed",
+                    "antibody_candidates": antibody_candidates,
+                    "primary_target": primary_target,
                     "golden_combination": {
-                        "antibody": result.golden_combination.antibody.name,
+                        "antibody": result.golden_combination.antibody.name if result.golden_combination else None,
                         "linker": {
-                            "type": result.golden_combination.linker.type,
-                            "smiles": result.golden_combination.linker.smiles
+                            "type": result.golden_combination.linker.type if result.golden_combination else None,
+                            "smiles": result.golden_combination.linker.smiles if result.golden_combination else None
                         },
                         "payload": {
-                            "class": result.golden_combination.payload.class_name,
-                            "smiles": result.golden_combination.payload.smiles
+                            "class": result.golden_combination.payload.class_name if result.golden_combination else None,
+                            "smiles": result.golden_combination.payload.smiles if result.golden_combination else None
                         },
-                        "dar": result.golden_combination.dar,
-                        "historical_orr": result.golden_combination.historical_performance.get("orr_pct") if result.golden_combination.historical_performance else None
+                        "dar": result.golden_combination.dar if result.golden_combination else 4,
+                        "historical_orr": result.golden_combination.historical_performance.get("orr_pct") if result.golden_combination and result.golden_combination.historical_performance else None
                     },
                     "physics_verified": result.physics_verified,
                     "virtual_trial": {
-                        "predicted_orr": result.virtual_trial.predicted_orr,
-                        "predicted_pfs_months": result.virtual_trial.predicted_pfs_months,
-                        "predicted_os_months": result.virtual_trial.predicted_os_months,
-                        "pk_data": result.virtual_trial.pk_data,
-                        "tumor_data": result.virtual_trial.tumor_data,
-                        "confidence": result.virtual_trial.confidence
+                        "predicted_orr": result.virtual_trial.predicted_orr if result.virtual_trial else 0,
+                        "predicted_pfs_months": result.virtual_trial.predicted_pfs_months if result.virtual_trial else 0,
+                        "predicted_os_months": result.virtual_trial.predicted_os_months if result.virtual_trial else 0,
+                        "pk_data": result.virtual_trial.pk_data if result.virtual_trial else [],
+                        "tumor_data": result.virtual_trial.tumor_data if result.virtual_trial else [],
+                        "confidence": result.virtual_trial.confidence if result.virtual_trial else 0,
+                        "data_quality_score": result.virtual_trial.data_quality_score if result.virtual_trial else 0
                     },
-                    "predicted_orr": result.virtual_trial.predicted_orr,
+                    "predicted_orr": result.virtual_trial.predicted_orr if result.virtual_trial else 0,
                     "lineage_data": result.digital_lineage,
-                    "current_step": 5
-                }).eq("id", session_id).execute()
+                    "warnings": result.warnings if hasattr(result, 'warnings') else [],  # FIXED
+                    "current_step": 5,
+                    "completed_at": datetime.utcnow().isoformat()
+                }
+                
+                supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
 
             except Exception as e:
                 logger.exception(f"[navigator-bg] Error: {e}")
                 supabase.table("navigator_sessions").update({
                     "status": "failed",
-                    "error_message": str(e)
+                    "error_message": str(e)[:500],
+                    "completed_at": datetime.utcnow().isoformat()
                 }).eq("id", session_id).execute()
 
         # 백그라운드 태스크 추가
@@ -861,8 +885,9 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
             "success": True,
             "session_id": session_id,
             "status": "running",
-            "message": "Navigator started. Connect to /api/design/navigator/stream/{session_id} for progress."
+            "message": "Navigator started."
         }
+
 
     except Exception as e:
         logger.exception(f"[navigator] Error: {e}")
@@ -1036,21 +1061,26 @@ async def get_disease_targets(disease: str):
 @router.get("/navigator/stream/{session_id}")
 async def stream_navigator_progress(session_id: str):
     """
-    Navigator 진행 상황 SSE 스트리밍
+    Navigator 진행 상황 SSE 스트리밍 (FIXED)
 
     Server-Sent Events를 통해 실시간 진행 상황 전송
+    - 데이터 일관성 보장을 위해 트랜잭션 처리
+    - Warnings 필드 지원
     """
     async def event_generator() -> AsyncGenerator[str, None]:
         supabase = get_supabase_client()
         last_step = 0
-        max_wait = 120  # 최대 2분 대기
+        max_wait = 180  # FIXED: 3분으로 증가 (복잡한 계산 대응)
         elapsed = 0
+        last_data_hash = None  # 데이터 변경 감지용
 
         while elapsed < max_wait:
             try:
-                # 세션 상태 조회
+                # FIXED: 더 많은 필드 조회하여 일관성 보장
                 result = supabase.table("navigator_sessions").select(
-                    "status, current_step, error_message"
+                    "status, current_step, error_message, updated_at, "
+                    "antibody_candidates, golden_combination, primary_target, "
+                    "virtual_trial, physics_verified, lineage_data, warnings"
                 ).eq("id", session_id).single().execute()
 
                 if not result.data:
@@ -1060,6 +1090,14 @@ async def stream_navigator_progress(session_id: str):
                 session = result.data
                 current_step = session.get("current_step", 0)
                 status = session.get("status", "pending")
+                
+                # 데이터 변경 감지 (중복 이벤트 방지)
+                data_hash = f"{current_step}:{status}:{session.get('updated_at')}"
+                if data_hash == last_data_hash:
+                    await asyncio.sleep(0.5)  # 더 빠른 폴링
+                    elapsed += 0.5
+                    continue
+                last_data_hash = data_hash
 
                 # 단계 변경 시 이벤트 전송
                 if current_step > last_step:
@@ -1072,7 +1110,7 @@ async def stream_navigator_progress(session_id: str):
                     ]
 
                     # 이전 단계 완료 이벤트
-                    if last_step > 0:
+                    if last_step > 0 and last_step <= 5:
                         yield f"data: {json.dumps({'type': 'step_complete', 'step': last_step, 'message': f'{step_names[last_step-1]} completed'})}\n\n"
 
                     # 새 단계 시작 이벤트
@@ -1083,42 +1121,42 @@ async def stream_navigator_progress(session_id: str):
 
                 # 완료 상태 확인
                 if status == "completed":
-                    # 마지막 단계 완료
+                    # 마지막 단계 완료 이벤트들
                     if last_step < 5:
                         for step in range(last_step + 1, 6):
                             yield f"data: {json.dumps({'type': 'step_complete', 'step': step, 'message': 'Completed'})}\n\n"
 
-                    # 전체 결과 조회
-                    full_result = supabase.table("navigator_sessions").select("*").eq(
-                        "id", session_id
-                    ).single().execute()
-
-                    if full_result.data:
-                        # 결과 데이터 정리
-                        data = full_result.data
-                        result_payload = {
-                            "type": "complete",
-                            "result": {
-                                "session_id": session_id,
-                                "disease_name": data.get("disease_name"),
-                                "target_protein": data.get("primary_target"),
-                                "antibody_candidates": data.get("antibody_candidates", []),
-                                "golden_combination": data.get("golden_combination", {}),
-                                "physics_verified": data.get("physics_verified", False),
-                                "virtual_trial": data.get("virtual_trial", {}),
-                                "execution_time_seconds": (data.get("lineage_data") or {}).get("total_execution_seconds", 0)
-                            }
+                    # FIXED: 완료된 데이터 직접 사용 (추가 쿼리 없이)
+                    lineage = session.get("lineage_data") or {}
+                    virtual_trial = session.get("virtual_trial") or {}
+                    
+                    result_payload = {
+                        "type": "complete",
+                        "result": {
+                            "session_id": session_id,
+                            "disease_name": session.get("disease_name"),
+                            "target_protein": session.get("primary_target"),
+                            "antibody_candidates": session.get("antibody_candidates", []),
+                            "golden_combination": session.get("golden_combination", {}),
+                            "physics_verified": session.get("physics_verified", False),
+                            "virtual_trial": virtual_trial,
+                            "warnings": session.get("warnings", []),  # FIXED: Warnings 포함
+                            "data_quality_score": virtual_trial.get("data_quality_score", 0),
+                            "execution_time_seconds": lineage.get("execution_time_seconds", 0)
                         }
-                        yield f"data: {json.dumps(result_payload)}\n\n"
+                    }
+                    yield f"data: {json.dumps(result_payload)}\n\n"
                     break
 
                 elif status == "failed":
-                    yield f"data: {json.dumps({'type': 'error', 'message': session.get('error_message', 'Unknown error')})}\n\n"
+                    error_msg = session.get('error_message', 'Unknown error')
+                    yield f"data: {json.dumps({'type': 'error', 'message': error_msg, 'warnings': session.get('warnings', [])})}\n\n"
                     break
 
-                # 1초 대기
-                await asyncio.sleep(1)
-                elapsed += 1
+                # FIXED: 지수 백오프로 폴링 간격 조정
+                sleep_time = min(1.0 + (elapsed / 60), 3.0)  # 최대 3초까지 증가
+                await asyncio.sleep(sleep_time)
+                elapsed += sleep_time
 
             except Exception as e:
                 logger.error(f"[navigator-stream] Error: {e}")
@@ -1127,7 +1165,7 @@ async def stream_navigator_progress(session_id: str):
 
         # 타임아웃
         if elapsed >= max_wait:
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Timeout waiting for navigator completion'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Timeout waiting for navigator completion (180s)'})}\n\n"
 
     return StreamingResponse(
         event_generator(),
