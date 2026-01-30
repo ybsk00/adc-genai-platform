@@ -1106,7 +1106,7 @@ async def stream_navigator_progress(session_id: str):
                                 "golden_combination": data.get("golden_combination", {}),
                                 "physics_verified": data.get("physics_verified", False),
                                 "virtual_trial": data.get("virtual_trial", {}),
-                                "execution_time_seconds": 0
+                                "execution_time_seconds": (data.get("lineage_data") or {}).get("total_execution_seconds", 0)
                             }
                         }
                         yield f"data: {json.dumps(result_payload)}\n\n"
