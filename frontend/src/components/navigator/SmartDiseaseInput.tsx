@@ -285,7 +285,7 @@ export function SmartDiseaseInput({
                     <div className="flex flex-col items-end">
                       <span className="text-xs text-slate-500">Avg ORR</span>
                       <span className="text-sm font-semibold text-amber-400">
-                        {suggestion.avg_orr.toFixed(1)}%
+                        {Number(suggestion.avg_orr ?? 0).toFixed(1)}%
                       </span>
                     </div>
                   )}
