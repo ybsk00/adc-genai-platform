@@ -171,7 +171,7 @@ export function NavigatorPage() {
   }, [currentSessionId, diseaseName]);
 
   // Handle Navigator run with WebSocket streaming
-  const handleNavigate = useCallback(async (disease: string) => {
+  const handleNavigate = useCallback(async (disease: string, targetProtein?: string) => {
     resetState();
     setDiseaseName(disease);
     setIsRunning(true);
@@ -182,11 +182,14 @@ export function NavigatorPage() {
     }
 
     try {
-      // Start Navigator via POST
+      // Start Navigator via POST (disease + target)
       const response = await fetch(`${API_BASE_URL}/api/design/navigator/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ disease_name: disease }),
+        body: JSON.stringify({
+          disease_name: disease,
+          target_protein: targetProtein || null,
+        }),
       });
 
       if (!response.ok) {

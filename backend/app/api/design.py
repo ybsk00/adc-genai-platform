@@ -753,8 +753,9 @@ async def get_validation_history(session_id: str):
 class NavigatorRequest(BaseModel):
     """Navigator 요청"""
     disease_name: str
+    target_protein: Optional[str] = None  # 사용자가 선택한 타겟 (HER2, TROP2 등)
     session_id: Optional[str] = None
-    selected_antibody_id: Optional[str] = None  # NEW: For Selection Gate
+    selected_antibody_id: Optional[str] = None
 
 
 class DiseaseSuggestion(BaseModel):
@@ -817,6 +818,7 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                     disease_name=request.disease_name,
                     session_id=session_id,
                     user_id=user_id,
+                    target_protein=request.target_protein,
                     selected_antibody_id=request.selected_antibody_id
                 )
 
@@ -1136,9 +1138,10 @@ async def stream_navigator_progress(session_id: str):
             try:
                 # FIXED: 더 많은 필드 조회하여 일관성 보장
                 result = supabase.table("navigator_sessions").select(
-                    "status, current_step, error_message, updated_at, "
+                    "status, current_step, error_message, updated_at, disease_name, "
                     "antibody_candidates, golden_combination, primary_target, "
-                    "virtual_trial, physics_verified, lineage_data, warnings"
+                    "virtual_trial, physics_verified, lineage_data, warnings, "
+                    "predicted_orr, completed_at"
                 ).eq("id", session_id).single().execute()
 
                 if not result.data:
@@ -1185,22 +1188,24 @@ async def stream_navigator_progress(session_id: str):
                             yield f"data: {json.dumps({'type': 'step_complete', 'step': step, 'message': 'Completed'})}\n\n"
 
                     # FIXED: 완료된 데이터 직접 사용 (추가 쿼리 없이)
-                    lineage = session.get("lineage_data") or {}
                     virtual_trial = session.get("virtual_trial") or {}
-                    
+
+                    # 실행 시간 계산
+                    exec_time = elapsed  # SSE 경과 시간 fallback
+
                     result_payload = {
                         "type": "complete",
                         "result": {
                             "session_id": session_id,
-                            "disease_name": session.get("disease_name"),
+                            "disease_name": session.get("disease_name", ""),
                             "target_protein": session.get("primary_target"),
-                            "antibody_candidates": session.get("antibody_candidates", []),
-                            "golden_combination": session.get("golden_combination", {}),
+                            "antibody_candidates": session.get("antibody_candidates") or [],
+                            "golden_combination": session.get("golden_combination") or {},
                             "physics_verified": session.get("physics_verified", False),
                             "virtual_trial": virtual_trial,
-                            "warnings": session.get("warnings", []),  # FIXED: Warnings 포함
-                            "data_quality_score": virtual_trial.get("data_quality_score", 0),
-                            "execution_time_seconds": lineage.get("execution_time_seconds", 0)
+                            "warnings": session.get("warnings") or [],
+                            "data_quality_score": virtual_trial.get("confidence", 0),
+                            "execution_time_seconds": exec_time
                         }
                     }
                     yield f"data: {json.dumps(result_payload)}\n\n"

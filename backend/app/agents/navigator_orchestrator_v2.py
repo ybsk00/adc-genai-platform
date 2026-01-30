@@ -108,6 +108,7 @@ class NavigatorOrchestratorV2:
         disease_name: str,
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
+        target_protein: Optional[str] = None,
         selected_antibody_id: Optional[str] = None
     ) -> NavigatorResultV2:
         """
@@ -118,26 +119,31 @@ class NavigatorOrchestratorV2:
 
         start_time = datetime.utcnow()
         warnings = []
+
+        # FIXED: 세션별 agent_logs 초기화 (싱글톤 공유 문제 해결)
+        self.agent_logs = []
         
-        # FIXED: DesignSessionState 생성
+        # FIXED: DesignSessionState 생성 (사용자 선택 타겟 반영)
+        effective_target = target_protein or disease_name
         state = create_initial_state(
             session_id=session_id,
             user_id=user_id or "anonymous",
             session_type="navigator",
             tier="premium",
-            target_antigen=disease_name,  # 질환명을 타겟으로 사용
+            target_antigen=effective_target,
             target_indication=disease_name,
             requested_dar=4,
             linker_preference="cleavable",
-            design_goal=f"Design optimal ADC for {disease_name}"
+            design_goal=f"Design optimal ADC targeting {effective_target} for {disease_name}"
         )
         
         # 초기 상태 설정
         state["status"] = "running"
         state["step"] = 0
         
-        await self._log_agent_event(session_id, "orchestrator", 0, "started", 
-                                    f"Starting Navigator V2 for {disease_name}")
+        target_msg = f" (target: {target_protein})" if target_protein else ""
+        await self._log_agent_event(session_id, "orchestrator", 0, "started",
+                                    f"Starting Navigator V2 for {disease_name}{target_msg}")
 
         try:
             # ═══════════════════════════════════════════════════════════
@@ -179,49 +185,31 @@ class NavigatorOrchestratorV2:
                         confidence_score=0.3
                     )
 
-            # [SELECTION GATE] 사용자 선택 대기
-            if not selected_antibody_id and len(antibody_candidates) > 0:
-                try:
-                    self.supabase.table("navigator_sessions").update({
-                        "status": "waiting_for_selection",
-                        "antibody_candidates": antibody_candidates,
-                        "current_step": 1
-                    }).eq("id", session_id).execute()
-                except Exception as gate_err:
-                    # CHECK constraint에 waiting_for_selection 미포함 시 fallback
-                    logger.warning(f"[navigator-v2] Selection gate update failed: {gate_err}")
-                    self.supabase.table("navigator_sessions").update({
-                        "status": "running",
-                        "antibody_candidates": antibody_candidates,
-                        "current_step": 1
-                    }).eq("id", session_id).execute()
-                
-                await self._broadcast_step(session_id, 1, "Waiting for user selection...")
-                
-                # Return partial result
-                return NavigatorResultV2(
-                    session_id=session_id,
-                    disease_name=disease_name,
-                    antibody_candidates=antibody_candidates,
-                    golden_combination={},
-                    calculated_metrics={},
-                    physics_verified=False,
-                    virtual_trial={},
-                    agent_logs=self.agent_logs,
-                    data_lineage={"status": "waiting"},
-                    execution_time_seconds=(datetime.utcnow() - start_time).total_seconds(),
-                    warnings=warnings
+            # 사용자 선택 타겟이 있으면 해당 타겟 항체를 우선 배치
+            if target_protein and antibody_candidates:
+                # 선택된 타겟에 매칭되는 항체를 맨 앞으로
+                matched = [ab for ab in antibody_candidates if ab.get("target_protein") == target_protein]
+                others = [ab for ab in antibody_candidates if ab.get("target_protein") != target_protein]
+                antibody_candidates = matched + others
+
+            # Auto-select top antibody
+            if antibody_candidates:
+                top_ab = antibody_candidates[0]
+                state["target_antigen"] = top_ab.get("target_protein", target_protein or disease_name)
+                await self._log_agent_event(
+                    session_id, "orchestrator", 1, "auto_select",
+                    f"Selected antibody: {top_ab.get('name')} (target: {top_ab.get('target_protein')})"
                 )
 
-            # [RESUME] 선택된 항체로 필터링
-            if selected_antibody_id:
-                selected = [ab for ab in antibody_candidates if ab["id"] == selected_antibody_id]
-                if selected:
-                    antibody_candidates = selected
-                    # Update target in state for downstream agents
-                    state["target_antigen"] = selected[0].get("target_protein", disease_name)
-                    await self._log_agent_event(session_id, "orchestrator", 1, "resume", 
-                                              f"Resuming with selected antibody: {selected[0].get('name')}")
+                # 항체 후보 저장
+                try:
+                    self.supabase.table("navigator_sessions").update({
+                        "antibody_candidates": antibody_candidates,
+                        "primary_target": top_ab.get("target_protein"),
+                        "current_step": 1
+                    }).eq("id", session_id).execute()
+                except Exception as e:
+                    logger.warning(f"[navigator-v2] Failed to save antibody candidates: {e}")
             
             # ═══════════════════════════════════════════════════════════
             # Step 2: Alchemist - Golden Combination
@@ -358,7 +346,7 @@ class NavigatorOrchestratorV2:
                 session_id=session_id,
                 disease_name=disease_name,
                 antibody_candidates=antibody_candidates,
-                golden_combination=self._build_golden_combination(state, candidates),
+                golden_combination=self._build_golden_combination(state, candidates, antibody_candidates),
                 calculated_metrics=state.get("calculated_metrics", {}),
                 physics_verified=physics_verified,
                 virtual_trial=virtual_trial,
@@ -548,32 +536,61 @@ class NavigatorOrchestratorV2:
         return candidates[:3]
 
     def _build_golden_combination(
-        self, 
+        self,
         state: DesignSessionState,
-        candidates: List[CandidateStructure]
+        candidates: List[CandidateStructure],
+        antibody_candidates: List[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """최종 조합 구성"""
-        if not candidates:
-            return {
-                "antibody": "Trastuzumab",
-                "linker": {"type": "cleavable", "smiles": "CC(C)C[C@H](NC(=O)CNC(=O)[C@@H]1CCCN1)C(=O)NCCCCNC(=O)CCCCC"},
-                "payload": {"class": "MMAE", "smiles": "CC[C@H]1C(=O)N(C)C(CC(C)C)C(=O)N(C)C(CC(C)C)C(=O)N1C"},
-                "dar": 4
-            }
-        
-        top_candidate = candidates[0]
-        
+        """최종 조합 구성 (golden_set_library 데이터 반영)"""
+        antibody_name = "Trastuzumab"
+        linker_type = "Cleavable (Val-Cit)"
+        payload_class = "MMAE"
+        dar = 4
+        historical_orr = None
+
+        # antibody_candidates에서 항체명 가져오기
+        if antibody_candidates:
+            top = antibody_candidates[0]
+            antibody_name = top.get("name", antibody_name)
+
+        # golden_set_library 레퍼런스 검색
+        try:
+            target = state.get("target_antigen", "")
+            gs_ref = self.supabase.table("golden_set_library").select(
+                "name, target_1, linker_type, dar, orr_pct, description"
+            ).eq("status", "approved").eq("target_1", target).limit(1).execute()
+
+            if gs_ref.data:
+                ref = gs_ref.data[0]
+                antibody_name = ref.get("name") or antibody_name
+                linker_type = ref.get("linker_type") or linker_type
+                dar = ref.get("dar") or dar
+                historical_orr = ref.get("orr_pct")
+        except Exception as e:
+            logger.warning(f"[navigator-v2] Golden set lookup failed: {e}")
+
+        # Alchemist 결과에서 SMILES 가져오기
+        linker_smiles = ""
+        payload_smiles = ""
+        if candidates:
+            top_candidate = candidates[0]
+            linker_smiles = top_candidate.get("smiles", "")
+            payload_smiles = top_candidate.get("payload_smiles", linker_smiles)
+            if top_candidate.get("payload_class"):
+                payload_class = top_candidate["payload_class"]
+
         return {
-            "antibody": state.get("target_antigen", "Trastuzumab"),
+            "antibody": antibody_name,
             "linker": {
-                "type": "cleavable",
-                "smiles": top_candidate.get("smiles", "")
+                "type": linker_type,
+                "smiles": linker_smiles
             },
             "payload": {
-                "class": "MMAE",
-                "smiles": top_candidate.get("smiles", "")
+                "class": payload_class,
+                "smiles": payload_smiles
             },
-            "dar": state.get("requested_dar", 4)
+            "dar": dar,
+            "historical_orr": historical_orr
         }
 
     async def _run_virtual_trial_v2(
@@ -768,17 +785,19 @@ async def run_one_click_navigator_v2(
     disease_name: str,
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    target_protein: Optional[str] = None,
     selected_antibody_id: Optional[str] = None
 ) -> NavigatorResultV2:
     """
     One-Click ADC Navigator V2 실행
-    
-    실제 에이전트 호출 + DesignSessionState 공유 + Selection Gate
+
+    실제 에이전트 호출 + DesignSessionState 공유 + 타겟 선택
     """
     orchestrator = get_navigator_orchestrator_v2()
     return await orchestrator.run_navigator_v2(
         disease_name=disease_name,
         session_id=session_id,
         user_id=user_id,
+        target_protein=target_protein,
         selected_antibody_id=selected_antibody_id
     )
