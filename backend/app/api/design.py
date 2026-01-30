@@ -829,44 +829,28 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                     for log in result.agent_logs
                 ]
 
-                # 결과 저장
+                # 결과 저장 (V2 result format)
+                primary_target = None
+                if result.antibody_candidates:
+                    first_ab = result.antibody_candidates[0]
+                    primary_target = first_ab.get("target_protein") if isinstance(first_ab, dict) else getattr(first_ab, "target_protein", None)
+
                 update_data = {
                     "status": "completed",
                     "antibody_candidates": result.antibody_candidates,
-                    "primary_target": result.antibody_candidates[0].get("target_protein") if result.antibody_candidates else None,
+                    "primary_target": primary_target,
                     "golden_combination": result.golden_combination,
                     "calculated_metrics": result.calculated_metrics,
                     "physics_verified": result.physics_verified,
                     "virtual_trial": result.virtual_trial,
-                    "agent_logs": agent_logs,  # FIXED: 실시간 로그
-                    "data_lineage": result.data_lineage,  # FIXED: 데이터 출처
+                    "agent_logs": agent_logs,
+                    "lineage_data": result.data_lineage,
+                    "predicted_orr": result.virtual_trial.get("predicted_orr", 0) if isinstance(result.virtual_trial, dict) else getattr(result.virtual_trial, "predicted_orr", 0),
                     "warnings": result.warnings,
-                    "completed_at": datetime.utcnow().isoformat()
-                        },
-                        "payload": {
-                            "class": result.golden_combination.payload.class_name if result.golden_combination else None,
-                            "smiles": result.golden_combination.payload.smiles if result.golden_combination else None
-                        },
-                        "dar": result.golden_combination.dar if result.golden_combination else 4,
-                        "historical_orr": result.golden_combination.historical_performance.get("orr_pct") if result.golden_combination and result.golden_combination.historical_performance else None
-                    },
-                    "physics_verified": result.physics_verified,
-                    "virtual_trial": {
-                        "predicted_orr": result.virtual_trial.predicted_orr if result.virtual_trial else 0,
-                        "predicted_pfs_months": result.virtual_trial.predicted_pfs_months if result.virtual_trial else 0,
-                        "predicted_os_months": result.virtual_trial.predicted_os_months if result.virtual_trial else 0,
-                        "pk_data": result.virtual_trial.pk_data if result.virtual_trial else [],
-                        "tumor_data": result.virtual_trial.tumor_data if result.virtual_trial else [],
-                        "confidence": result.virtual_trial.confidence if result.virtual_trial else 0,
-                        "data_quality_score": result.virtual_trial.data_quality_score if result.virtual_trial else 0
-                    },
-                    "predicted_orr": result.virtual_trial.predicted_orr if result.virtual_trial else 0,
-                    "lineage_data": result.digital_lineage,
-                    "warnings": result.warnings if hasattr(result, 'warnings') else [],  # FIXED
                     "current_step": 5,
                     "completed_at": datetime.utcnow().isoformat()
                 }
-                
+
                 supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
 
             except Exception as e:

@@ -403,92 +403,225 @@ class NavigatorOrchestrator:
             "requires_healing": False
         }
 
-    # [AGENT CALL] Alchemist
-    alchemist_result = await self.alchemist.execute(agent_state)
-            
-    if not alchemist_result.success:
-        # Healer attempt could go here, but simple retry for now
-        logger.error(f"[navigator] Alchemist failed: {alchemist_result.error}")
-        # Use fallback
-        golden_combo = await self._generate_golden_combination(state.target_protein, state.antibody_candidates)
+    async def run_one_click_pipeline(
+        self,
+        disease_name: str,
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        selected_antibody_id: Optional[str] = None
+    ) -> NavigatorResult:
+        """
+        One-Click ADC Navigator 파이프라인 (5단계)
+
+        실제 에이전트 execute()를 호출하고, 결과를 반영합니다.
+        Fallback: Agent 실패 시 레거시 메서드로 보완.
+        """
+        session_id = session_id or str(uuid.uuid4())
+        warnings: List[str] = []
+        agents_used: List[str] = []
+
+        state = NavigatorState(
+            session_id=session_id,
+            user_id=user_id,
+            disease_name=disease_name,
+        )
+
+        try:
+            # DB 세션 생성
+            await self._create_db_session(state)
+
+            # ═══════════════════════════════════════════════════════════
+            # Step 1: Target & Antibody Match (Librarian)
+            # ═══════════════════════════════════════════════════════════
+            state.step = NavigatorStep.TARGET_DISCOVERY
+            await self._broadcast_step(state, 1, "Librarian 에이전트가 타겟 & 항체를 검색 중...")
+            await self._broadcast_agent_log(state, "Librarian", 1, f"질환 '{disease_name}'에 대한 타겟 검색 시작")
+            agents_used.append("librarian")
+
+            antibody_candidates = await self._find_antibodies_by_disease(disease_name)
+            state.antibody_candidates = antibody_candidates
+
+            if antibody_candidates:
+                state.target_protein = antibody_candidates[0].target_protein
+                await self._broadcast_agent_log(
+                    state, "Librarian", 1,
+                    f"타겟 발견: {state.target_protein}, 항체 후보 {len(antibody_candidates)}개"
+                )
+
+            # gpNMB 실패 사례 경고
+            for ab in antibody_candidates:
+                if ab.target_protein and "gpNMB" in ab.target_protein:
+                    gpnmb_warn = (
+                        "⚠️ [FAILURE CASE #5552] gpNMB target detected. "
+                        "Glembatumumab vedotin (CDX-011) failed in METRIC trial due to Shedding-related efficacy loss."
+                    )
+                    warnings.append(gpnmb_warn)
+                    state.warnings.append(gpnmb_warn)
+                    await self._broadcast_agent_log(state, "Librarian", 1, gpnmb_warn, data_source="golden_set_library:5552")
+
+            await self._update_db_step(state, 1, {
+                "antibody_candidates": [
+                    {"id": ab.antibody_id, "name": ab.name, "target": ab.target_protein, "score": ab.clinical_score}
+                    for ab in antibody_candidates
+                ]
+            })
+            await self._broadcast_step(state, 1, f"✅ 타겟 발견: {state.target_protein} ({len(antibody_candidates)}개 항체)")
+
+            # Selection Gate: 사용자 선택 대기
+            if not selected_antibody_id and len(antibody_candidates) > 1:
+                self.supabase.table("navigator_sessions").update({
+                    "status": "waiting_for_selection",
+                    "antibody_candidates": [
+                        {"id": ab.antibody_id, "name": ab.name, "target_protein": ab.target_protein,
+                         "clinical_score": ab.clinical_score, "match_confidence": ab.match_confidence}
+                        for ab in antibody_candidates
+                    ]
+                }).eq("id", session_id).execute()
+                # Return partial result — frontend will show selection modal
+                return NavigatorResult(
+                    session_id=session_id,
+                    disease_name=disease_name,
+                    antibody_candidates=antibody_candidates,
+                    golden_combination=None,
+                    calculated_metrics={},
+                    physical_validations=[],
+                    physics_verified=False,
+                    virtual_trial=None,
+                    digital_lineage={},
+                    warnings=warnings
+                )
+
+            # If antibody selected, filter to that one
+            if selected_antibody_id:
+                selected = [ab for ab in antibody_candidates if ab.antibody_id == selected_antibody_id]
+                if selected:
+                    state.target_protein = selected[0].target_protein
+
+            # Build agent state for downstream agents
+            agent_state = self._map_to_design_state(state)
+
+            # ═══════════════════════════════════════════════════════════
+            # Step 2: Golden Combination (Alchemist)
+            # ═══════════════════════════════════════════════════════════
+            state.step = NavigatorStep.GOLDEN_COMBINATION
+            await self._broadcast_step(state, 2, "Alchemist 에이전트가 최적 ADC 조합을 설계 중...")
+            await self._broadcast_agent_log(state, "Alchemist", 2, f"타겟 '{state.target_protein}'에 대한 조합 생성 시작")
+            agents_used.append("alchemist")
+
+            golden_combo = None
+            alchemist_result = await self.alchemist.execute(agent_state)
+
+            if alchemist_result.success:
+                agents_used.append("alchemist:success")
+                agent_data = alchemist_result.data or {}
+                agent_smiles = agent_data.get("primary_smiles")
+                agent_candidates = agent_data.get("candidates", [])
+                golden_refs = agent_data.get("golden_set_refs", [])
+
+                await self._broadcast_agent_log(
+                    state, "Alchemist", 2,
+                    f"Alchemist가 {len(agent_candidates)}개 후보 생성, SMILES: {bool(agent_smiles)}",
+                    confidence=alchemist_result.confidence_score
+                )
+
+                # Alchemist의 구조화된 데이터로 GoldenCombination 구성
+                golden_combo = await self._generate_golden_combination(
+                    state.target_protein, state.antibody_candidates,
+                    alchemist_smiles=agent_smiles,
+                    alchemist_refs=golden_refs
+                )
             else:
-                # Extract best candidate
-                candidates = alchemist_result.data.get("candidates", [])
-                if candidates:
-                    best_cand = candidates[0]
-                    # Map back to GoldenCombination (simplified for now)
-                    # We need to construct Linker/Payload specs from SMILES (reverse engineer or use metadata)
-                    # For stability, we stick to the _generate_golden_combination logic BUT augmented with Alchemist findings
-                    # Ideally Alchemist returns structured data.
-                    # Let's use the Fallback logic for structured data but use Alchemist's SMILES if valid
-                    
-                    # For this demo, we'll continue using the robust _generate_golden_combination 
-                    # but we acknowledge Alchemist ran.
-                    # To be "True Agent", we should use Alchemist's output.
-                    # Let's assume Alchemist returned a valid SMILES string in 'primary_smiles'
-                    agent_smiles = alchemist_result.data.get("primary_smiles")
-                    
-                    # Run legacy logic to get structured metadata (linker type, etc) which Alchemist might not return fully parsed
-                    golden_combo = await self._generate_golden_combination(state.target_protein, state.antibody_candidates)
-                    
-                    if agent_smiles:
-                        # Override with Agent's creation if available
-                        # golden_combo.linker.smiles = ... # Complex to split SMILES back
-                        pass
-                else:
-                    golden_combo = await self._generate_golden_combination(state.target_protein, state.antibody_candidates)
+                logger.warning(f"[navigator] Alchemist failed: {alchemist_result.error}")
+                await self._broadcast_agent_log(state, "Alchemist", 2, f"Alchemist 실패, 레거시 fallback 사용: {alchemist_result.error}")
+                golden_combo = await self._generate_golden_combination(state.target_protein, state.antibody_candidates)
 
             state.golden_combination = golden_combo
-            
-            # [BUSINESS LOGIC] Toxicity Guardrail
+
+            # Toxicity Guardrail
             payload_cls = golden_combo.payload.class_name.upper()
             if "PBD" in payload_cls or "SGN-CD33A" in golden_combo.historical_performance.get("source_drug", ""):
-                 tox_warning = "⚠️ [TOXICITY ALERT] DNA-alkylating payload detected (PBD). Hepatotoxicity risk."
-                 warnings.append(tox_warning)
-                 state.warnings.append(tox_warning)
+                tox_warning = (
+                    "⚠️ [TOXICITY ALERT #5551] DNA-alkylating payload (PBD) detected. "
+                    "Vadastuximab talirine (SGN-CD33A) caused fatal hepatotoxicity (VOD/SOS) in Phase 3."
+                )
+                warnings.append(tox_warning)
+                state.warnings.append(tox_warning)
+                await self._broadcast_agent_log(state, "Auditor", 2, tox_warning, data_source="golden_set_library:5551")
 
-            # Update Agent State
             agent_state["current_smiles"] = self._combine_adc_structure(golden_combo)
             state.combined_smiles = agent_state["current_smiles"]
 
             await self._update_db_step(state, 2, {
                 "golden_combination": self._combination_to_dict(golden_combo)
             })
-            
             await self._broadcast_step(state, 2, f"✅ 최적 조합 발견 (DAR: {golden_combo.dar})")
 
             # ═══════════════════════════════════════════════════════════
-            # Step 3: 물성 계산 (Coder)
+            # Step 3: 물성 계산 (Coder + Healer)
             # ═══════════════════════════════════════════════════════════
             state.step = NavigatorStep.PROPERTY_CALCULATION
             await self._broadcast_step(state, 3, "Coder 에이전트가 Sandbox에서 물성 계산 중...")
+            await self._broadcast_agent_log(state, "Coder", 3, f"RDKit Sandbox에서 분자 물성 계산 시작 (SMILES: {state.combined_smiles[:30]}...)")
+            agents_used.append("coder")
 
-            # [AGENT CALL] Coder (Runs in Sandbox)
+            metrics = None
             coder_result = await self.coder.execute(agent_state)
-            
-            if not coder_result.success:
-                logger.warning(f"[navigator] Coder failed: {coder_result.error}. Engaging Healer...")
-                
-                # [AGENT CALL] Healer
-                agent_state["last_error"] = coder_result.error
-                agent_state["last_code"] = coder_result.data.get("code")
-                healer_result = await self.healer.execute(agent_state)
-                
-                if healer_result.success:
-                    # Retry Coder with fixed code
-                    logger.info("[navigator] Healer fixed the code. Retrying Coder...")
-                    # For simplicity in this flow, we might just proceed or retry once.
-                    # Let's rely on fallback for now if Healer succeeds but we don't re-execute here to save time.
-                    pass
-                
-                # Fallback calculation
-                metrics = await self._calculate_properties(state.combined_smiles, golden_combo)
-            else:
+
+            if coder_result.success:
+                agents_used.append("coder:success")
                 metrics = coder_result.data.get("metrics", {})
-                # Ensure keys match
-                metrics["molecular_weight"] = metrics.get("mw")
+                metrics["molecular_weight"] = metrics.get("mw") or metrics.get("molecular_weight")
                 metrics["smiles_valid"] = True
-                metrics["pk_parameters"] = await self._estimate_pk_parameters(golden_combo) # Add PK
+                metrics["pk_parameters"] = await self._estimate_pk_parameters(golden_combo)
+                await self._broadcast_agent_log(
+                    state, "Coder", 3,
+                    f"Coder 성공: MW={metrics.get('molecular_weight')}, LogP={metrics.get('logp')}"
+                )
+            else:
+                logger.warning(f"[navigator] Coder failed: {coder_result.error}. Engaging Healer...")
+                await self._broadcast_agent_log(state, "Coder", 3, f"Coder 실패: {coder_result.error}")
+
+                # Healer: 코드 수정 후 Coder 재시도 (최대 2회)
+                agents_used.append("healer")
+                agent_state["last_error"] = coder_result.error
+                agent_state["last_code"] = (coder_result.data or {}).get("code")
+                agent_state["requires_healing"] = True
+
+                for heal_attempt in range(2):
+                    await self._broadcast_agent_log(
+                        state, "Healer", 3,
+                        f"Healer 코드 수정 시도 {heal_attempt + 1}/2..."
+                    )
+                    healer_result = await self.healer.execute(agent_state)
+
+                    if healer_result.success:
+                        agents_used.append(f"healer:fix_{heal_attempt + 1}")
+                        await self._broadcast_agent_log(state, "Healer", 3, "Healer가 코드를 수정했습니다. Coder 재실행...")
+
+                        # Healer가 수정한 코드로 Coder 재시도
+                        agent_state["requires_healing"] = False
+                        if healer_result.data and healer_result.data.get("fixed_code"):
+                            agent_state["last_code"] = healer_result.data["fixed_code"]
+
+                        retry_result = await self.coder.execute(agent_state)
+                        if retry_result.success:
+                            agents_used.append(f"coder:retry_{heal_attempt + 1}")
+                            metrics = retry_result.data.get("metrics", {})
+                            metrics["molecular_weight"] = metrics.get("mw") or metrics.get("molecular_weight")
+                            metrics["smiles_valid"] = True
+                            metrics["pk_parameters"] = await self._estimate_pk_parameters(golden_combo)
+                            await self._broadcast_agent_log(state, "Coder", 3, f"Coder 재시도 성공! MW={metrics.get('molecular_weight')}")
+                            break
+                        else:
+                            agent_state["last_error"] = retry_result.error
+                            agent_state["last_code"] = (retry_result.data or {}).get("code")
+                    else:
+                        await self._broadcast_agent_log(state, "Healer", 3, f"Healer 수정 실패: {healer_result.error}")
+
+                # 모든 재시도 실패 시 Sandbox fallback
+                if metrics is None:
+                    await self._broadcast_agent_log(state, "Coder", 3, "Agent 재시도 모두 실패, Sandbox fallback 사용")
+                    metrics = await self._calculate_properties(state.combined_smiles, golden_combo)
 
             state.calculated_metrics = metrics
             agent_state["calculated_metrics"] = metrics
@@ -497,7 +630,6 @@ class NavigatorOrchestrator:
                 "combined_smiles": state.combined_smiles,
                 "calculated_metrics": metrics
             })
-
             await self._broadcast_step(state, 3, "✅ 물성 계산 완료")
 
             # ═══════════════════════════════════════════════════════════
@@ -505,17 +637,31 @@ class NavigatorOrchestrator:
             # ═══════════════════════════════════════════════════════════
             state.step = NavigatorStep.PHYSICAL_VALIDATION
             await self._broadcast_step(state, 4, "Auditor 에이전트가 규제 준수 여부를 검증 중...")
+            await self._broadcast_agent_log(state, "Auditor", 4, "PAINS/Lipinski/독성 패턴 검증 시작")
+            agents_used.append("auditor")
 
-            # [AGENT CALL] Auditor
             auditor_result = await self.auditor.execute(agent_state)
-            
+
             if auditor_result.success:
+                agents_used.append("auditor:success")
                 validation_data = auditor_result.data.get("chemistry_validation", {})
-                state.physics_verified = auditor_result.success
-                # Convert Auditor format to Navigator format if needed
+                state.physics_verified = True
                 state.physical_validations = self._convert_auditor_validation(validation_data)
+
+                decision = auditor_result.data.get("decision", "approved")
+                risk_score = auditor_result.data.get("risk_score", 0)
+                await self._broadcast_agent_log(
+                    state, "Auditor", 4,
+                    f"Auditor 결과: {decision} (risk_score: {risk_score})",
+                    confidence=auditor_result.confidence_score
+                )
+
+                if decision == "redesign":
+                    warnings.append("⚠️ Auditor recommends redesign. Proceeding with current design for evaluation.")
+                    state.warnings.append("Auditor recommends redesign")
             else:
-                # Fallback legacy validation
+                logger.warning(f"[navigator] Auditor failed: {auditor_result.error}. Using legacy validation.")
+                await self._broadcast_agent_log(state, "Auditor", 4, f"Auditor 실패, 레거시 검증 사용: {auditor_result.error}")
                 from app.services.physical_validator import validate_structure
                 validation_result = await validate_structure(state.combined_smiles)
                 state.physical_validations = validation_result.get("validations", [])
@@ -536,6 +682,8 @@ class NavigatorOrchestrator:
             # ═══════════════════════════════════════════════════════════
             state.step = NavigatorStep.VIRTUAL_TRIAL
             await self._broadcast_step(state, 5, "가상 임상 시뮬레이션 중...")
+            await self._broadcast_agent_log(state, "Clinical", 5, "Golden Set 레퍼런스 기반 가상 임상 예측 시작")
+            agents_used.append("clinical_predictor")
 
             virtual_trial = await self._run_virtual_trial(
                 golden_combo=golden_combo,
@@ -544,6 +692,12 @@ class NavigatorOrchestrator:
             )
 
             state.virtual_trial = virtual_trial
+
+            await self._broadcast_agent_log(
+                state, "Clinical", 5,
+                f"예측 완료: ORR={virtual_trial.predicted_orr:.1f}%, PFS={virtual_trial.predicted_pfs_months:.1f}mo, "
+                f"OS={virtual_trial.predicted_os_months:.1f}mo (신뢰도: {virtual_trial.confidence:.0%})"
+            )
 
             await self._update_db_step(state, 5, {
                 "virtual_trial": {
@@ -568,7 +722,7 @@ class NavigatorOrchestrator:
             state.step = NavigatorStep.COMPLETE
 
             # Digital Lineage 수집
-            lineage = await self._collect_lineage(state)
+            lineage = await self._collect_lineage(state, agents_used)
 
             # DB 완료 처리
             await self._complete_db_session(state, lineage)
@@ -601,8 +755,7 @@ class NavigatorOrchestrator:
             state.errors.append(str(e))
             await self._fail_db_session(state, str(e))
             await self._broadcast_step(state, state.step.value, f"❌ 오류 발생: {str(e)}")
-            
-            # Return partial result
+
             return NavigatorResult(
                 session_id=session_id,
                 disease_name=disease_name,
@@ -616,10 +769,36 @@ class NavigatorOrchestrator:
                 calculated_metrics=state.calculated_metrics or {},
                 physical_validations=state.physical_validations or [],
                 physics_verified=False,
-                virtual_trial=VirtualTrialResult(0,0,0),
-                digital_lineage={"error": str(e)},
+                virtual_trial=VirtualTrialResult(0, 0, 0),
+                digital_lineage={"error": str(e), "agents_used": agents_used},
                 warnings=warnings + [str(e)]
             )
+
+    async def _broadcast_agent_log(
+        self,
+        state: NavigatorState,
+        agent_name: str,
+        step: int,
+        message: str,
+        data_source: str = "",
+        confidence: float = 0.0,
+        pmid_refs: List[str] = None
+    ):
+        """Broadcast agent reasoning log via WebSocket for real-time UI display"""
+        try:
+            await websocket_hub.broadcast(state.session_id, {
+                "type": "agent_log",
+                "agent": agent_name,
+                "step": step,
+                "status": "running",
+                "message": message,
+                "data_source": data_source,
+                "confidence": confidence,
+                "pmid_refs": pmid_refs or [],
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        except Exception as e:
+            logger.debug(f"[navigator] Agent log broadcast error: {e}")
 
     def _convert_auditor_validation(self, validation_data: Dict) -> List[Dict]:
         """Convert Auditor validation format to Navigator list format"""
@@ -1002,10 +1181,13 @@ class NavigatorOrchestrator:
     async def _generate_golden_combination(
         self,
         target_protein: str,
-        antibody_candidates: List[AntibodyCandidate]
+        antibody_candidates: List[AntibodyCandidate],
+        alchemist_smiles: Optional[str] = None,
+        alchemist_refs: Optional[List[Dict]] = None
     ) -> GoldenCombination:
         """
-        FIXED: Generate golden combination with proper SMILES validation
+        FIXED: Generate golden combination with proper SMILES validation.
+        Alchemist의 출력(SMILES, golden_set references)이 있으면 우선 반영.
         """
         cache_params = {"target": target_protein, "type": "combination"}
         cached = await self.cache.get("combination", cache_params)
@@ -1124,10 +1306,24 @@ class NavigatorOrchestrator:
                 best_combo = await self._gemini_suggest_combination(target_protein)
                 source = "gemini_ai"
 
+            # Alchemist SMILES override: if Alchemist generated a valid SMILES, use it
+            if alchemist_smiles and len(alchemist_smiles) > 5:
+                logger.info(f"[navigator] Using Alchemist-generated SMILES: {alchemist_smiles[:50]}...")
+                # Alchemist returns a combined ADC SMILES — split by '.' for linker/payload
+                parts = alchemist_smiles.split(".")
+                if len(parts) >= 2:
+                    best_combo["linker_smiles"] = parts[0]
+                    best_combo["payload_smiles"] = parts[1]
+                    source = f"{source}+alchemist_smiles"
+                elif len(parts) == 1:
+                    # Single SMILES — keep as payload, use DB linker
+                    best_combo["payload_smiles"] = parts[0]
+                    source = f"{source}+alchemist_payload"
+
             # Build result with validation
             linker_smiles = best_combo.get("linker_smiles", "") or ""
             payload_smiles = best_combo.get("payload_smiles", "") or ""
-            
+
             # FIXED: Validate SMILES
             if not linker_smiles or not payload_smiles:
                 logger.warning("[navigator] Empty SMILES, using defaults")
@@ -1329,7 +1525,10 @@ class NavigatorOrchestrator:
         # [REAL AGENT] Use Sandbox for RDKit
         try:
             sandbox = get_sandbox_executor()
-            
+
+            # Safely encode SMILES as JSON string to avoid f-string injection
+            smiles_json = json.dumps(smiles)
+
             # Python script to run inside sandbox
             code = f"""
 import json
@@ -1337,7 +1536,7 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors, Crippen
 
 def calculate():
-    smiles = "{smiles}"
+    smiles = json.loads({json.dumps(smiles_json)})
     total_mw = 0
     total_logp = 0
     hbd = 0
@@ -1345,12 +1544,12 @@ def calculate():
     tpsa = 0
     rot_bonds = 0
     valid_count = 0
-    
+
     parts = smiles.split(".")
     for smi in parts:
         smi = smi.strip()
         if not smi: continue
-        
+
         mol = Chem.MolFromSmiles(smi)
         if mol:
             valid_count += 1
@@ -1360,7 +1559,7 @@ def calculate():
             hba += Descriptors.NumHAcceptors(mol)
             tpsa += Descriptors.TPSA(mol)
             rot_bonds += Descriptors.NumRotatableBonds(mol)
-            
+
     return {{
         "molecular_weight": round(total_mw, 2),
         "logp": round(total_logp, 2),
@@ -1720,8 +1919,8 @@ print(json.dumps(calculate()))
         try:
             await websocket_hub.stream_progress(
                 state.session_id,
-                progress=step * 20,
-                step=message
+                percentage=step * 20,
+                operation=message
             )
 
             if complete:
@@ -1742,16 +1941,18 @@ print(json.dumps(calculate()))
     # Digital Lineage
     # =========================================================================
 
-    async def _collect_lineage(self, state: NavigatorState) -> Dict[str, Any]:
-        """Collect data lineage with full traceability"""
+    async def _collect_lineage(self, state: NavigatorState, agents_used: List[str] = None) -> Dict[str, Any]:
+        """Collect data lineage with full agent traceability"""
         combo = state.golden_combination
+        execution_time = (datetime.utcnow() - state.started_at).total_seconds()
         lineage = {
             "pipeline": "one_click_adc_navigator",
-            "version": "2.1.0-fixed",
+            "version": "2.2.0",
             "execution_timestamp": state.started_at.isoformat(),
+            "total_execution_seconds": execution_time,
             "disease_input": state.disease_name,
             "steps_completed": state.step.value,
-            "agents_invoked": ["navigator_orchestrator"],
+            "agents_invoked": agents_used or ["navigator_orchestrator"],
             "antibody_count": len(state.antibody_candidates),
             "physics_verified": state.physics_verified,
             "confidence_score": combo.confidence_score if combo else 0,
@@ -1768,7 +1969,7 @@ print(json.dumps(calculate()))
             lineage["combination_source"] = combo.historical_performance.get("data_source", "unknown")
             lineage["reference_drug"] = combo.historical_performance.get("source_drug", "")
             lineage["historical_orr"] = combo.historical_performance.get("orr_pct")
-        
+
         return lineage
 
 
