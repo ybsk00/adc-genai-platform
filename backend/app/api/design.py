@@ -940,58 +940,119 @@ async def suggest_diseases(query: str, limit: int = 10):
     """
     질환명 자동완성
 
-    질환명의 일부를 입력하면 관련 질환과 주요 타겟을 반환합니다.
+    golden_set_library(승격 골든셋)에서 질환-타겟을 검색합니다.
+    성공 골든셋 우선, 실패 골든셋은 경고로 표시합니다.
     """
     if len(query) < 2:
         return {"suggestions": []}
 
     supabase = get_supabase_client()
+    query_lower = query.lower().strip()
 
     try:
-        result = supabase.rpc("suggest_diseases", {
-            "query_text": query,
-            "max_results": limit
-        }).execute()
+        # 1순위: golden_set_library (승격된 골든셋)에서 검색
+        gs_result = supabase.table("golden_set_library").select(
+            "name, target_1, target_2, description, outcome_type, dar, linker_type, orr_pct, status"
+        ).eq("status", "approved").not_.is_("target_1", "null").execute()
+
+        # description에서 질환 매칭
+        disease_map: dict = {}  # disease -> {targets: set, approved_count: int, orr_values: list, warnings: list}
+        for row in gs_result.data or []:
+            desc = (row.get("description") or "").lower()
+            name = (row.get("name") or "").lower()
+            target = row.get("target_1", "")
+            outcome = row.get("outcome_type", "")
+
+            if not target or query_lower not in desc and query_lower not in name:
+                continue
+
+            # description에서 질환명 추출
+            diseases_found = _extract_diseases_from_description(desc, query_lower)
+            if not diseases_found:
+                diseases_found = [query.strip().title() + " cancer" if "cancer" not in query_lower else query.strip().title()]
+
+            for disease in diseases_found:
+                if disease not in disease_map:
+                    disease_map[disease] = {"targets": set(), "approved_count": 0, "orr_values": [], "warnings": []}
+                disease_map[disease]["targets"].add(target)
+                if row.get("target_2"):
+                    disease_map[disease]["targets"].add(row["target_2"])
+                if outcome == "Success":
+                    disease_map[disease]["approved_count"] += 1
+                elif outcome == "Failure":
+                    disease_map[disease]["warnings"].append(
+                        f"{row.get('name', 'Unknown')} ({target}) - Clinical failure"
+                    )
+                orr = row.get("orr_pct")
+                if orr is not None:
+                    disease_map[disease]["orr_values"].append(float(orr))
+
+        # 2순위: golden_set_library 전체 (target_1이 있는 것)에서 보충
+        if len(disease_map) < 2:
+            gs_all = supabase.table("golden_set_library").select(
+                "name, target_1, description, outcome_type"
+            ).not_.is_("target_1", "null").ilike("description", f"%{query}%").limit(30).execute()
+
+            for row in gs_all.data or []:
+                desc = (row.get("description") or "").lower()
+                target = row.get("target_1", "")
+                if not target:
+                    continue
+                diseases_found = _extract_diseases_from_description(desc, query_lower)
+                for disease in diseases_found:
+                    if disease not in disease_map:
+                        disease_map[disease] = {"targets": set(), "approved_count": 0, "orr_values": [], "warnings": []}
+                    disease_map[disease]["targets"].add(target)
 
         suggestions = []
-        for row in result.data or []:
+        for disease, info in sorted(disease_map.items(), key=lambda x: (-x[1]["approved_count"], -len(x[1]["targets"]))):
+            avg_orr = round(sum(info["orr_values"]) / len(info["orr_values"]), 1) if info["orr_values"] else None
             suggestions.append({
-                "disease": row.get("disease"),
-                "primary_targets": row.get("primary_targets", []),
-                "approved_adc_count": row.get("approved_adc_count", 0),
-                "avg_orr": row.get("avg_orr")
+                "disease": disease,
+                "primary_targets": sorted(list(info["targets"]))[:5],
+                "approved_adc_count": info["approved_count"],
+                "avg_orr": avg_orr,
+                "warnings": info["warnings"][:3] if info["warnings"] else None
             })
 
-        return {"suggestions": suggestions}
+        return {"suggestions": suggestions[:limit]}
 
     except Exception as e:
-        logger.warning(f"[suggest-disease] Error: {e}")
-        # Fallback: 직접 검색
-        result = supabase.table("antibody_library").select(
-            "related_disease, target_normalized"
-        ).ilike("related_disease", f"%{query}%").limit(limit).execute()
+        logger.exception(f"[suggest-disease] Error: {e}")
+        return {"suggestions": [], "error": str(e)}
 
-        disease_map = {}
-        for row in result.data or []:
-            disease = row.get("related_disease")
-            if disease:
-                if disease not in disease_map:
-                    disease_map[disease] = []
-                target = row.get("target_normalized")
-                if target and target not in disease_map[disease]:
-                    disease_map[disease].append(target)
 
-        suggestions = [
-            {
-                "disease": disease,
-                "primary_targets": targets[:3],
-                "approved_adc_count": 0,
-                "avg_orr": None
-            }
-            for disease, targets in disease_map.items()
-        ]
-
-        return {"suggestions": suggestions}
+def _extract_diseases_from_description(description: str, query_lower: str) -> list:
+    """description 텍스트에서 질환명 추출"""
+    known_diseases = [
+        "breast cancer", "gastric cancer", "lung cancer", "NSCLC",
+        "urothelial cancer", "cervical cancer", "ovarian cancer",
+        "colorectal cancer", "pancreatic cancer", "prostate cancer",
+        "lymphoma", "Hodgkin lymphoma", "DLBCL", "ALCL",
+        "AML", "multiple myeloma", "bladder cancer",
+        "TNBC", "solid tumors", "melanoma", "glioblastoma",
+    ]
+    found = []
+    desc_lower = description.lower()
+    for disease in known_diseases:
+        if disease.lower() in desc_lower and query_lower in disease.lower():
+            # 정규화: TNBC → Triple-negative breast cancer
+            display_name = disease
+            if disease == "TNBC":
+                display_name = "Triple-negative breast cancer"
+            elif disease == "NSCLC":
+                display_name = "Non-small cell lung cancer"
+            elif disease == "DLBCL":
+                display_name = "Diffuse large B-cell lymphoma"
+            elif disease == "ALCL":
+                display_name = "Anaplastic large cell lymphoma"
+            elif disease == "AML":
+                display_name = "Acute myeloid leukemia"
+            else:
+                display_name = disease.title()
+            if display_name not in found:
+                found.append(display_name)
+    return found
 
 
 @router.get("/navigator/disease-targets/{disease}")
