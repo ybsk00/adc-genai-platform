@@ -34,26 +34,26 @@ interface AntibodyCandidate {
 }
 
 interface GoldenCombination {
-  antibody: string;
-  linker: {
-    type: string;
-    smiles: string;
+  antibody?: string;
+  linker?: {
+    type?: string;
+    smiles?: string;
   };
-  payload: {
-    class: string;
-    smiles: string;
+  payload?: {
+    class?: string;
+    smiles?: string;
   };
-  dar: number;
-  historical_orr: number | null;
+  dar?: number;
+  historical_orr?: number | null;
 }
 
 interface VirtualTrial {
-  predicted_orr: number;
-  predicted_pfs_months: number;
-  predicted_os_months: number;
-  pk_data: Array<{ time_hours: number; concentration: number; free_payload: number }>;
-  tumor_data: Array<{ day: number; treated: number; control: number }>;
-  confidence: number;
+  predicted_orr?: number;
+  predicted_pfs_months?: number;
+  predicted_os_months?: number;
+  pk_data?: Array<{ time_hours: number; concentration: number; free_payload: number }>;
+  tumor_data?: Array<{ day: number; treated: number; control: number }>;
+  confidence?: number;
 }
 
 interface NavigatorResultProps {
@@ -61,9 +61,9 @@ interface NavigatorResultProps {
   diseaseName: string;
   targetProtein: string | null;
   antibodyCandidates: AntibodyCandidate[];
-  goldenCombination: GoldenCombination;
+  goldenCombination: GoldenCombination | null;
   physicsVerified: boolean;
-  virtualTrial: VirtualTrial;
+  virtualTrial: VirtualTrial | null;
   executionTime: number;
   warnings?: string[];  // FIXED
   dataQualityScore?: number;
@@ -221,7 +221,7 @@ export function NavigatorResult({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-slate-500">Selected Antibody</p>
-              <p className="text-lg font-medium text-white">{goldenCombination.antibody}</p>
+              <p className="text-lg font-medium text-white">{goldenCombination?.antibody || 'N/A'}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -234,12 +234,12 @@ export function NavigatorResult({
                   variant="outline"
                   className={cn(
                     'mt-1',
-                    goldenCombination.linker.type === 'cleavable'
+                    goldenCombination?.linker?.type?.toLowerCase()?.includes('cleavable')
                       ? 'text-emerald-400 border-emerald-400/50'
                       : 'text-amber-400 border-amber-400/50'
                   )}
                 >
-                  {goldenCombination.linker.type}
+                  {goldenCombination?.linker?.type || 'N/A'}
                 </Badge>
               </div>
               <div>
@@ -248,7 +248,7 @@ export function NavigatorResult({
                   Payload
                 </p>
                 <Badge variant="outline" className="mt-1 text-violet-400 border-violet-400/50">
-                  {goldenCombination.payload.class}
+                  {goldenCombination?.payload?.class || 'N/A'}
                 </Badge>
               </div>
             </div>
@@ -256,12 +256,12 @@ export function NavigatorResult({
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-slate-800/50 rounded-lg text-center">
                 <p className="text-sm text-slate-500">DAR</p>
-                <p className="text-2xl font-bold text-white">{goldenCombination.dar}</p>
+                <p className="text-2xl font-bold text-white">{goldenCombination?.dar ?? 'N/A'}</p>
               </div>
               <div className="p-3 bg-slate-800/50 rounded-lg text-center">
                 <p className="text-sm text-slate-500">Historical ORR</p>
                 <p className="text-2xl font-bold text-amber-400">
-                  {goldenCombination.historical_orr ? `${goldenCombination.historical_orr}%` : 'N/A'}
+                  {goldenCombination?.historical_orr ? `${goldenCombination.historical_orr}%` : 'N/A'}
                 </p>
               </div>
             </div>
@@ -309,7 +309,7 @@ export function NavigatorResult({
                 <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-violet-500 to-indigo-500"
-                    style={{ width: `${virtualTrial.confidence * 100}%` }}
+                    style={{ width: `${(virtualTrial?.confidence ?? 0) * 100}%` }}
                   />
                 </div>
                 <span className="text-sm font-medium text-white">
@@ -323,9 +323,9 @@ export function NavigatorResult({
 
       {/* Virtual Trial Charts */}
       <VirtualTrialChart
-        pkData={virtualTrial.pk_data}
-        tumorData={virtualTrial.tumor_data}
-        predictedORR={virtualTrial.predicted_orr}
+        pkData={virtualTrial?.pk_data ?? []}
+        tumorData={virtualTrial?.tumor_data ?? []}
+        predictedORR={virtualTrial?.predicted_orr ?? 0}
       />
 
       {/* Action Buttons */}

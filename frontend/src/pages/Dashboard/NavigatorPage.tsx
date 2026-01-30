@@ -64,9 +64,9 @@ interface NavigatorSessionResult {
   disease_name: string;
   target_protein: string | null;
   antibody_candidates: AntibodyCandidate[];
-  golden_combination: GoldenCombination;
+  golden_combination: GoldenCombination | null;
   physics_verified: boolean;
-  virtual_trial: VirtualTrial;
+  virtual_trial: VirtualTrial | null;
   execution_time_seconds: number;
   warnings?: string[];  // FIXED: Add warnings field
   data_quality_score?: number;
