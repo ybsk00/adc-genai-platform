@@ -78,6 +78,7 @@ class NavigatorResultV2:
     data_lineage: Dict[str, Any]  # 데이터 출처 추적
     execution_time_seconds: float = 0.0
     warnings: List[str] = field(default_factory=list)
+    critical_errors: List[str] = field(default_factory=list)  # Fail-Fast: 사용자에게 노출할 치명적 오류
 
 
 # ============================================================================
@@ -259,56 +260,133 @@ class NavigatorOrchestratorV2:
                     break
 
             # ═══════════════════════════════════════════════════════════
-            # Step 3: Property Calculation (Direct RDKit — sandbox 불필요)
+            # Step 3: Coder - Property Calculation (with Healer retry)
+            # Fallback: Direct RDKit if Coder sandbox fails
             # ═══════════════════════════════════════════════════════════
             await self._log_agent_event(session_id, "coder", 3, "started",
-                                        "Calculating molecular properties...")
+                                        "Calculating molecular properties via Coder agent...")
 
-            await self._broadcast_step(session_id, 3, "Property Calculation...")
+            await self._broadcast_step(session_id, 3, "Coder: Property Calculation...")
 
-            calculated_metrics, calc_warnings = await self._calculate_properties_direct(
-                state, session_id
-            )
-            state["calculated_metrics"] = calculated_metrics
+            calculated_metrics = {}
+            calc_warnings = []
+            critical_errors = []
+
+            try:
+                # PRIMARY: Coder agent execute() with Healer retry
+                coder_result = await self._run_coder_with_healer_retry(state, session_id)
+
+                if coder_result.success:
+                    calculated_metrics = coder_result.data.get("metrics", {})
+                    state["calculated_metrics"] = calculated_metrics
+                    await self._log_agent_event(
+                        session_id, "coder", 3, "completed",
+                        f"Coder calculated {len(calculated_metrics)} properties",
+                        reasoning=coder_result.reasoning,
+                        confidence_score=coder_result.confidence_score or 0.9
+                    )
+                else:
+                    # Coder+Healer 실패 → Direct RDKit (STRICT, no estimates)
+                    logger.warning(f"[navigator-v2] Coder failed: {coder_result.error}, attempting direct RDKit...")
+                    await self._log_agent_event(
+                        session_id, "coder", 3, "fallback",
+                        f"Coder sandbox failed ({coder_result.error}). Attempting direct RDKit..."
+                    )
+                    try:
+                        calculated_metrics, calc_warnings = await self._calculate_properties_direct(
+                            state, session_id
+                        )
+                        state["calculated_metrics"] = calculated_metrics
+                        calc_warnings.append(f"Coder agent failed, used direct RDKit (no estimates)")
+                    except (ValueError, ImportError) as direct_err:
+                        # FAIL-FAST: RDKit도 실패하면 Critical Error
+                        error_msg = str(direct_err)
+                        critical_errors.append(error_msg)
+                        await self._log_agent_event(
+                            session_id, "coder", 3, "critical_error", error_msg
+                        )
+            except Exception as coder_exc:
+                # Coder 예외 → Direct RDKit (STRICT)
+                logger.warning(f"[navigator-v2] Coder exception: {coder_exc}, attempting direct RDKit...")
+                await self._log_agent_event(
+                    session_id, "coder", 3, "fallback",
+                    f"Coder exception: {str(coder_exc)[:100]}. Attempting direct RDKit..."
+                )
+                try:
+                    calculated_metrics, calc_warnings = await self._calculate_properties_direct(
+                        state, session_id
+                    )
+                    state["calculated_metrics"] = calculated_metrics
+                    calc_warnings.append(f"Coder exception, used direct RDKit (no estimates)")
+                except (ValueError, ImportError) as direct_err:
+                    error_msg = str(direct_err)
+                    critical_errors.append(error_msg)
+                    await self._log_agent_event(
+                        session_id, "coder", 3, "critical_error", error_msg
+                    )
+
             warnings.extend(calc_warnings)
 
-            await self._log_agent_event(
-                session_id, "coder", 3, "completed",
-                f"Calculated {len(calculated_metrics)} properties",
-                confidence_score=0.85
-            )
-
             # ═══════════════════════════════════════════════════════════
-            # Step 4: Physical Validation (Direct — Auditor fallback)
+            # Step 4: Auditor - Physical Validation
             # ═══════════════════════════════════════════════════════════
             await self._log_agent_event(session_id, "auditor", 4, "started",
-                                        "Validating chemical structure and constraints...")
+                                        "Validating chemical structure via Auditor agent...")
 
-            await self._broadcast_step(session_id, 4, "Physical Validation...")
+            await self._broadcast_step(session_id, 4, "Auditor: Physical Validation...")
 
             physics_verified = False
             validation_flags = {}
 
-            try:
-                auditor_result = await self.auditor.execute(state)
-                if auditor_result.success:
-                    validation_flags = auditor_result.data.get("chemistry_validation", {})
-                    state["validation_flags"] = validation_flags
-                    state["constraint_check"] = auditor_result.data.get("constraint_check", {})
-                    physics_verified = auditor_result.data.get("decision", {}).get("approved", False)
-                else:
-                    # Auditor 실패 시 직접 검증
+            if not calculated_metrics:
+                # Step 3에서 물성 연산 자체가 실패한 경우
+                critical_errors.append(
+                    "물성 검증 불가: Step 3 Property Calculation이 실패하여 "
+                    "검증할 데이터가 없습니다."
+                )
+                await self._log_agent_event(
+                    session_id, "auditor", 4, "critical_error",
+                    "No calculated metrics to validate — Step 3 failed"
+                )
+            else:
+                try:
+                    # PRIMARY: Auditor agent execute()
+                    auditor_result = await self.auditor.execute(state)
+                    if auditor_result.success:
+                        validation_flags = auditor_result.data.get("chemistry_validation", {})
+                        state["validation_flags"] = validation_flags
+                        state["constraint_check"] = auditor_result.data.get("constraint_check", {})
+                        physics_verified = auditor_result.data.get("decision", {}).get("approved", False)
+                        await self._log_agent_event(
+                            session_id, "auditor", 4, "completed",
+                            f"Auditor validation: {'APPROVED' if physics_verified else 'REJECTED'}",
+                            reasoning=auditor_result.reasoning,
+                            confidence_score=auditor_result.confidence_score
+                        )
+                    else:
+                        # Auditor 실패 → 직접 범위 검증 (이건 실제 로직이므로 허용)
+                        validation_flags, physics_verified = self._validate_properties_direct(calculated_metrics)
+                        warnings.append(
+                            f"Auditor agent 실패 ({auditor_result.error}). "
+                            f"기본 범위 검증(MW/LogP/HBD/HBA)으로 대체하였습니다."
+                        )
+                        await self._log_agent_event(
+                            session_id, "auditor", 4, "fallback",
+                            f"Auditor failed: {auditor_result.error}. Using range-check validation.",
+                            confidence_score=0.4
+                        )
+                except Exception as audit_err:
+                    logger.warning(f"[navigator-v2] Auditor exception: {audit_err}")
                     validation_flags, physics_verified = self._validate_properties_direct(calculated_metrics)
-                    warnings.append(f"Auditor partial: using direct validation")
-            except Exception as audit_err:
-                logger.warning(f"[navigator-v2] Auditor error: {audit_err}, using direct validation")
-                validation_flags, physics_verified = self._validate_properties_direct(calculated_metrics)
-
-            await self._log_agent_event(
-                session_id, "auditor", 4, "completed",
-                f"Validation: {'PASSED' if physics_verified else 'WARNINGS'}",
-                confidence_score=0.8 if physics_verified else 0.5
-            )
+                    warnings.append(
+                        f"Auditor agent 예외 발생: {str(audit_err)[:100]}. "
+                        f"기본 범위 검증으로 대체하였습니다."
+                    )
+                    await self._log_agent_event(
+                        session_id, "auditor", 4, "fallback",
+                        f"Auditor exception: {str(audit_err)[:100]}. Using range-check validation.",
+                        confidence_score=0.3
+                    )
             
             # ═══════════════════════════════════════════════════════════
             # Step 5: Virtual Trial Simulation
@@ -343,6 +421,11 @@ class NavigatorOrchestratorV2:
             await self._log_agent_event(session_id, "orchestrator", 5, "completed",
                                         f"Navigator completed in {execution_time:.1f}s")
             
+            # Virtual trial에 에러가 있으면 critical_errors에 추가
+            vt_error = virtual_trial.get("error")
+            if vt_error:
+                critical_errors.append(vt_error)
+
             return NavigatorResultV2(
                 session_id=session_id,
                 disease_name=disease_name,
@@ -354,15 +437,16 @@ class NavigatorOrchestratorV2:
                 agent_logs=self.agent_logs,
                 data_lineage=data_lineage,
                 execution_time_seconds=execution_time,
-                warnings=warnings
+                warnings=warnings,
+                critical_errors=critical_errors,
             )
 
         except Exception as e:
-            logger.exception(f"[navigator-v2] Pipeline error: {e}")
-            await self._log_agent_event(session_id, "orchestrator", state.get("step", 0), 
-                                        "error", str(e))
-            
-            # 오류 발생해도 부분 결과 반환
+            logger.exception(f"[navigator-v2] Pipeline CRITICAL error: {e}")
+            await self._log_agent_event(session_id, "orchestrator", state.get("step", 0),
+                                        "critical_error", str(e))
+
+            # FAIL-FAST: 파이프라인 전체 실패 시 명확한 에러 + 부분 결과
             return NavigatorResultV2(
                 session_id=session_id,
                 disease_name=disease_name,
@@ -374,7 +458,8 @@ class NavigatorOrchestratorV2:
                 agent_logs=self.agent_logs,
                 data_lineage={"error": str(e)},
                 execution_time_seconds=(datetime.utcnow() - start_time).total_seconds(),
-                warnings=warnings + [f"Pipeline error: {str(e)}"]
+                warnings=warnings,
+                critical_errors=[f"Pipeline Critical Error: {str(e)}"],
             )
 
     async def _run_coder_with_healer_retry(
@@ -542,43 +627,70 @@ class NavigatorOrchestratorV2:
         candidates: List[CandidateStructure],
         antibody_candidates: List[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """최종 조합 구성 (golden_set_library 데이터 반영)"""
-        antibody_name = "Trastuzumab"
-        linker_type = "Cleavable (Val-Cit)"
-        payload_class = "MMAE"
-        dar = 4
+        """
+        최종 조합 구성 — golden_set_library 실제 데이터 필수
+
+        FAIL-FAST: golden_set에서 실제 레퍼런스를 찾지 못하면
+        데이터 출처를 명시하고, 하드코딩 기본값 사용 금지.
+        """
+        target = state.get("target_antigen", "")
+        antibody_name = None
+        linker_type = None
+        payload_class = None
+        dar = None
         historical_orr = None
+        data_source = "unknown"
 
-        # antibody_candidates에서 항체명 가져오기
-        if antibody_candidates:
-            top = antibody_candidates[0]
-            antibody_name = top.get("name", antibody_name)
-
-        # golden_set_library 레퍼런스 검색
+        # 1순위: golden_set_library에서 FDA 승인 레퍼런스 검색
         try:
-            target = state.get("target_antigen", "")
             gs_ref = self.supabase.table("golden_set_library").select(
-                "name, target_1, linker_type, dar, orr_pct, description"
+                "name, target_1, linker_type, dar, orr_pct, description, payload_class"
             ).eq("status", "approved").eq("target_1", target).limit(1).execute()
 
             if gs_ref.data:
                 ref = gs_ref.data[0]
-                antibody_name = ref.get("name") or antibody_name
-                linker_type = ref.get("linker_type") or linker_type
-                dar = ref.get("dar") or dar
+                antibody_name = ref.get("name")
+                linker_type = ref.get("linker_type")
+                dar = ref.get("dar")
                 historical_orr = ref.get("orr_pct")
+                payload_class = ref.get("payload_class")
+                data_source = f"golden_set_library (approved, target={target})"
+                logger.info(f"[navigator-v2] Golden combination from DB: {antibody_name}, {linker_type}, DAR={dar}")
         except Exception as e:
-            logger.warning(f"[navigator-v2] Golden set lookup failed: {e}")
+            logger.error(f"[navigator-v2] Golden set lookup FAILED: {e}")
 
-        # Alchemist 결과에서 SMILES 가져오기
+        # 2순위: antibody_candidates에서 항체명 보충
+        if not antibody_name and antibody_candidates:
+            top = antibody_candidates[0]
+            antibody_name = top.get("name")
+            data_source = f"librarian_candidates (target={target})"
+
+        # Alchemist 결과에서 SMILES/payload 보충
         linker_smiles = ""
         payload_smiles = ""
         if candidates:
             top_candidate = candidates[0]
             linker_smiles = top_candidate.get("smiles", "")
             payload_smiles = top_candidate.get("payload_smiles", linker_smiles)
-            if top_candidate.get("payload_class"):
+            if not payload_class and top_candidate.get("payload_class"):
                 payload_class = top_candidate["payload_class"]
+
+        # FAIL-FAST: 필수 필드 누락 시 명시적 경고 (가짜값 대입 안함)
+        missing_fields = []
+        if not antibody_name:
+            missing_fields.append("antibody")
+        if not linker_type:
+            missing_fields.append("linker_type")
+        if not payload_class:
+            missing_fields.append("payload_class")
+        if not dar:
+            missing_fields.append("DAR")
+
+        if missing_fields:
+            logger.warning(
+                f"[navigator-v2] INCOMPLETE golden combination for target '{target}': "
+                f"missing {missing_fields}. No fake defaults applied."
+            )
 
         return {
             "antibody": antibody_name,
@@ -591,7 +703,9 @@ class NavigatorOrchestratorV2:
                 "smiles": payload_smiles
             },
             "dar": dar,
-            "historical_orr": historical_orr
+            "historical_orr": historical_orr,
+            "data_source": data_source,
+            "missing_fields": missing_fields if missing_fields else None,
         }
 
     async def _calculate_properties_direct(
@@ -600,92 +714,72 @@ class NavigatorOrchestratorV2:
         session_id: str
     ) -> tuple:
         """
-        RDKit 직접 계산 (sandbox 불필요)
-        Cloud Run에서도 동작. Coder+Healer 실패 시 대체.
+        RDKit 직접 계산 (Coder+Healer 실패 시 최후의 보루)
+
+        FAIL-FAST 원칙:
+        - SMILES 없음 → CRITICAL ERROR (추정값 절대 사용 금지)
+        - RDKit 미설치 → CRITICAL ERROR (환경 문제 즉시 노출)
+        - Invalid SMILES → CRITICAL ERROR (잘못된 구조 즉시 노출)
         """
         warnings = []
         metrics = {}
 
         smiles = state.get("current_smiles", "")
         if not smiles:
-            # Alchemist 결과에서 SMILES 추출 시도
             candidates = state.get("candidates", [])
             if candidates:
                 smiles = candidates[0].get("smiles", "")
 
         if not smiles:
-            warnings.append("No SMILES available for property calculation")
-            return metrics, warnings
+            raise ValueError(
+                "CRITICAL: No SMILES structure available. "
+                "Alchemist가 유효한 분자 구조를 생성하지 못했습니다. "
+                "물성 연산을 수행할 수 없습니다."
+            )
 
         try:
             from rdkit import Chem
             from rdkit.Chem import Descriptors, rdMolDescriptors
-
-            mol = Chem.MolFromSmiles(smiles)
-            if mol is None:
-                warnings.append(f"Invalid SMILES: {smiles[:50]}...")
-                # golden_set 기반 추정값 사용
-                target = state.get("target_antigen", "")
-                metrics = self._estimate_properties_from_golden_set(target)
-                return metrics, warnings
-
-            metrics = {
-                "mw": round(Descriptors.MolWt(mol), 2),
-                "logp": round(Descriptors.MolLogP(mol), 2),
-                "hbd": rdMolDescriptors.CalcNumHBD(mol),
-                "hba": rdMolDescriptors.CalcNumHBA(mol),
-                "tpsa": round(Descriptors.TPSA(mol), 2),
-                "rotatable_bonds": rdMolDescriptors.CalcNumRotatableBonds(mol),
-                "num_rings": rdMolDescriptors.CalcNumRings(mol),
-                "smiles": smiles,
-            }
-
-            # SA Score 시도
-            try:
-                from rdkit.Chem import RDConfig
-                import os, sys
-                sa_path = os.path.join(RDConfig.RDContribDir, "SA_Score")
-                if os.path.isdir(sa_path):
-                    sys.path.insert(0, sa_path)
-                    import sascorer
-                    metrics["sa_score"] = round(sascorer.calculateScore(mol), 2)
-            except Exception:
-                pass
-
         except ImportError:
-            logger.warning("[navigator-v2] RDKit not available, using golden_set estimates")
-            target = state.get("target_antigen", "")
-            metrics = self._estimate_properties_from_golden_set(target)
-            warnings.append("RDKit unavailable, using reference estimates")
-        except Exception as e:
-            logger.warning(f"[navigator-v2] Property calc error: {e}")
-            target = state.get("target_antigen", "")
-            metrics = self._estimate_properties_from_golden_set(target)
-            warnings.append(f"Property calculation partial: {str(e)[:100]}")
+            raise ImportError(
+                "CRITICAL: RDKit 물리 엔진이 설치되지 않았습니다. "
+                "Cloud Run 환경에 rdkit>=2024.3.6이 누락되어 정확한 물성 연산이 불가능합니다. "
+                "추정값 사용은 허용되지 않습니다. 즉시 환경을 점검하십시오."
+            )
 
-        return metrics, warnings
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            raise ValueError(
+                f"CRITICAL: Invalid SMILES 구조입니다 — '{smiles[:80]}'. "
+                f"RDKit이 파싱할 수 없는 잘못된 분자식입니다. "
+                f"Alchemist가 생성한 SMILES를 검증하십시오."
+            )
 
-    def _estimate_properties_from_golden_set(self, target: str) -> Dict[str, Any]:
-        """golden_set_library에서 타겟 기반 추정값"""
-        # 대표 ADC payload 물성 (MMAE 기반)
-        defaults = {
-            "mw": 718.0, "logp": 3.2, "hbd": 4, "hba": 9,
-            "tpsa": 166.0, "rotatable_bonds": 12, "estimated": True
+        metrics = {
+            "mw": round(Descriptors.MolWt(mol), 2),
+            "logp": round(Descriptors.MolLogP(mol), 2),
+            "hbd": rdMolDescriptors.CalcNumHBD(mol),
+            "hba": rdMolDescriptors.CalcNumHBA(mol),
+            "tpsa": round(Descriptors.TPSA(mol), 2),
+            "rotatable_bonds": rdMolDescriptors.CalcNumRotatableBonds(mol),
+            "num_rings": rdMolDescriptors.CalcNumRings(mol),
+            "smiles": smiles,
+            "computed_by": "rdkit_direct",
         }
 
+        # SA Score (선택적 — 이것만 실패해도 전체는 성공)
         try:
-            ref = self.supabase.table("golden_set_library").select(
-                "dar, linker_type"
-            ).eq("status", "approved").eq("target_1", target).limit(1).execute()
-
-            if ref.data:
-                row = ref.data[0]
-                dar = row.get("dar") or 4
-                defaults["dar_reference"] = dar
+            from rdkit.Chem import RDConfig
+            import os, sys
+            sa_path = os.path.join(RDConfig.RDContribDir, "SA_Score")
+            if os.path.isdir(sa_path):
+                sys.path.insert(0, sa_path)
+                import sascorer
+                metrics["sa_score"] = round(sascorer.calculateScore(mol), 2)
         except Exception:
-            pass
+            warnings.append("SA Score calculation unavailable (non-critical)")
 
-        return defaults
+        return metrics, warnings
 
     def _validate_properties_direct(self, metrics: Dict) -> tuple:
         """직접 물성 검증 (Auditor 실패 시 fallback)"""
@@ -715,36 +809,109 @@ class NavigatorOrchestratorV2:
         antibody_candidates: List[Dict],
         validation_flags: Dict
     ) -> Dict[str, Any]:
-        """Virtual Trial 시뮬레이션 V2"""
-        # 기본 예측값
-        base_orr = 45.0
-        base_pfs = 6.0
-        base_os = 12.0
-        
-        # Validation 결과에 따른 조정
+        """
+        Virtual Trial 시뮬레이션 V2 — golden_set 실제 임상 데이터 기반
+
+        FAIL-FAST 원칙:
+        - golden_set에서 실제 ORR/PFS/OS 데이터를 조회
+        - 데이터가 없으면 '데이터 부족으로 예측 불가'라고 정직하게 보고
+        - 하드코딩 ORR=45, PFS=6 등 절대 사용 금지
+        """
+        target = state.get("target_antigen", "")
+        disease = state.get("target_indication", "")
+
+        # golden_set_library에서 동일 타겟의 실제 임상 데이터 조회
+        ref_orr = None
+        ref_pfs = None
+        ref_os = None
+        ref_name = None
+        data_source = None
+
+        try:
+            gs_refs = self.supabase.table("golden_set_library").select(
+                "name, target_1, orr_pct, pfs_months, os_months, clinical_status, indication"
+            ).eq("target_1", target).not_.is_("orr_pct", "null").order(
+                "orr_pct", desc=True
+            ).limit(3).execute()
+
+            if gs_refs.data:
+                # 가장 높은 ORR 레퍼런스 사용
+                best_ref = gs_refs.data[0]
+                ref_orr = best_ref.get("orr_pct")
+                ref_pfs = best_ref.get("pfs_months")
+                ref_os = best_ref.get("os_months")
+                ref_name = best_ref.get("name")
+                data_source = f"golden_set_library: {ref_name} (target={target})"
+                logger.info(f"[navigator-v2] Virtual trial ref: {ref_name} ORR={ref_orr}%, PFS={ref_pfs}m, OS={ref_os}m")
+        except Exception as e:
+            logger.error(f"[navigator-v2] Golden set clinical data query FAILED: {e}")
+
+        # FAIL-FAST: 실제 레퍼런스 데이터가 없으면 정직하게 보고
+        if ref_orr is None:
+            logger.warning(f"[navigator-v2] No clinical reference data for target '{target}' — prediction unavailable")
+            return {
+                "predicted_orr": None,
+                "predicted_pfs_months": None,
+                "predicted_os_months": None,
+                "confidence": 0.0,
+                "pk_data": [],
+                "tumor_data": [],
+                "data_source": None,
+                "reference_drug": None,
+                "error": (
+                    f"임상 예측 데이터 부족: target '{target}'에 대한 "
+                    f"Golden Set 레퍼런스 ORR/PFS/OS 데이터가 존재하지 않습니다. "
+                    f"가상 임상 시뮬레이션을 수행할 수 없습니다."
+                ),
+            }
+
+        # Validation 결과에 따른 미세 조정 (레퍼런스 기반)
+        adjustment = 1.0
         if validation_flags.get("lipinski_pass"):
-            base_orr *= 1.1
+            adjustment *= 1.05  # 물성 통과 시 소폭 보너스
         if validation_flags.get("pains_detected"):
-            base_orr *= 0.9
-        
-        # Antibody 점수 반영
-        if antibody_candidates:
-            avg_confidence = sum(ab.get("match_confidence", 0.5) for ab in antibody_candidates) / len(antibody_candidates)
-            base_orr *= (0.8 + 0.4 * avg_confidence)
-        
+            adjustment *= 0.85  # PAINS 검출 시 감점
+
+        # 신뢰도 계산
+        confidence = 0.5  # 기본 (레퍼런스 존재)
+        if ref_pfs is not None:
+            confidence += 0.15
+        if ref_os is not None:
+            confidence += 0.15
+        if len(gs_refs.data) >= 2:
+            confidence += 0.1  # 다수 레퍼런스 존재
+
+        predicted_orr = round(min(ref_orr * adjustment, 95), 1)
+        predicted_pfs = round(ref_pfs * adjustment, 1) if ref_pfs else None
+        predicted_os = round(ref_os * adjustment, 1) if ref_os else None
+
+        # PK/Tumor 시뮬레이션은 레퍼런스 기반으로 생성
+        half_life_hours = 96 if ref_pfs and ref_pfs > 6 else 72  # 레퍼런스 기반 추정
+        pk_data = self._generate_pk_data(half_life_hours=half_life_hours)
+        tumor_data = self._generate_tumor_data(predicted_orr)
+
         return {
-            "predicted_orr": round(min(base_orr, 95), 1),
-            "predicted_pfs_months": round(base_pfs, 1),
-            "predicted_os_months": round(base_os, 1),
-            "confidence": 0.75,
-            "pk_data": self._generate_pk_data(),
-            "tumor_data": self._generate_tumor_data(base_orr)
+            "predicted_orr": predicted_orr,
+            "predicted_pfs_months": predicted_pfs,
+            "predicted_os_months": predicted_os,
+            "confidence": round(confidence, 2),
+            "pk_data": pk_data,
+            "tumor_data": tumor_data,
+            "data_source": data_source,
+            "reference_drug": ref_name,
+            "reference_count": len(gs_refs.data) if gs_refs.data else 0,
         }
 
-    def _generate_pk_data(self) -> List[Dict]:
-        """PK 데이터 생성"""
+    def _generate_pk_data(self, half_life_hours: float = 96) -> List[Dict]:
+        """PK 데이터 생성 (레퍼런스 반감기 기반)"""
+        # half_life를 일 단위 decay rate로 변환
+        decay_per_day = 0.5 ** (24 / half_life_hours)
         return [
-            {"time_hours": i * 24, "concentration": 100 * (0.5 ** (i / 4)), "free_payload": 5 * (0.5 ** (i / 4))}
+            {
+                "time_hours": i * 24,
+                "concentration": round(100 * (decay_per_day ** i), 2),
+                "free_payload": round(5 * (decay_per_day ** i), 3),
+            }
             for i in range(15)
         ]
 
@@ -842,25 +1009,20 @@ class NavigatorOrchestratorV2:
         except Exception as e:
             logger.warning(f"[navigator-v2] WebSocket broadcast error: {e}")
         
-        # DB에도 저장 (agent_name_check constraint 우회)
-        # DB constraint는 librarian/alchemist/coder/healer/auditor만 허용
-        VALID_DB_AGENTS = {"librarian", "alchemist", "coder", "healer", "auditor"}
-        db_agent_name = agent_name if agent_name in VALID_DB_AGENTS else None
-
-        if db_agent_name:
-            try:
-                self.supabase.table("agent_execution_logs").insert({
-                    "session_id": session_id,
-                    "agent_name": db_agent_name,
-                    "status": status,
-                    "reasoning": reasoning,
-                    "decision_summary": message,
-                    "confidence_score": confidence_score,
-                    "referenced_pmids": pmid_references,
-                    "created_at": datetime.utcnow().isoformat()
-                }).execute()
-            except Exception as e:
-                logger.warning(f"[navigator-v2] DB log error: {e}")
+        # DB에도 저장 (모든 에이전트 로그 기록)
+        try:
+            self.supabase.table("agent_execution_logs").insert({
+                "session_id": session_id,
+                "agent_name": agent_name,
+                "status": status,
+                "reasoning": reasoning,
+                "decision_summary": message,
+                "confidence_score": confidence_score,
+                "referenced_pmids": pmid_references,
+                "created_at": datetime.utcnow().isoformat()
+            }).execute()
+        except Exception as e:
+            logger.warning(f"[navigator-v2] DB log error for {agent_name}: {e}")
 
     def _get_agent_emoji(self, agent_name: str) -> str:
         """에이전트별 이모지"""

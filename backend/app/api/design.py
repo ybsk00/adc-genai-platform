@@ -844,8 +844,16 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                     first_ab = result.antibody_candidates[0]
                     primary_target = first_ab.get("target_protein") if isinstance(first_ab, dict) else getattr(first_ab, "target_protein", None)
 
+                # Fail-Fast: critical_errors가 있으면 status를 completed_with_errors로 설정
+                has_critical = bool(result.critical_errors)
+                final_status = "completed_with_errors" if has_critical else "completed"
+
+                predicted_orr = None
+                if isinstance(result.virtual_trial, dict):
+                    predicted_orr = result.virtual_trial.get("predicted_orr")
+
                 update_data = {
-                    "status": "completed",
+                    "status": final_status,
                     "antibody_candidates": result.antibody_candidates,
                     "primary_target": primary_target,
                     "golden_combination": result.golden_combination,
@@ -853,21 +861,31 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                     "physics_verified": result.physics_verified,
                     "virtual_trial": result.virtual_trial,
                     "lineage_data": result.data_lineage,
-                    "predicted_orr": result.virtual_trial.get("predicted_orr", 0) if isinstance(result.virtual_trial, dict) else getattr(result.virtual_trial, "predicted_orr", 0),
+                    "predicted_orr": predicted_orr,
                     "current_step": 5,
                     "completed_at": datetime.utcnow().isoformat()
                 }
 
-                # agent_logs/warnings 컬럼 존재 시 포함
+                # agent_logs/warnings/critical_errors 컬럼 존재 시 포함
                 try:
                     supabase.table("navigator_sessions").update({
                         **update_data,
                         "agent_logs": agent_logs,
-                        "warnings": result.warnings
+                        "warnings": result.warnings,
+                        "critical_errors": result.critical_errors,
                     }).eq("id", session_id).execute()
                 except Exception:
-                    logger.warning("[navigator-bg] agent_logs/warnings columns missing, saving without them")
-                    supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
+                    # critical_errors 컬럼이 아직 없을 수 있으므로 warnings에 병합
+                    try:
+                        merged_warnings = result.warnings + [f"[CRITICAL] {e}" for e in result.critical_errors]
+                        supabase.table("navigator_sessions").update({
+                            **update_data,
+                            "agent_logs": agent_logs,
+                            "warnings": merged_warnings,
+                        }).eq("id", session_id).execute()
+                    except Exception:
+                        logger.warning("[navigator-bg] agent_logs/warnings columns missing, saving without them")
+                        supabase.table("navigator_sessions").update(update_data).eq("id", session_id).execute()
 
             except Exception as e:
                 logger.exception(f"[navigator-bg] Error: {e}")
@@ -1180,18 +1198,23 @@ async def stream_navigator_progress(session_id: str):
 
                     last_step = current_step
 
-                # 완료 상태 확인
-                if status == "completed":
+                # 완료 상태 확인 (completed 또는 completed_with_errors)
+                if status in ("completed", "completed_with_errors"):
                     # 마지막 단계 완료 이벤트들
                     if last_step < 5:
                         for step in range(last_step + 1, 6):
                             yield f"data: {json.dumps({'type': 'step_complete', 'step': step, 'message': 'Completed'})}\n\n"
 
-                    # FIXED: 완료된 데이터 직접 사용 (추가 쿼리 없이)
                     virtual_trial = session.get("virtual_trial") or {}
+                    exec_time = elapsed
 
-                    # 실행 시간 계산
-                    exec_time = elapsed  # SSE 경과 시간 fallback
+                    # Fail-Fast: critical_errors 포함
+                    raw_warnings = session.get("warnings") or []
+                    critical_errors = session.get("critical_errors") or []
+                    # critical_errors 컬럼이 없으면 warnings에서 [CRITICAL] 태그 추출
+                    if not critical_errors:
+                        critical_errors = [w.replace("[CRITICAL] ", "") for w in raw_warnings if w.startswith("[CRITICAL]")]
+                        raw_warnings = [w for w in raw_warnings if not w.startswith("[CRITICAL]")]
 
                     result_payload = {
                         "type": "complete",
@@ -1203,7 +1226,8 @@ async def stream_navigator_progress(session_id: str):
                             "golden_combination": session.get("golden_combination") or {},
                             "physics_verified": session.get("physics_verified", False),
                             "virtual_trial": virtual_trial,
-                            "warnings": session.get("warnings") or [],
+                            "warnings": raw_warnings,
+                            "critical_errors": critical_errors,
                             "data_quality_score": virtual_trial.get("confidence", 0),
                             "execution_time_seconds": exec_time
                         }

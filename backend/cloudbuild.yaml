@@ -40,7 +40,7 @@ steps:
       - '--concurrency=80'
       - '--min-instances=0'
       - '--max-instances=1'
-      - '--set-env-vars=ENVIRONMENT=production'
+      - '--set-env-vars=ENVIRONMENT=production,SANDBOX_MODE=subprocess'
       - '--set-secrets=OPENAI_API_KEY=openai-api-key:latest,SUPABASE_URL=supabase-url:latest,SUPABASE_KEY=supabase-key:latest,PERPLEXITY_API_KEY=perplexity-api-key:latest'
 
 # 이미지 저장

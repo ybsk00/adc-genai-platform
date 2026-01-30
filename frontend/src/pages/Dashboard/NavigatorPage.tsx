@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Rocket, History, Trash2, RefreshCw } from 'lucide-react';
+import { Rocket, History, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,12 +51,15 @@ interface GoldenCombination {
 }
 
 interface VirtualTrial {
-  predicted_orr: number;
-  predicted_pfs_months: number;
-  predicted_os_months: number;
-  pk_data: Array<{ time_hours: number; concentration: number; free_payload: number }>;
-  tumor_data: Array<{ day: number; treated: number; control: number }>;
-  confidence: number;
+  predicted_orr?: number;  // Fail-Fast: undefined = 데이터 부족으로 예측 불가
+  predicted_pfs_months?: number;
+  predicted_os_months?: number;
+  pk_data?: Array<{ time_hours: number; concentration: number; free_payload: number }>;
+  tumor_data?: Array<{ day: number; treated: number; control: number }>;
+  confidence?: number;
+  error?: string;  // Fail-Fast: 시뮬레이션 실패 사유
+  data_source?: string;  // 데이터 출처 추적
+  reference_drug?: string;  // 레퍼런스 약물명
 }
 
 interface NavigatorSessionResult {
@@ -68,7 +71,8 @@ interface NavigatorSessionResult {
   physics_verified: boolean;
   virtual_trial: VirtualTrial | null;
   execution_time_seconds: number;
-  warnings?: string[];  // FIXED: Add warnings field
+  warnings?: string[];
+  critical_errors?: string[];  // Fail-Fast: 치명적 오류 (사용자에게 직접 노출)
   data_quality_score?: number;
 }
 
@@ -622,6 +626,26 @@ export function NavigatorPage() {
               </Button>
             </div>
 
+            {/* Fail-Fast: Critical Errors 표시 */}
+            {result.critical_errors && result.critical_errors.length > 0 && (
+              <div className="mb-6 p-4 bg-red-900/30 border-2 border-red-500/60 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <h3 className="text-red-400 font-bold text-lg">Critical Errors Detected</h3>
+                </div>
+                <p className="text-red-300/80 text-sm mb-3">
+                  아래 오류로 인해 일부 연산 결과가 불완전합니다. 추정값이나 가짜 데이터는 사용되지 않았습니다.
+                </p>
+                <ul className="space-y-2">
+                  {result.critical_errors.map((err, i) => (
+                    <li key={i} className="text-red-300 text-sm bg-red-950/50 rounded-lg p-3 font-mono">
+                      {err}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <NavigatorResult
               sessionId={result.session_id}
               diseaseName={result.disease_name}
@@ -631,8 +655,8 @@ export function NavigatorPage() {
               physicsVerified={result.physics_verified}
               virtualTrial={result.virtual_trial}
               executionTime={result.execution_time_seconds}
-              warnings={result.warnings}  // FIXED
-              dataQualityScore={result.data_quality_score}  // FIXED
+              warnings={result.warnings}
+              dataQualityScore={result.data_quality_score}
               onExportReport={() => toast.info('Export feature coming soon')}
               onShare={() => toast.info('Share feature coming soon')}
             />
