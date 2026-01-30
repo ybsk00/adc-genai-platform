@@ -335,19 +335,19 @@ class LibrarianAgent(BaseDesignAgent):
         target: str,
         threshold: float = 0.6
     ) -> List[Dict]:
-        """Golden Set에서 타겟 기반 검색"""
+        """Golden Set Library에서 타겟 기반 검색 (rejected 제외)"""
         try:
-            result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, target_2, indication, clinical_status"
-            ).or_(
+            result = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, target_2, category, outcome_type"
+            ).neq("status", "rejected").or_(
                 f"target_1.ilike.%{target}%,target_2.ilike.%{target}%"
             ).limit(10).execute()
 
             return [{
                 "id": str(g["id"]),
-                "name": g.get("drug_name"),
+                "name": g.get("name"),
                 "target": g.get("target_1"),
-                "status": g.get("clinical_status")
+                "status": g.get("outcome_type")
             } for g in (result.data or [])]
 
         except Exception as e:
@@ -632,20 +632,20 @@ Golden Set 참조 (FDA 승인 ADC):
                     for ab in result.data
                 ]
 
-            # Golden Set에서 검색
-            gs_result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, indication, orr_pct, os_months"
-            ).ilike(
-                "indication", f"%{disease_name}%"
+            # Golden Set Library에서 검색 (rejected 제외)
+            gs_result = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, category, orr_pct, os_months"
+            ).neq("status", "rejected").or_(
+                f"name.ilike.%{disease_name}%,category.ilike.%{disease_name}%"
             ).limit(top_k).execute()
 
             return [
                 {
                     "id": gs["id"],
-                    "name": gs["drug_name"],
+                    "name": gs["name"],
                     "target_protein": gs.get("target_1", "Unknown"),
                     "isotype": None,
-                    "related_disease": gs.get("indication"),
+                    "related_disease": gs.get("category"),
                     "full_spec": None,
                     "orr_pct": gs.get("orr_pct"),
                     "os_months": gs.get("os_months"),

@@ -494,13 +494,16 @@ class NavigatorOrchestrator:
         targets = {}  # canonical_name -> {data}
 
         try:
-            # 1. golden_set에서 해당 질환의 타겟 검색
-            gs_result = self.supabase.table("golden_set").select(
-                "drug_name, target_1, target_2, indication, orr_pct, pfs_months, os_months, "
-                "clinical_status, dar, payload_class, linker_type, mechanism_of_action"
-            ).ilike("indication", f"%{disease_name}%").execute()
+            # 1. golden_set_library에서 해당 질환의 타겟 검색 (rejected 제외)
+            gs_result = self.supabase.table("golden_set_library").select(
+                "name, target_1, target_2, category, orr_pct, pfs_months, os_months, "
+                "status, dar, properties, linker_type"
+            ).neq("status", "rejected").or_(
+                f"name.ilike.%{disease_name}%,category.ilike.%{disease_name}%"
+            ).execute()
 
             for row in (gs_result.data or []):
+                props = row.get("properties") or {}
                 for target_col in ["target_1", "target_2"]:
                     t = row.get(target_col)
                     if t and t.strip():
@@ -509,7 +512,7 @@ class NavigatorOrchestrator:
                             targets[canonical] = {
                                 "canonical_name": canonical,
                                 "display_name": t.strip(),
-                                "source": "golden_set",
+                                "source": "golden_set_library",
                                 "clinical_data": [],
                                 "drug_count": 0,
                                 "best_orr": 0,
@@ -517,21 +520,21 @@ class NavigatorOrchestrator:
                             }
                         targets[canonical]["drug_count"] += 1
                         targets[canonical]["clinical_data"].append({
-                            "drug_name": row.get("drug_name"),
+                            "drug_name": row.get("name"),
                             "orr_pct": row.get("orr_pct"),
                             "pfs_months": row.get("pfs_months"),
                             "os_months": row.get("os_months"),
-                            "clinical_status": row.get("clinical_status"),
+                            "clinical_status": row.get("outcome_type") or row.get("status", ""),
                             "dar": row.get("dar"),
-                            "payload_class": row.get("payload_class"),
+                            "payload_class": props.get("payload_class", ""),
                             "linker_type": row.get("linker_type"),
                         })
                         orr = row.get("orr_pct") or 0
                         if orr > targets[canonical]["best_orr"]:
                             targets[canonical]["best_orr"] = orr
-                            targets[canonical]["best_phase"] = row.get("clinical_status", "")
+                            targets[canonical]["best_phase"] = row.get("outcome_type") or row.get("status", "")
 
-            logger.info(f"[navigator] Found {len(targets)} targets from golden_set for '{disease_name}'")
+            logger.info(f"[navigator] Found {len(targets)} targets from golden_set_library for '{disease_name}'")
 
             # 2. antibody_library에서 추가 타겟 검색
             ab_result = self.supabase.table("antibody_library").select(
@@ -769,22 +772,24 @@ class NavigatorOrchestrator:
                     ) for ab in result.data
                 ]
 
-            # golden_set 검색
-            gs_result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, indication, orr_pct, pfs_months, os_months, clinical_status"
-            ).ilike("indication", f"%{disease_name}%").limit(top_k).execute()
+            # golden_set_library 검색 (rejected 제외)
+            gs_result = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, category, orr_pct, pfs_months, os_months, outcome_type"
+            ).neq("status", "rejected").or_(
+                f"name.ilike.%{disease_name}%,category.ilike.%{disease_name}%"
+            ).limit(top_k).execute()
 
             return [
                 AntibodyCandidate(
                     antibody_id=str(gs["id"]),
-                    name=gs["drug_name"],
+                    name=gs["name"],
                     target_protein=gs.get("target_1", "Unknown"),
-                    related_diseases=gs.get("indication"),
+                    related_diseases=gs.get("category"),
                     clinical_score=self.scorer.calculate_score({
                         "orr_pct": gs.get("orr_pct", 0),
                         "pfs_months": gs.get("pfs_months", 0),
                         "os_months": gs.get("os_months", 0),
-                        "clinical_phase": gs.get("clinical_status", "")
+                        "clinical_phase": gs.get("outcome_type", "")
                     }),
                     match_confidence=0.7
                 ) for gs in (gs_result.data or [])
@@ -800,11 +805,11 @@ class NavigatorOrchestrator:
     ) -> float:
         """실제 임상 데이터 기반 clinical score 계산"""
         if not clinical_data:
-            # golden_set에서 해당 타겟의 임상 데이터 직접 조회
+            # golden_set_library에서 해당 타겟의 임상 데이터 직접 조회 (rejected 제외)
             try:
-                result = self.supabase.table("golden_set").select(
-                    "orr_pct, pfs_months, os_months, clinical_status"
-                ).or_(
+                result = self.supabase.table("golden_set_library").select(
+                    "orr_pct, pfs_months, os_months, outcome_type"
+                ).neq("status", "rejected").or_(
                     f"target_1.ilike.%{target_name}%,target_2.ilike.%{target_name}%"
                 ).order("orr_pct", desc=True).limit(5).execute()
                 clinical_data = result.data or []
@@ -822,7 +827,7 @@ class NavigatorOrchestrator:
                 "orr_pct": cd.get("orr_pct", 0) or 0,
                 "pfs_months": cd.get("pfs_months", 0) or 0,
                 "os_months": cd.get("os_months", 0) or 0,
-                "clinical_phase": cd.get("clinical_status", "") or ""
+                "clinical_phase": cd.get("clinical_status", "") or cd.get("outcome_type", "") or ""
             })
             best_score = max(best_score, score)
 
@@ -845,12 +850,12 @@ class NavigatorOrchestrator:
             best_combo = None
             source = "none"
 
-            # ── 1순위: golden_set에서 FDA 승인/임상 ADC 조합 검색 ──
-            gs_result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, target_2, indication, "
-                "linker_smiles, linker_type, payload_smiles, payload_class, "
-                "dar, orr_pct, pfs_months, os_months, clinical_status, mechanism_of_action"
-            ).or_(
+            # ── 1순위: golden_set_library에서 FDA 승인/임상 ADC 조합 검색 (rejected 제외) ──
+            gs_result = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, target_2, category, "
+                "linker_smiles, linker_type, payload_smiles, properties, "
+                "dar, orr_pct, pfs_months, os_months, outcome_type"
+            ).neq("status", "rejected").or_(
                 f"target_1.ilike.%{target_protein}%,target_2.ilike.%{target_protein}%"
             ).order("orr_pct", desc=True).limit(10).execute()
 
@@ -860,17 +865,23 @@ class NavigatorOrchestrator:
                 # 임상 점수로 재순위화
                 scored = []
                 for combo in gs_combos:
+                    props = combo.get("properties") or {}
                     score = self.scorer.calculate_score({
                         "orr_pct": combo.get("orr_pct", 0) or 0,
                         "pfs_months": combo.get("pfs_months", 0) or 0,
                         "os_months": combo.get("os_months", 0) or 0,
-                        "clinical_phase": combo.get("clinical_status", "") or ""
+                        "clinical_phase": combo.get("outcome_type", "") or ""
                     })
+                    # properties에서 payload_class, mechanism_of_action 추출
+                    combo["drug_name"] = combo.get("name", "")
+                    combo["payload_class"] = props.get("payload_class", "")
+                    combo["mechanism_of_action"] = props.get("mechanism_of_action", "")
+                    combo["clinical_status"] = combo.get("outcome_type", "")
                     scored.append({**combo, "weighted_score": score})
 
                 best_combo = max(scored, key=lambda x: x["weighted_score"])
-                source = "golden_set"
-                logger.info(f"[navigator] Golden combo from golden_set: {best_combo.get('drug_name')} (score={best_combo['weighted_score']:.3f})")
+                source = "golden_set_library"
+                logger.info(f"[navigator] Golden combo from golden_set_library: {best_combo.get('drug_name')} (score={best_combo['weighted_score']:.3f})")
 
             # ── 2순위: commercial_reagents에서 시약 검색 ──
             if not best_combo or not best_combo.get("linker_smiles"):
@@ -915,26 +926,31 @@ class NavigatorOrchestrator:
                 except Exception as e:
                     logger.warning(f"[navigator] Commercial reagent search error: {e}")
 
-            # ── 3순위: golden_set 전체에서 최고 성능 조합 ──
+            # ── 3순위: golden_set_library 전체에서 최고 성능 조합 (rejected 제외) ──
             if not best_combo:
-                any_gs = self.supabase.table("golden_set").select(
-                    "id, drug_name, target_1, linker_smiles, linker_type, "
-                    "payload_smiles, payload_class, dar, orr_pct, pfs_months, os_months, "
-                    "clinical_status, mechanism_of_action"
-                ).not_.is_("linker_smiles", "null").order(
+                any_gs = self.supabase.table("golden_set_library").select(
+                    "id, name, target_1, linker_smiles, linker_type, "
+                    "payload_smiles, properties, dar, orr_pct, pfs_months, os_months, "
+                    "outcome_type"
+                ).neq("status", "rejected").not_.is_("linker_smiles", "null").order(
                     "orr_pct", desc=True
                 ).limit(1).execute()
 
                 if any_gs.data:
                     best_combo = any_gs.data[0]
+                    props = best_combo.get("properties") or {}
+                    best_combo["drug_name"] = best_combo.get("name", "")
+                    best_combo["payload_class"] = props.get("payload_class", "")
+                    best_combo["mechanism_of_action"] = props.get("mechanism_of_action", "")
+                    best_combo["clinical_status"] = best_combo.get("outcome_type", "")
                     best_combo["weighted_score"] = self.scorer.calculate_score({
                         "orr_pct": best_combo.get("orr_pct", 0) or 0,
                         "pfs_months": best_combo.get("pfs_months", 0) or 0,
                         "os_months": best_combo.get("os_months", 0) or 0,
-                        "clinical_phase": best_combo.get("clinical_status", "") or ""
+                        "clinical_phase": best_combo.get("outcome_type", "") or ""
                     })
-                    source = "golden_set_global"
-                    logger.info(f"[navigator] Using global best from golden_set: {best_combo.get('drug_name')}")
+                    source = "golden_set_library_global"
+                    logger.info(f"[navigator] Using global best from golden_set_library: {best_combo.get('drug_name')}")
 
             # ── 4순위: Gemini AI 추천 ──
             if not best_combo:
@@ -1033,23 +1049,24 @@ class NavigatorOrchestrator:
         self,
         antibody_candidates: List[AntibodyCandidate]
     ) -> GoldenCombination:
-        """최종 fallback: golden_set에서 가장 높은 점수 조합"""
+        """최종 fallback: golden_set_library에서 가장 높은 점수 조합 (rejected 제외)"""
         try:
-            result = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, linker_smiles, linker_type, "
-                "payload_smiles, payload_class, dar, orr_pct, pfs_months, os_months, "
-                "clinical_status, mechanism_of_action"
-            ).not_.is_("orr_pct", "null").order(
+            result = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, linker_smiles, linker_type, "
+                "payload_smiles, properties, dar, orr_pct, pfs_months, os_months, "
+                "outcome_type"
+            ).neq("status", "rejected").not_.is_("orr_pct", "null").order(
                 "orr_pct", desc=True
             ).limit(1).execute()
 
             if result.data:
                 best = result.data[0]
+                props = best.get("properties") or {}
                 score = self.scorer.calculate_score({
                     "orr_pct": best.get("orr_pct", 0) or 0,
                     "pfs_months": best.get("pfs_months", 0) or 0,
                     "os_months": best.get("os_months", 0) or 0,
-                    "clinical_phase": best.get("clinical_status", "") or ""
+                    "clinical_phase": best.get("outcome_type", "") or ""
                 })
                 return GoldenCombination(
                     antibody=antibody_candidates[0] if antibody_candidates else AntibodyCandidate(
@@ -1063,16 +1080,16 @@ class NavigatorOrchestrator:
                     payload=PayloadSpec(
                         id=str(best.get("id", "")),
                         smiles=best.get("payload_smiles", "") or "",
-                        class_name=best.get("payload_class", "Unknown") or "Unknown",
-                        mechanism=best.get("mechanism_of_action", "") or ""
+                        class_name=props.get("payload_class", "Unknown") or "Unknown",
+                        mechanism=props.get("mechanism_of_action", "") or ""
                     ),
                     dar=best.get("dar", 4) or 4,
                     historical_performance={
                         "orr_pct": best.get("orr_pct"),
                         "pfs_months": best.get("pfs_months"),
                         "os_months": best.get("os_months"),
-                        "source_drug": best.get("drug_name", ""),
-                        "data_source": "golden_set_fallback"
+                        "source_drug": best.get("name", ""),
+                        "data_source": "golden_set_library_fallback"
                     },
                     confidence_score=score
                 )
@@ -1239,13 +1256,13 @@ class NavigatorOrchestrator:
         target = golden_combo.antibody.target_protein
         confidence_factor = golden_combo.confidence_score
 
-        # ── 1. golden_set에서 해당 타겟+질환의 실제 임상 레퍼런스 수집 ──
+        # ── 1. golden_set_library에서 해당 타겟+질환의 실제 임상 레퍼런스 수집 (rejected 제외) ──
         reference_data = []
         try:
-            ref_result = self.supabase.table("golden_set").select(
-                "drug_name, target_1, indication, orr_pct, pfs_months, os_months, "
-                "clinical_status, dar, payload_class, linker_type"
-            ).or_(
+            ref_result = self.supabase.table("golden_set_library").select(
+                "name, target_1, category, orr_pct, pfs_months, os_months, "
+                "outcome_type, dar, properties, linker_type"
+            ).neq("status", "rejected").or_(
                 f"target_1.ilike.%{target}%,target_2.ilike.%{target}%"
             ).not_.is_("orr_pct", "null").order("orr_pct", desc=True).limit(10).execute()
             reference_data = ref_result.data or []

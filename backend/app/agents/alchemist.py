@@ -182,12 +182,12 @@ class AlchemistAgent(BaseDesignAgent):
         타겟 항원과 적응증 기반 검색
         """
         try:
-            # 타겟 기반 검색
-            query = self.supabase.table("golden_set").select(
-                "id, drug_name, target_1, target_2, indication, "
+            # 타겟 기반 검색 (rejected 제외)
+            query = self.supabase.table("golden_set_library").select(
+                "id, name, target_1, target_2, category, "
                 "payload_smiles, linker_smiles, linker_type, dar, "
-                "clinical_status, orr_pct, os_months"
-            )
+                "outcome_type, orr_pct, os_months, properties"
+            ).neq("status", "rejected")
 
             if target:
                 query = query.or_(f"target_1.ilike.%{target}%,target_2.ilike.%{target}%")
@@ -196,12 +196,24 @@ class AlchemistAgent(BaseDesignAgent):
 
             if result.data:
                 logger.info(f"[alchemist] Found {len(result.data)} Golden Set entries for target: {target}")
-                return result.data
+                # 필드 호환성 매핑
+                mapped = []
+                for row in result.data:
+                    props = row.get("properties") or {}
+                    row["drug_name"] = row.get("name", "")
+                    row["indication"] = row.get("category", "")
+                    row["clinical_status"] = row.get("outcome_type", "")
+                    row["payload_class"] = props.get("payload_class", "")
+                    row["mechanism_of_action"] = props.get("mechanism_of_action", "")
+                    mapped.append(row)
+                return mapped
 
             # 타겟으로 못 찾으면 적응증으로 검색
             if indication:
-                result = self.supabase.table("golden_set").select("*").ilike(
-                    "indication", f"%{indication}%"
+                result = self.supabase.table("golden_set_library").select(
+                    "*"
+                ).neq("status", "rejected").ilike(
+                    "category", f"%{indication}%"
                 ).limit(limit).execute()
                 return result.data or []
 

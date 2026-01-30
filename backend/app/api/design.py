@@ -984,10 +984,12 @@ async def get_disease_targets(disease: str):
         "target_protein, target_normalized"
     ).ilike("related_disease", f"%{disease}%").execute()
 
-    # golden_set에서 검색
-    gs_result = supabase.table("golden_set").select(
-        "target_1, target_2, clinical_status, orr_pct"
-    ).ilike("indication", f"%{disease}%").execute()
+    # golden_set_library에서 검색 (rejected 제외)
+    gs_result = supabase.table("golden_set_library").select(
+        "target_1, target_2, outcome_type, orr_pct"
+    ).neq("status", "rejected").or_(
+        f"name.ilike.%{disease}%,category.ilike.%{disease}%"
+    ).execute()
 
     # 타겟 집계
     target_stats = {}
@@ -1007,7 +1009,7 @@ async def get_disease_targets(disease: str):
                 orr = row.get("orr_pct")
                 if orr and (target_stats[target]["max_orr"] is None or orr > target_stats[target]["max_orr"]):
                     target_stats[target]["max_orr"] = orr
-                if row.get("clinical_status") == "Approved":
+                if row.get("outcome_type") == "Success" or row.get("outcome_type") == "Approved":
                     target_stats[target]["approved"] = True
 
     # 정렬 (approved > max_orr > count)
