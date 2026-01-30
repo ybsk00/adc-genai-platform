@@ -768,12 +768,14 @@ class DiseaseSuggestion(BaseModel):
 @router.post("/navigator/run")
 async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundTasks):
     """
-    One-Click ADC Navigator 실행 (Selection Gate 지원)
-
-    질환명 하나만 입력하면 6인 에이전트가 협업하여
-    최적의 ADC 설계안을 자동 생성합니다.
+    One-Click ADC Navigator V2 실행 (실제 에이전트 호출)
+    
+    FIXED:
+    - Librarian, Alchemist, Coder, Healer, Auditor 실제 execute() 호출
+    - DesignSessionState 공유
+    - 실시간 연산 로그 스트리밍
     """
-    from app.agents.navigator_orchestrator import get_navigator_orchestrator
+    from app.agents.navigator_orchestrator_v2 import run_one_click_navigator_v2
     import uuid
 
     user_id = await get_current_user_id()
@@ -791,7 +793,9 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                 "disease_name": request.disease_name,
                 "status": "running",
                 "current_step": 0,
-                "total_steps": 5
+                "total_steps": 5,
+                "agent_logs": [],  # FIXED: 실시간 로그 저장
+                "created_at": datetime.utcnow().isoformat()
             }).execute()
         else:
             supabase.table("navigator_sessions").update({
@@ -799,50 +803,45 @@ async def run_navigator(request: NavigatorRequest, background_tasks: BackgroundT
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("id", session_id).execute()
 
-        # 백그라운드에서 Navigator 실행 (FIXED)
+        # 백그라운드에서 Navigator V2 실행 (FIXED: 실제 에이전트 호출)
         async def run_navigator_background():
-            from app.agents.navigator_orchestrator import run_one_click_navigator
             try:
-                result = await run_one_click_navigator(
+                # FIXED: V2 호출 (실제 에이전트 execute())
+                result = await run_one_click_navigator_v2(
                     disease_name=request.disease_name,
                     session_id=session_id,
-                    user_id=user_id,
-                    selected_antibody_id=request.selected_antibody_id
+                    user_id=user_id
                 )
 
-                # Check if we are in waiting state (Selection Gate)
-                if not request.selected_antibody_id and not result.golden_combination:
-                    logger.info(f"[navigator-bg] Session {session_id} is now waiting for antibody selection")
-                    return # DB already updated to waiting_for_selection in orchestrator
+                # FIXED: 에이전트 로그 저장
+                agent_logs = [
+                    {
+                        "agent": log.agent_name,
+                        "step": log.step,
+                        "status": log.status,
+                        "message": log.message,
+                        "reasoning": log.reasoning,
+                        "data_source": log.data_source,
+                        "pmid_refs": log.pmid_references,
+                        "confidence": log.confidence_score,
+                        "timestamp": log.timestamp
+                    }
+                    for log in result.agent_logs
+                ]
 
-                # FIXED: 안전한 데이터 접근
-                antibody_candidates = []
-                for ab in result.antibody_candidates:
-                    try:
-                        antibody_candidates.append({
-                            "id": ab.antibody_id,
-                            "name": ab.name,
-                            "target_protein": ab.target_protein,
-                            "clinical_score": ab.clinical_score,
-                            "match_confidence": ab.match_confidence
-                        })
-                    except Exception as ab_e:
-                        logger.warning(f"[navigator-bg] Error processing antibody: {ab_e}")
-
-                primary_target = None
-                if result.antibody_candidates:
-                    primary_target = result.antibody_candidates[0].target_protein
-
-                # 결과 저장 (FIXED: warnings 포함)
+                # 결과 저장
                 update_data = {
                     "status": "completed",
-                    "antibody_candidates": antibody_candidates,
-                    "primary_target": primary_target,
-                    "golden_combination": {
-                        "antibody": result.golden_combination.antibody.name if result.golden_combination else None,
-                        "linker": {
-                            "type": result.golden_combination.linker.type if result.golden_combination else None,
-                            "smiles": result.golden_combination.linker.smiles if result.golden_combination else None
+                    "antibody_candidates": result.antibody_candidates,
+                    "primary_target": result.antibody_candidates[0].get("target_protein") if result.antibody_candidates else None,
+                    "golden_combination": result.golden_combination,
+                    "calculated_metrics": result.calculated_metrics,
+                    "physics_verified": result.physics_verified,
+                    "virtual_trial": result.virtual_trial,
+                    "agent_logs": agent_logs,  # FIXED: 실시간 로그
+                    "data_lineage": result.data_lineage,  # FIXED: 데이터 출처
+                    "warnings": result.warnings,
+                    "completed_at": datetime.utcnow().isoformat()
                         },
                         "payload": {
                             "class": result.golden_combination.payload.class_name if result.golden_combination else None,

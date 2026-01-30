@@ -14,6 +14,7 @@ import {
   SmartDiseaseInput,
   NavigatorPipeline,
   NavigatorResult,
+  type AgentLog,
 } from '@/components/navigator';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -66,6 +67,8 @@ interface NavigatorSessionResult {
   physics_verified: boolean;
   virtual_trial: VirtualTrial;
   execution_time_seconds: number;
+  warnings?: string[];  // FIXED: Add warnings field
+  data_quality_score?: number;
 }
 
 interface RecentSession {
@@ -95,6 +98,7 @@ export function NavigatorPage() {
   const [result, setResult] = useState<NavigatorSessionResult | null>(null);
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);  // FIXED: 실시간 에이전트 로그
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -126,6 +130,7 @@ export function NavigatorPage() {
       { status: 'pending' },
     ]);
     setResult(null);
+    setAgentLogs([]);  // FIXED
   }, []);
 
   // Handle Navigator run with WebSocket streaming
@@ -205,8 +210,29 @@ export function NavigatorPage() {
               toast.error(`Step ${data.step} failed: ${data.message}`);
               break;
 
+            // FIXED: 실시간 에이전트 로그 수신
+            case 'agent_log':
+              if (data.agent && data.message) {
+                setAgentLogs((prev) => [...prev, {
+                  timestamp: data.timestamp || new Date().toISOString(),
+                  agent_name: data.agent,
+                  step: data.step || currentStep,
+                  status: data.status || 'running',
+                  message: data.message,
+                  reasoning: data.reasoning,
+                  data_source: data.data_source,
+                  pmid_refs: data.pmid_refs,
+                  confidence_score: data.confidence
+                }]);
+              }
+              break;
+
             case 'complete':
               setResult(data.result);
+              // FIXED: 완료 시 로그 동기화
+              if (data.result?.agent_logs) {
+                setAgentLogs(data.result.agent_logs);
+              }
               setIsRunning(false);
               eventSource.close();
               toast.success('ADC design completed!');
@@ -480,6 +506,7 @@ export function NavigatorPage() {
               currentStep={currentStep}
               steps={steps}
               diseaseName={diseaseName}
+              agentLogs={agentLogs}  // FIXED: 실시간 로그 전달
             />
           </motion.div>
         ) : result ? (
@@ -512,6 +539,8 @@ export function NavigatorPage() {
               physicsVerified={result.physics_verified}
               virtualTrial={result.virtual_trial}
               executionTime={result.execution_time_seconds}
+              warnings={result.warnings}  // FIXED
+              dataQualityScore={result.data_quality_score}  // FIXED
               onExportReport={() => toast.info('Export feature coming soon')}
               onShare={() => toast.info('Share feature coming soon')}
             />

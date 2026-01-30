@@ -18,12 +18,12 @@ import {
   FileText,
   AlertTriangle,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { VirtualTrialChart } from './VirtualTrialChart';
-import { cn } from '@/lib/utils';
 
 interface AntibodyCandidate {
   id: string;
@@ -65,6 +65,8 @@ interface NavigatorResultProps {
   physicsVerified: boolean;
   virtualTrial: VirtualTrial;
   executionTime: number;
+  warnings?: string[];  // FIXED
+  dataQualityScore?: number;
   onExportReport?: () => void;
   onShare?: () => void;
 }
@@ -78,6 +80,8 @@ export function NavigatorResult({
   physicsVerified,
   virtualTrial,
   executionTime,
+  warnings = [],
+  dataQualityScore,
   onExportReport,
   onShare,
 }: NavigatorResultProps) {
@@ -116,6 +120,45 @@ export function NavigatorResult({
           </motion.div>
         )}
       </div>
+
+      {/* FIXED: Warnings Display */}
+      {warnings.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-amber-300 font-medium">Design Warnings</h4>
+              <ul className="mt-2 space-y-1">
+                {warnings.map((warning, idx) => (
+                  <li key={idx} className="text-sm text-amber-200/80">
+                    • {warning}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* FIXED: Data Quality Indicator */}
+      {dataQualityScore !== undefined && (
+        <div className="flex justify-end">
+          <Badge 
+            variant="outline" 
+            className={cn(
+              dataQualityScore > 0.7 ? 'text-emerald-400 border-emerald-400/50' :
+              dataQualityScore > 0.4 ? 'text-amber-400 border-amber-400/50' :
+              'text-red-400 border-red-400/50'
+            )}
+          >
+            Data Quality: {(dataQualityScore * 100).toFixed(0)}%
+          </Badge>
+        </div>
+      )}
 
       {/* Main Results Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
