@@ -17,7 +17,7 @@ export function HeroSection() {
                     <span className="flex items-center gap-1">⚡ 99.8% Prediction Accuracy</span>
                 </div>
 
-                <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-tight text-white">
+                <h1 className="text-3xl lg:text-3xl font-bold tracking-tight leading-snug text-white">
                     Accelerate ADC Discovery: <br />
                     From "Black Box" to <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">

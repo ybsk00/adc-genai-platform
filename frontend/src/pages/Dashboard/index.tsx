@@ -7,4 +7,5 @@ export { default as DenovoDesign } from './DenovoDesign'
 export { default as LeadOptimization } from './LeadOptimization'
 export { default as PreclinicalAudit } from './PreclinicalAudit'
 export { default as CMCSourcing } from './CMCSourcing'
+export { default as NavigatorPage } from './NavigatorPage'
 

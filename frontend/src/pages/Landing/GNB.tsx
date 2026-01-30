@@ -29,9 +29,7 @@ export function GNB() {
 
                     {/* Desktop Menu */}
                     <div className="hidden md:flex items-center gap-8">
-                        <a href="#features" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Features</a>
-                        <a href="#pricing" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Pricing</a>
-                        <Link to="/library" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Golden Set</Link>
+                        {/* Menu items removed as requested */}
                     </div>
 
                     {/* Auth Buttons */}
@@ -57,9 +55,7 @@ export function GNB() {
                 {isMenuOpen && (
                     <div className="md:hidden py-4 border-t border-white/10 bg-[#0F172A]">
                         <div className="flex flex-col gap-4">
-                            <a href="#features" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Features</a>
-                            <a href="#pricing" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-                            <Link to="/library" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Golden Set</Link>
+                            {/* Mobile menu items removed as requested */}
                             <div className="h-px bg-white/10 my-2" />
                             <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white px-2" onClick={() => setIsMenuOpen(false)}>Log in</Link>
                             <Link to="/signup" className="text-sm font-medium text-[#007AFF] hover:text-[#0056b3] px-2" onClick={() => setIsMenuOpen(false)}>Sign up</Link>

@@ -1,4 +1,7 @@
 import { motion } from 'framer-motion'
+import ForBioResearchers from '@/assets/icons/For_Bio-Researchers.png'
+import ForVCInvestors from '@/assets/icons/For_VC_Investors.png'
+import ForCDMOs from '@/assets/icons/For_CDMOs.png'
 
 export function UseCaseSection() {
     return (
@@ -19,7 +22,7 @@ export function UseCaseSection() {
 
                     <div className="relative z-10">
                         <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors overflow-hidden">
-                            <img src="/icons/For_Bio-Researchers.png" alt="For Bio-Researchers" className="w-full h-full object-cover" />
+                            <img src={ForBioResearchers} alt="For Bio-Researchers" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For Bio-Researchers</h3>
@@ -48,7 +51,7 @@ export function UseCaseSection() {
 
                     <div className="relative z-10">
                         <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors overflow-hidden">
-                            <img src="/icons/For_VC_Investors.png" alt="For VC Investors" className="w-full h-full object-cover" />
+                            <img src={ForVCInvestors} alt="For VC Investors" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For VC Investors</h3>
@@ -77,7 +80,7 @@ export function UseCaseSection() {
 
                     <div className="relative z-10">
                         <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6 group-hover:bg-green-500/20 transition-colors overflow-hidden">
-                            <img src="/icons/For_CDMOs.png" alt="For CDMOs" className="w-full h-full object-cover" />
+                            <img src={ForCDMOs} alt="For CDMOs" className="w-full h-full object-cover" />
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-2">For CDMOs</h3>

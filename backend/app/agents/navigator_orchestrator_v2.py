@@ -167,6 +167,18 @@ class NavigatorOrchestratorV2:
                 confidence_score=librarian_result.confidence_score
             )
 
+            # [gpNMB / HIGH-RISK TARGET WARNING]
+            for ab in antibody_candidates:
+                target = ab.get("target_protein", "")
+                if target in self.HIGH_RISK_TARGETS:
+                    warning_msg = self.HIGH_RISK_TARGETS[target]
+                    warnings.append(f"HIGH-RISK TARGET ({target}): {warning_msg}")
+                    await self._log_agent_event(
+                        session_id, "orchestrator", 1, "warning",
+                        f"Target {target} has failed clinical trials: {warning_msg}",
+                        confidence_score=0.3
+                    )
+
             # [SELECTION GATE] 사용자 선택 대기
             if not selected_antibody_id and len(antibody_candidates) > 0:
                 self.supabase.table("navigator_sessions").update({
@@ -234,7 +246,21 @@ class NavigatorOrchestratorV2:
                            f"reagents:{len(alchemist_result.data.get('reagent_refs', []))}",
                 confidence_score=alchemist_result.confidence_score
             )
-            
+
+            # [PBD / HIGH-TOXICITY PAYLOAD GUARDRAIL]
+            payload_class = alchemist_result.data.get("payload_class", "")
+            if not payload_class and candidates:
+                payload_class = candidates[0].get("payload_class", "")
+            for toxic_payload, risk_msg in self.HIGH_TOXICITY_PAYLOADS.items():
+                if toxic_payload.lower() in payload_class.lower():
+                    warnings.append(f"HIGH-TOXICITY PAYLOAD ({toxic_payload}): {risk_msg}")
+                    await self._log_agent_event(
+                        session_id, "orchestrator", 2, "warning",
+                        f"Payload class {toxic_payload} flagged: {risk_msg}",
+                        confidence_score=0.4
+                    )
+                    break
+
             # ═══════════════════════════════════════════════════════════
             # Step 3: Coder - Property Calculation (with Healer retry)
             # ═══════════════════════════════════════════════════════════
@@ -417,14 +443,64 @@ class NavigatorOrchestratorV2:
             error=f"Failed after {retry_count} healing attempts"
         )
 
+    # 질환별 대표 항체 매핑 (golden_set 기반)
+    DISEASE_ANTIBODY_MAP: Dict[str, List[Dict[str, Any]]] = {
+        "breast cancer": [
+            {"name": "Trastuzumab", "target_protein": "HER2", "clinical_score": 0.95},
+            {"name": "Sacituzumab", "target_protein": "TROP2", "clinical_score": 0.88},
+            {"name": "Patritumab", "target_protein": "HER3", "clinical_score": 0.72},
+        ],
+        "lung cancer": [
+            {"name": "Trastuzumab", "target_protein": "HER2", "clinical_score": 0.82},
+            {"name": "Datopotamab", "target_protein": "TROP2", "clinical_score": 0.80},
+            {"name": "Telisotuzumab", "target_protein": "c-Met", "clinical_score": 0.70},
+        ],
+        "urothelial cancer": [
+            {"name": "Enfortumab", "target_protein": "Nectin-4", "clinical_score": 0.90},
+            {"name": "Sacituzumab", "target_protein": "TROP2", "clinical_score": 0.85},
+        ],
+        "lymphoma": [
+            {"name": "Brentuximab", "target_protein": "CD30", "clinical_score": 0.92},
+            {"name": "Polatuzumab", "target_protein": "CD79b", "clinical_score": 0.85},
+            {"name": "Loncastuximab", "target_protein": "CD19", "clinical_score": 0.80},
+        ],
+        "aml": [
+            {"name": "Gemtuzumab", "target_protein": "CD33", "clinical_score": 0.78},
+        ],
+        "gastric cancer": [
+            {"name": "Trastuzumab", "target_protein": "HER2", "clinical_score": 0.88},
+            {"name": "Zolbetuximab", "target_protein": "CLDN18.2", "clinical_score": 0.75},
+        ],
+        "ovarian cancer": [
+            {"name": "Mirvetuximab", "target_protein": "FRa", "clinical_score": 0.86},
+        ],
+        "melanoma": [
+            {"name": "Glembatumumab", "target_protein": "gpNMB", "clinical_score": 0.55},
+        ],
+    }
+
+    # gpNMB 등 임상 실패 타겟 목록
+    HIGH_RISK_TARGETS = {
+        "gpNMB": "METRIC trial failed (Phase II): Glembatumumab vedotin showed no PFS benefit vs. capecitabine in gpNMB+ TNBC (HR=0.95, p=0.83)",
+        "EGFR": "Depatuxizumab mafodotin (ABT-414) failed Phase III INTELLANCE-1 in GBM",
+        "MUC16": "Sofituzumab vedotin discontinued in ovarian cancer (limited efficacy)",
+    }
+
+    # PBD (Pyrrolobenzodiazepine) 등 고독성 payload 클래스
+    HIGH_TOXICITY_PAYLOADS = {
+        "PBD": "PBD dimers carry severe toxicity risk: Vadastuximab talirine (SGN-CD33A) discontinued after fatal hepatotoxicity in CASCADE trial. Loncastuximab tesirine has narrow therapeutic window.",
+        "PBD dimer": "PBD dimers carry severe toxicity risk: Vadastuximab talirine (SGN-CD33A) discontinued after fatal hepatotoxicity in CASCADE trial.",
+        "Calicheamicin": "Calicheamicin-based ADCs (Gemtuzumab ozogamicin) have hepatic veno-occlusive disease risk. Require careful dose management.",
+    }
+
     def _extract_antibodies_from_librarian(
-        self, 
-        result: AgentOutput, 
+        self,
+        result: AgentOutput,
         disease_name: str
     ) -> List[Dict[str, Any]]:
-        """Librarian 결과에서 항체 목록 추출"""
+        """Librarian 결과에서 항체 목록 추출 (질환별 매핑)"""
         candidates = []
-        
+
         # Golden Set 참조에서 항체 정보 추출
         gs_refs = result.data.get("golden_set_references", [])
         for ref in gs_refs[:3]:
@@ -432,22 +508,34 @@ class NavigatorOrchestratorV2:
                 "id": ref.get("id", str(uuid.uuid4())[:8]),
                 "name": ref.get("name", "Unknown"),
                 "target_protein": ref.get("target", disease_name),
-                "clinical_score": 0.85,
+                "clinical_score": ref.get("clinical_score", 0.85),
                 "match_confidence": result.confidence_score or 0.8,
                 "source": "librarian_golden_set"
             })
-        
-        # 부족하면 기본값 추가
+
+        # 부족하면 질환별 매핑에서 보충
         if len(candidates) < 3:
-            candidates.append({
-                "id": "trastuzumab-default",
-                "name": "Trastuzumab",
-                "target_protein": "HER2",
-                "clinical_score": 0.9,
-                "match_confidence": 0.85,
-                "source": "default"
-            })
-        
+            disease_lower = disease_name.lower().strip()
+            fallback_abs = []
+
+            # 부분 매칭 (e.g. "triple negative breast cancer" → "breast cancer")
+            for disease_key, abs_list in self.DISEASE_ANTIBODY_MAP.items():
+                if disease_key in disease_lower or disease_lower in disease_key:
+                    fallback_abs = abs_list
+                    break
+
+            existing_names = {c["name"] for c in candidates}
+            for ab in fallback_abs:
+                if ab["name"] not in existing_names and len(candidates) < 3:
+                    candidates.append({
+                        "id": f"{ab['name'].lower()}-fallback",
+                        "name": ab["name"],
+                        "target_protein": ab["target_protein"],
+                        "clinical_score": ab["clinical_score"],
+                        "match_confidence": 0.70,
+                        "source": "disease_mapping_fallback"
+                    })
+
         return candidates[:3]
 
     def _build_golden_combination(
@@ -646,7 +734,7 @@ class NavigatorOrchestratorV2:
             await websocket_hub.stream_progress(
                 session_id=session_id,
                 percentage=step * 20,
-                step=message
+                operation=message
             )
         except Exception as e:
             logger.warning(f"[navigator-v2] Progress broadcast error: {e}")

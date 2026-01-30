@@ -1,8 +1,8 @@
 /**
  * Navigator Pipeline Component
- * One-Click ADC Navigator - Live Pipeline Progress
+ * One-Click ADC Navigator - Wizard-Style Pipeline Progress
  *
- * 6인 에이전트 협업 파이프라인 진행 상황 표시
+ * 4-Phase Wizard + 5-Step Pipeline 진행 상황 표시
  */
 
 import { useState, useEffect } from 'react';
@@ -18,6 +18,10 @@ import {
   Shield,
   Activity,
   ChevronRight,
+  Search,
+  Beaker,
+  ClipboardCheck,
+  BarChart3,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,11 +34,12 @@ interface PipelineStep {
   description: string;
   agent: string;
   icon: React.ReactNode;
+  phase: number;
   status: 'pending' | 'running' | 'completed' | 'error';
   message?: string;
 }
 
-import { AgentLogPanel, AgentLog } from './AgentLogPanel';
+import { AgentLogPanel, type AgentLog } from './AgentLogPanel';
 
 interface NavigatorPipelineProps {
   currentStep: number;
@@ -43,9 +48,17 @@ interface NavigatorPipelineProps {
     message?: string;
   }>;
   diseaseName: string;
-  agentLogs?: AgentLog[];  // FIXED: 실시간 에이전트 로그
+  agentLogs?: AgentLog[];
   onComplete?: () => void;
 }
+
+// 4-Phase Wizard 정의
+const WIZARD_PHASES = [
+  { id: 1, name: 'Discovery', icon: <Search className="h-4 w-4" />, steps: [1] },
+  { id: 2, name: 'Design', icon: <Beaker className="h-4 w-4" />, steps: [2, 3] },
+  { id: 3, name: 'Validate', icon: <ClipboardCheck className="h-4 w-4" />, steps: [4] },
+  { id: 4, name: 'Simulate', icon: <BarChart3 className="h-4 w-4" />, steps: [5] },
+];
 
 const DEFAULT_STEPS: Omit<PipelineStep, 'status' | 'message'>[] = [
   {
@@ -54,6 +67,7 @@ const DEFAULT_STEPS: Omit<PipelineStep, 'status' | 'message'>[] = [
     description: 'Finding optimal antibodies for the disease',
     agent: 'Librarian',
     icon: <BookOpen className="h-5 w-5" />,
+    phase: 1,
   },
   {
     id: 2,
@@ -61,13 +75,15 @@ const DEFAULT_STEPS: Omit<PipelineStep, 'status' | 'message'>[] = [
     description: 'Selecting best linker-payload combination',
     agent: 'Alchemist',
     icon: <FlaskConical className="h-5 w-5" />,
+    phase: 2,
   },
   {
     id: 3,
     name: 'Property Calculation',
     description: 'Computing molecular properties',
-    agent: 'Coder',
+    agent: 'Coder + Healer',
     icon: <Calculator className="h-5 w-5" />,
+    phase: 2,
   },
   {
     id: 4,
@@ -75,6 +91,7 @@ const DEFAULT_STEPS: Omit<PipelineStep, 'status' | 'message'>[] = [
     description: 'Verifying structural feasibility',
     agent: 'Auditor',
     icon: <Shield className="h-5 w-5" />,
+    phase: 3,
   },
   {
     id: 5,
@@ -82,6 +99,7 @@ const DEFAULT_STEPS: Omit<PipelineStep, 'status' | 'message'>[] = [
     description: 'Running clinical simulation',
     agent: 'Clinical',
     icon: <Activity className="h-5 w-5" />,
+    phase: 4,
   },
 ];
 
@@ -92,12 +110,16 @@ const statusColors = {
   error: 'text-red-400 bg-red-900/50',
 };
 
-const statusIcons = {
-  pending: <Circle className="h-5 w-5" />,
-  running: <Loader2 className="h-5 w-5 animate-spin" />,
-  completed: <CheckCircle2 className="h-5 w-5" />,
-  error: <AlertCircle className="h-5 w-5" />,
-};
+function getPhaseStatus(
+  phase: (typeof WIZARD_PHASES)[number],
+  steps: Array<{ status: string }>
+): 'pending' | 'running' | 'completed' | 'error' {
+  const phaseStepStatuses = phase.steps.map((s) => steps[s - 1]?.status || 'pending');
+  if (phaseStepStatuses.every((s) => s === 'completed')) return 'completed';
+  if (phaseStepStatuses.some((s) => s === 'error')) return 'error';
+  if (phaseStepStatuses.some((s) => s === 'running')) return 'running';
+  return 'pending';
+}
 
 export function NavigatorPipeline({
   currentStep,
@@ -108,18 +130,15 @@ export function NavigatorPipeline({
 }: NavigatorPipelineProps) {
   const [progress, setProgress] = useState(0);
 
-  // Update progress based on current step
   useEffect(() => {
     const completedSteps = steps.filter((s) => s.status === 'completed').length;
     setProgress((completedSteps / DEFAULT_STEPS.length) * 100);
 
-    // Notify completion
     if (completedSteps === DEFAULT_STEPS.length) {
       onComplete?.();
     }
   }, [steps, onComplete]);
 
-  // Combine default steps with current status
   const pipelineSteps: PipelineStep[] = DEFAULT_STEPS.map((step, index) => ({
     ...step,
     status: steps[index]?.status || 'pending',
@@ -128,19 +147,23 @@ export function NavigatorPipeline({
 
   return (
     <Card className="bg-slate-900/50 border-slate-700 overflow-hidden">
-      <CardHeader className="border-b border-slate-700/50">
-        <div className="flex items-center justify-between">
+      <CardHeader className="border-b border-slate-700/50 pb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <CardTitle className="text-white flex items-center gap-2">
-              Live Pipeline
+              ADC Design Wizard
               {currentStep > 0 && currentStep <= 5 && (
-                <Badge variant="outline" className="text-violet-400 border-violet-400/50 animate-pulse">
+                <Badge
+                  variant="outline"
+                  className="text-violet-400 border-violet-400/50 animate-pulse"
+                >
                   Running
                 </Badge>
               )}
             </CardTitle>
             <p className="text-sm text-slate-500 mt-1">
-              Designing ADC for: <span className="text-violet-400">{diseaseName}</span>
+              Designing ADC for:{' '}
+              <span className="text-violet-400 font-medium">{diseaseName}</span>
             </p>
           </div>
           <div className="text-right">
@@ -148,9 +171,74 @@ export function NavigatorPipeline({
             <p className="text-2xl font-bold text-white">{Math.round(progress)}%</p>
           </div>
         </div>
-        <Progress value={progress} className="mt-4 h-2" />
+
+        {/* Wizard Phase Indicator (horizontal stepper) */}
+        <div className="flex items-center gap-0 mt-2">
+          {WIZARD_PHASES.map((phase, idx) => {
+            const phaseStatus = getPhaseStatus(phase, steps);
+            const isActive = phaseStatus === 'running';
+            const isCompleted = phaseStatus === 'completed';
+            const isError = phaseStatus === 'error';
+
+            return (
+              <div key={phase.id} className="flex items-center flex-1">
+                <div className="flex flex-col items-center flex-1">
+                  {/* Phase circle */}
+                  <motion.div
+                    animate={isActive ? { scale: [1, 1.1, 1] } : {}}
+                    transition={isActive ? { repeat: Infinity, duration: 1.5 } : {}}
+                    className={cn(
+                      'flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all',
+                      isCompleted && 'bg-emerald-500/20 border-emerald-500 text-emerald-400',
+                      isActive && 'bg-violet-500/20 border-violet-500 text-violet-400',
+                      isError && 'bg-red-500/20 border-red-500 text-red-400',
+                      phaseStatus === 'pending' &&
+                        'bg-slate-800 border-slate-600 text-slate-500'
+                    )}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : isActive ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : isError ? (
+                      <AlertCircle className="h-5 w-5" />
+                    ) : (
+                      phase.icon
+                    )}
+                  </motion.div>
+                  {/* Phase label */}
+                  <span
+                    className={cn(
+                      'text-xs mt-1.5 font-medium',
+                      isCompleted && 'text-emerald-400',
+                      isActive && 'text-violet-400',
+                      isError && 'text-red-400',
+                      phaseStatus === 'pending' && 'text-slate-500'
+                    )}
+                  >
+                    {phase.name}
+                  </span>
+                </div>
+                {/* Connector line between phases */}
+                {idx < WIZARD_PHASES.length - 1 && (
+                  <div className="flex-shrink-0 w-8 h-0.5 -mt-5 mx-1">
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-colors',
+                        isCompleted ? 'bg-emerald-500/60' : 'bg-slate-700'
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <Progress value={progress} className="mt-5 h-2" />
       </CardHeader>
 
+      {/* Step details */}
       <CardContent className="p-0">
         <div className="divide-y divide-slate-800">
           {pipelineSteps.map((step, index) => {
@@ -260,11 +348,11 @@ export function NavigatorPipeline({
         </div>
       </CardContent>
 
-      {/* FIXED: 실시간 에이전트 로그 패널 */}
+      {/* Real-time agent log panel */}
       {agentLogs.length > 0 && (
         <div className="border-t border-slate-700/50">
-          <AgentLogPanel 
-            logs={agentLogs} 
+          <AgentLogPanel
+            logs={agentLogs}
             isRunning={currentStep > 0 && currentStep < 6}
             className="border-0 rounded-none"
           />

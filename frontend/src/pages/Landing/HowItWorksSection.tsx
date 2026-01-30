@@ -1,33 +1,37 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
+import Step01 from '@/assets/icons/Step_01.png'
+import Step02 from '@/assets/icons/Step_02.png'
+import Step03 from '@/assets/icons/Step_03.png'
+import Step04 from '@/assets/icons/Step_04.png'
 
 const steps = [
     {
         id: '01',
         title: 'Sequence Input',
         description: 'Input Target Antibody Sequence',
-        icon: "/icons/Step_01.png",
+        icon: Step01,
         color: 'text-blue-400'
     },
     {
         id: '02',
         title: 'Code-Verified Reasoning',
         description: 'Simultaneous Analysis by 6 AI Agents',
-        icon: "/icons/Step_02.png",
+        icon: Step02,
         color: 'text-purple-400'
     },
     {
         id: '03',
         title: 'Relative Benchmarking',
         description: 'Optimal Linker/Payload Recommendation',
-        icon: "/icons/Step_03.png",
+        icon: Step03,
         color: 'text-cyan-400'
     },
     {
         id: '04',
         title: 'Certified 10-Page Report',
         description: 'Final Candidate Derivation',
-        icon: "/icons/Step_04.png",
+        icon: Step04,
         color: 'text-green-400'
     }
 ]

@@ -13,7 +13,8 @@ import {
     Beaker,
     Sparkles,
     Shield,
-    Factory
+    Factory,
+    Rocket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 
 const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+    { icon: Rocket, label: 'One-Click Navigator', href: '/dashboard/navigator', highlight: true },
     { icon: FlaskConical, label: 'ADC Builder', href: '/dashboard/builder' },
     // Design Engine 4대 메뉴
     { icon: Beaker, label: 'De novo Design', href: '/dashboard/denovo' },
@@ -78,6 +80,7 @@ export function DashboardLayout() {
                     <ul className="space-y-1">
                         {menuItems.map((item) => {
                             const isActive = location.pathname === item.href
+                            const isHighlight = 'highlight' in item && item.highlight
                             return (
                                 <li key={item.href}>
                                     <Link
@@ -86,11 +89,22 @@ export function DashboardLayout() {
                                             "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                                             isActive
                                                 ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                                : isHighlight
+                                                ? "text-violet-400 hover:text-white hover:bg-violet-900/30 bg-violet-900/20 border border-violet-500/20"
                                                 : "text-slate-400 hover:text-white hover:bg-slate-800"
                                         )}
                                     >
-                                        <item.icon className="w-5 h-5 flex-shrink-0" />
-                                        {!isCollapsed && <span>{item.label}</span>}
+                                        <item.icon className={cn("w-5 h-5 flex-shrink-0", isHighlight && !isActive && "text-violet-400")} />
+                                        {!isCollapsed && (
+                                            <span className="flex items-center gap-2">
+                                                {item.label}
+                                                {isHighlight && !isCollapsed && (
+                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded">
+                                                        NEW
+                                                    </span>
+                                                )}
+                                            </span>
+                                        )}
                                     </Link>
                                 </li>
                             )

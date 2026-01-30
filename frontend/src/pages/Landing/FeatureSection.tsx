@@ -1,38 +1,44 @@
 import { motion } from 'framer-motion'
+import TheAuditor from '@/assets/icons/The_Auditor.png'
+import PredictiveToxicology from '@/assets/icons/Predictive_Toxicology.png'
+import IPRiskReasoning from '@/assets/icons/IP_Risk_Reasoning.png'
+import CompetitiveIntelligence from '@/assets/icons/Competitive_Intelligence.png'
+import TheLibrarian from '@/assets/icons/The_Librarian.png'
+import InSilico3DModeling from '@/assets/icons/In_Silico_3D_Modeling.png'
 
 const features = [
     {
-        icon: "/icons/The_Auditor.png",
+        icon: TheAuditor,
         title: "The Auditor",
         description: "Eliminates AI hallucinations by converting designs into executable Python code. Validates MW, stability, and synthesis scores in real-time.",
         color: "from-blue-500 to-cyan-500"
     },
     {
-        icon: "/icons/Predictive_Toxicology.png",
+        icon: PredictiveToxicology,
         title: "Predictive Toxicology",
         description: "Deep learning and biophysical simulations predict off-target toxicity and early ocular/blood risk heatmaps with 80%+ accuracy.",
         color: "from-purple-500 to-pink-500"
     },
     {
-        icon: "/icons/IP_Risk_Reasoning.png",
+        icon: IPRiskReasoning,
         title: "IP Risk Reasoning",
         description: "AI-driven structural novelty analysis. Logic-based reasoning to navigate the patent landscape and ensure design freedom.",
         color: "from-green-500 to-emerald-500"
     },
     {
-        icon: "/icons/Competitive_Intelligence.png",
+        icon: CompetitiveIntelligence,
         title: "Competitive Intelligence",
         description: "Dynamic Relative Scoring (%) against industry gold standards like Enhertu and Trodelvy via real-time benchmarking.",
         color: "from-orange-500 to-red-500"
     },
     {
-        icon: "/icons/The_Librarian.png",
+        icon: TheLibrarian,
         title: "The Librarian",
         description: "Real-time mapping of scientific evidence (PMID) across 30M+ papers to provide a solid logical foundation for every candidate.",
         color: "from-indigo-500 to-violet-500"
     },
     {
-        icon: "/icons/In_Silico_3D_Modeling.png",
+        icon: InSilico3DModeling,
         title: "In Silico 3D Modeling",
         description: "Next-Gen engine for antibody-drug binding structure simulation and affinity prediction (AlphaFold 3 Integration - Roadmap).",
         color: "from-blue-500 to-cyan-500"
