@@ -872,7 +872,7 @@ class NavigatorOrchestratorV2:
                 ref_os = best_ref.get("os_months")
                 ref_name = best_ref.get("name")
                 data_source = f"golden_set_library: {ref_name} (target={target})"
-                logger.info(f"[navigator-v2] Virtual trial ref: {ref_name} ORR={ref_orr}%, PFS={ref_pfs}m, OS={ref_os}m")
+                logger.info(f"[navigator-v2] Virtual trial ref: {ref_name} ORR={ref_orr}%, PFS={ref_pfs or 'N/A'}m, OS={ref_os or 'N/A'}m")
         except Exception as e:
             logger.error(f"[navigator-v2] Golden set clinical data query FAILED: {e}")
 
