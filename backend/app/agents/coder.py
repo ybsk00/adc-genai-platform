@@ -216,25 +216,32 @@ class CoderAgent(BaseDesignAgent):
         # SMILES 안전하게 이스케이프 (backslash, quote 등)
         safe_smiles = smiles.replace("\\", "\\\\").replace('"', '\\"')
 
-        code = f"""
-import json
-{chr(10).join(import_lines)}
+        # 코드 블록 조합 (들여쓰기 8칸 = else: 블록 내부)
+        indented_blocks = chr(10).join(
+            '        ' + line
+            for block in code_blocks
+            for line in block.split(chr(10))
+        )
 
-smiles = "{safe_smiles}"
-result = {{}}
-
-try:
-    from rdkit import Chem
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        result["error"] = "Invalid SMILES"
-    else:
-        {chr(10).join('        ' + line for block in code_blocks for line in block.split(chr(10)))}
-except Exception as e:
-    result["error"] = str(e)
-
-print(json.dumps(result))
-"""
+        code = (
+            "import json\n"
+            + chr(10).join(import_lines) + "\n"
+            + "\n"
+            + f'smiles = "{safe_smiles}"\n'
+            + "result = {}\n"
+            + "\n"
+            + "try:\n"
+            + "    from rdkit import Chem\n"
+            + "    mol = Chem.MolFromSmiles(smiles)\n"
+            + "    if mol is None:\n"
+            + '        result["error"] = "Invalid SMILES"\n'
+            + "    else:\n"
+            + indented_blocks + "\n"
+            + "except Exception as e:\n"
+            + '    result["error"] = str(e)\n'
+            + "\n"
+            + "print(json.dumps(result))\n"
+        )
         return code
 
     @staticmethod
