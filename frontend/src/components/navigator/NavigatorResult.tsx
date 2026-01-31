@@ -289,15 +289,23 @@ export function NavigatorResult({
                 <div className="p-3 bg-slate-800/50 rounded-lg text-center">
                   <p className="text-xs text-slate-500">PFS</p>
                   <p className="text-xl font-bold text-white">
-                    {Number(virtualTrial?.predicted_pfs_months ?? 0).toFixed(1)}
-                    <span className="text-xs text-slate-500 ml-1">mo</span>
+                    {virtualTrial?.predicted_pfs_months != null
+                      ? `${Number(virtualTrial.predicted_pfs_months).toFixed(1)}`
+                      : 'N/A'}
+                    {virtualTrial?.predicted_pfs_months != null && (
+                      <span className="text-xs text-slate-500 ml-1">mo</span>
+                    )}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg text-center">
                   <p className="text-xs text-slate-500">OS</p>
                   <p className="text-xl font-bold text-white">
-                    {Number(virtualTrial?.predicted_os_months ?? 0).toFixed(1)}
-                    <span className="text-xs text-slate-500 ml-1">mo</span>
+                    {virtualTrial?.predicted_os_months != null
+                      ? `${Number(virtualTrial.predicted_os_months).toFixed(1)}`
+                      : 'N/A'}
+                    {virtualTrial?.predicted_os_months != null && (
+                      <span className="text-xs text-slate-500 ml-1">mo</span>
+                    )}
                   </p>
                 </div>
               </div>

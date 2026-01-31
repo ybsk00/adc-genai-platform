@@ -671,11 +671,21 @@ class NavigatorOrchestratorV2:
         historical_orr = None
         data_source = "unknown"
 
-        # 1순위: golden_set_library에서 FDA 승인 레퍼런스 검색
+        # 1순위: golden_set_library에서 FDA 승인 레퍼런스 검색 (ORR 높은 순)
         try:
             gs_ref = self.supabase.table("golden_set_library").select(
                 "name, target_1, linker_type, dar, orr_pct, description, category, properties, payload_smiles"
-            ).eq("status", "approved").eq("target_1", target).limit(1).execute()
+            ).eq("status", "approved").eq("target_1", target).not_.is_(
+                "dar", "null"
+            ).order("orr_pct", desc=True).limit(1).execute()
+
+            # dar가 있는 approved 레코드가 없으면 dar 무관하게 검색
+            if not gs_ref.data:
+                gs_ref = self.supabase.table("golden_set_library").select(
+                    "name, target_1, linker_type, dar, orr_pct, description, category, properties, payload_smiles"
+                ).eq("status", "approved").eq("target_1", target).not_.is_(
+                    "orr_pct", "null"
+                ).order("orr_pct", desc=True).limit(1).execute()
 
             if gs_ref.data:
                 ref = gs_ref.data[0]
@@ -683,9 +693,35 @@ class NavigatorOrchestratorV2:
                 linker_type = ref.get("linker_type")
                 dar = ref.get("dar")
                 historical_orr = ref.get("orr_pct")
-                # payload_class: properties JSONB → category 순으로 탐색
+                # payload_class: properties JSONB → description에서 추출 → category (단, "clinical_trial" 등 무의미한 값 제외)
                 props = ref.get("properties") or {}
-                payload_class = props.get("payload_class") or props.get("payload") or ref.get("category")
+                payload_class = props.get("payload_class") or props.get("payload")
+                if not payload_class:
+                    # description에서 payload 키워드 추출
+                    desc = (ref.get("description") or "").lower()
+                    if "dxd" in desc or "deruxtecan" in desc:
+                        payload_class = "DXd (Topoisomerase I inhibitor)"
+                    elif "dm1" in desc or "emtansine" in desc or "maytansine" in desc:
+                        payload_class = "DM1 (Maytansine derivative)"
+                    elif "mmae" in desc or "vedotin" in desc:
+                        payload_class = "MMAE (Auristatin)"
+                    elif "sn-38" in desc or "govitecan" in desc:
+                        payload_class = "SN-38 (Topoisomerase I inhibitor)"
+                    else:
+                        # name에서도 추출 시도
+                        name_lower = (ref.get("name") or "").lower()
+                        if "deruxtecan" in name_lower or "dxd" in name_lower:
+                            payload_class = "DXd (Topoisomerase I inhibitor)"
+                        elif "emtansine" in name_lower or "dm1" in name_lower:
+                            payload_class = "DM1 (Maytansine derivative)"
+                        elif "vedotin" in name_lower:
+                            payload_class = "MMAE (Auristatin)"
+                # category가 "clinical_trial", "ADC" 등 무의미하면 사용하지 않음
+                if not payload_class:
+                    cat = ref.get("category", "")
+                    if cat and cat.lower() not in ("clinical_trial", "adc", "antibody", "drug", ""):
+                        payload_class = cat
+
                 data_source = f"golden_set_library (approved, target={target})"
                 logger.info(f"[navigator-v2] Golden combination from DB: {antibody_name}, linker={linker_type}, DAR={dar}, payload={payload_class}")
             # 1-2순위: approved가 없으면 status 무관하게 ORR 기준 검색
