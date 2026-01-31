@@ -93,12 +93,17 @@ class CoderAgent(BaseDesignAgent):
         try:
             # 1. 필요한 검증 항목 결정
             validations_needed = self._determine_validations(state)
+            logger.info(f"[coder] session_type={state['session_type']}, validations={validations_needed}")
 
             # 2. 검증된 스니펫으로 코드 조합
             code = await self._compose_code_from_snippets(smiles, validations_needed)
+            logger.info(f"[coder] Generated code length={len(code)} chars, first 200: {code[:200]}")
 
             # 3. 코드 실행 (현재는 직접 실행, 추후 Docker Sandbox로 대체)
             result = await self._execute_code(code, session_id)
+            logger.info(f"[coder] Execution result: exit_code={result.get('exit_code')}, "
+                        f"stdout_len={len(result.get('stdout', ''))}, "
+                        f"stderr={result.get('stderr', '')[:300]}")
 
             if result.get("exit_code", -1) != 0:
                 # Error -> The Healer로 전달
@@ -208,11 +213,14 @@ class CoderAgent(BaseDesignAgent):
             else:
                 import_lines.append(f"import {imp}")
 
+        # SMILES 안전하게 이스케이프 (backslash, quote 등)
+        safe_smiles = smiles.replace("\\", "\\\\").replace('"', '\\"')
+
         code = f"""
 import json
 {chr(10).join(import_lines)}
 
-smiles = "{smiles}"
+smiles = "{safe_smiles}"
 result = {{}}
 
 try:
@@ -236,10 +244,11 @@ print(json.dumps(result))
 
         실제 RDKit 연산만 수행 (추정값/가짜 데이터 없음 — Fail-Fast 원칙 준수)
         """
+        safe_smiles = smiles.replace("\\", "\\\\").replace('"', '\\"')
         return f'''
 import json
 
-smiles = "{smiles}"
+smiles = "{safe_smiles}"
 result = {{}}
 
 try:

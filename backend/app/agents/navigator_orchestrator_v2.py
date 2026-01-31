@@ -287,17 +287,26 @@ class NavigatorOrchestratorV2:
                     )
                 else:
                     # Coder+Healer 실패 → Direct RDKit (STRICT, no estimates)
-                    logger.warning(f"[navigator-v2] Coder failed: {coder_result.error}, attempting direct RDKit...")
+                    coder_err_detail = coder_result.error or "unknown"
+                    coder_stderr = coder_result.data.get("error", "")
+                    full_coder_err = f"{coder_err_detail}"
+                    if coder_stderr and coder_stderr != coder_err_detail:
+                        full_coder_err += f" | stderr: {str(coder_stderr)[:200]}"
+
+                    logger.warning(f"[navigator-v2] Coder failed: {full_coder_err}, attempting direct RDKit...")
                     await self._log_agent_event(
                         session_id, "coder", 3, "fallback",
-                        f"Coder sandbox failed ({coder_result.error}). Attempting direct RDKit..."
+                        f"Coder sandbox failed: {full_coder_err}. Attempting direct RDKit..."
                     )
                     try:
                         calculated_metrics, calc_warnings = await self._calculate_properties_direct(
                             state, session_id
                         )
                         state["calculated_metrics"] = calculated_metrics
-                        calc_warnings.append(f"Coder agent failed, used direct RDKit (no estimates)")
+                        calc_warnings.append(
+                            f"Coder sandbox 실패 ({full_coder_err}). "
+                            f"Direct RDKit으로 물성 계산 완료 (추정값 없음)."
+                        )
                     except (ValueError, ImportError) as direct_err:
                         # FAIL-FAST: RDKit도 실패하면 Critical Error
                         error_msg = str(direct_err)
@@ -310,14 +319,17 @@ class NavigatorOrchestratorV2:
                 logger.warning(f"[navigator-v2] Coder exception: {coder_exc}, attempting direct RDKit...")
                 await self._log_agent_event(
                     session_id, "coder", 3, "fallback",
-                    f"Coder exception: {str(coder_exc)[:100]}. Attempting direct RDKit..."
+                    f"Coder exception: {str(coder_exc)[:200]}. Attempting direct RDKit..."
                 )
                 try:
                     calculated_metrics, calc_warnings = await self._calculate_properties_direct(
                         state, session_id
                     )
                     state["calculated_metrics"] = calculated_metrics
-                    calc_warnings.append(f"Coder exception, used direct RDKit (no estimates)")
+                    calc_warnings.append(
+                        f"Coder 예외 ({str(coder_exc)[:150]}). "
+                        f"Direct RDKit으로 물성 계산 완료 (추정값 없음)."
+                    )
                 except (ValueError, ImportError) as direct_err:
                     error_msg = str(direct_err)
                     critical_errors.append(error_msg)
@@ -847,7 +859,7 @@ class NavigatorOrchestratorV2:
 
         try:
             gs_refs = self.supabase.table("golden_set_library").select(
-                "name, target_1, orr_pct, pfs_months, os_months, clinical_status, indication"
+                "name, target_1, orr_pct, pfs_months, os_months, outcome_type, indication"
             ).eq("target_1", target).not_.is_("orr_pct", "null").order(
                 "orr_pct", desc=True
             ).limit(3).execute()
