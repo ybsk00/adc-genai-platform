@@ -49,7 +49,7 @@ class HealerAgent(BaseDesignAgent):
     def __init__(self):
         super().__init__()
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model=settings.GEMINI_PRO_MODEL_ID,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.2
         )
