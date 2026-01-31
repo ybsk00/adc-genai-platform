@@ -352,19 +352,25 @@ class NavigatorOrchestratorV2:
                 try:
                     # PRIMARY: Auditor agent execute()
                     auditor_result = await self.auditor.execute(state)
-                    if auditor_result.success:
+
+                    # IMPORTANT: Auditor의 success는 "승인 여부"이지 "에이전트 실행 성공"이 아님.
+                    # data에 decision이 있으면 Auditor가 정상 실행된 것.
+                    auditor_has_result = bool(auditor_result.data.get("decision"))
+
+                    if auditor_has_result:
                         validation_flags = auditor_result.data.get("chemistry_validation", {})
                         state["validation_flags"] = validation_flags
                         state["constraint_check"] = auditor_result.data.get("constraint_check", {})
                         physics_verified = auditor_result.data.get("decision", {}).get("approved", False)
                         await self._log_agent_event(
                             session_id, "auditor", 4, "completed",
-                            f"Auditor validation: {'APPROVED' if physics_verified else 'REJECTED'}",
+                            f"Auditor validation: {'APPROVED' if physics_verified else 'REJECTED'} "
+                            f"(action: {auditor_result.data.get('decision', {}).get('action', 'N/A')})",
                             reasoning=auditor_result.reasoning,
                             confidence_score=auditor_result.confidence_score
                         )
-                    else:
-                        # Auditor 실패 → 직접 범위 검증 (이건 실제 로직이므로 허용)
+                    elif auditor_result.error:
+                        # 실제 에이전트 실행 에러 (Gemini API 실패 등)
                         validation_flags, physics_verified = self._validate_properties_direct(calculated_metrics)
                         warnings.append(
                             f"Auditor agent 실패 ({auditor_result.error}). "
@@ -373,6 +379,18 @@ class NavigatorOrchestratorV2:
                         await self._log_agent_event(
                             session_id, "auditor", 4, "fallback",
                             f"Auditor failed: {auditor_result.error}. Using range-check validation.",
+                            confidence_score=0.4
+                        )
+                    else:
+                        # success=False, error=None, data도 없음 → 알 수 없는 상태
+                        validation_flags, physics_verified = self._validate_properties_direct(calculated_metrics)
+                        warnings.append(
+                            "Auditor agent가 결과 없이 종료되었습니다. "
+                            "기본 범위 검증(MW/LogP/HBD/HBA)으로 대체하였습니다."
+                        )
+                        await self._log_agent_event(
+                            session_id, "auditor", 4, "fallback",
+                            "Auditor returned no decision data. Using range-check validation.",
                             confidence_score=0.4
                         )
                 except Exception as audit_err:
@@ -403,7 +421,7 @@ class NavigatorOrchestratorV2:
             
             await self._log_agent_event(
                 session_id, "virtual_trial", 5, "completed",
-                f"Predicted ORR: {virtual_trial.get('predicted_orr', 0):.1f}%",
+                f"Predicted ORR: {virtual_trial.get('predicted_orr') or 0:.1f}%",
                 confidence_score=virtual_trial.get('confidence', 0)
             )
             
