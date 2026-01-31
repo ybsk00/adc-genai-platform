@@ -674,7 +674,7 @@ class NavigatorOrchestratorV2:
         # 1순위: golden_set_library에서 FDA 승인 레퍼런스 검색
         try:
             gs_ref = self.supabase.table("golden_set_library").select(
-                "name, target_1, linker_type, dar, orr_pct, description, payload_class"
+                "name, target_1, linker_type, dar, orr_pct, description, category, properties, payload_smiles"
             ).eq("status", "approved").eq("target_1", target).limit(1).execute()
 
             if gs_ref.data:
@@ -683,9 +683,30 @@ class NavigatorOrchestratorV2:
                 linker_type = ref.get("linker_type")
                 dar = ref.get("dar")
                 historical_orr = ref.get("orr_pct")
-                payload_class = ref.get("payload_class")
+                # payload_class: properties JSONB → category 순으로 탐색
+                props = ref.get("properties") or {}
+                payload_class = props.get("payload_class") or props.get("payload") or ref.get("category")
                 data_source = f"golden_set_library (approved, target={target})"
-                logger.info(f"[navigator-v2] Golden combination from DB: {antibody_name}, {linker_type}, DAR={dar}")
+                logger.info(f"[navigator-v2] Golden combination from DB: {antibody_name}, linker={linker_type}, DAR={dar}, payload={payload_class}")
+            # 1-2순위: approved가 없으면 status 무관하게 ORR 기준 검색
+            if not gs_ref.data:
+                gs_ref = self.supabase.table("golden_set_library").select(
+                    "name, target_1, linker_type, dar, orr_pct, description, category, properties, payload_smiles"
+                ).eq("target_1", target).not_.is_("orr_pct", "null").order(
+                    "orr_pct", desc=True
+                ).limit(1).execute()
+
+                if gs_ref.data:
+                    ref = gs_ref.data[0]
+                    antibody_name = ref.get("name")
+                    linker_type = ref.get("linker_type")
+                    dar = ref.get("dar")
+                    historical_orr = ref.get("orr_pct")
+                    props = ref.get("properties") or {}
+                    payload_class = props.get("payload_class") or props.get("payload") or ref.get("category")
+                    data_source = f"golden_set_library (best ORR, target={target}, status={ref.get('status')})"
+                    logger.info(f"[navigator-v2] Golden combination fallback: {antibody_name}, linker={linker_type}, DAR={dar}, ORR={historical_orr}")
+
         except Exception as e:
             logger.error(f"[navigator-v2] Golden set lookup FAILED: {e}")
 
