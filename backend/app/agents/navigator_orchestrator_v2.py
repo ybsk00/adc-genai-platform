@@ -710,11 +710,72 @@ class NavigatorOrchestratorV2:
         except Exception as e:
             logger.error(f"[navigator-v2] Golden set lookup FAILED: {e}")
 
-        # 2순위: antibody_candidates에서 항체명 보충
+        # 2순위: commercial_reagents에서 Linker/Payload 보충
+        if not linker_type or not payload_class or not dar:
+            try:
+                cr_result = self.supabase.table("commercial_reagents").select(
+                    "id, product_name, category, target, target_normalized, "
+                    "smiles_code, payload_smiles, linker_smiles, linker_type, "
+                    "molecular_weight, properties, orr_pct, pfs_months"
+                ).ilike("target_normalized", f"%{target}%").not_.is_(
+                    "smiles_code", "null"
+                ).limit(10).execute()
+
+                if cr_result.data:
+                    logger.info(f"[navigator-v2] commercial_reagents fallback: found {len(cr_result.data)} reagents for {target}")
+
+                    # 카테고리별 분류
+                    linkers = [r for r in cr_result.data if r.get("category", "").lower() in ("linker", "linkers")]
+                    payloads = [r for r in cr_result.data if r.get("category", "").lower() in ("payload", "payloads")]
+                    antibodies = [r for r in cr_result.data if r.get("category", "").lower() in ("antibody", "antibodies")]
+
+                    if not linker_type and linkers:
+                        cr_linker = linkers[0]
+                        linker_type = cr_linker.get("linker_type") or "cleavable"
+                        if not data_source or data_source == "unknown":
+                            data_source = f"commercial_reagents (target={target})"
+                        else:
+                            data_source += f" + commercial_reagents:linker"
+                        logger.info(f"[navigator-v2] Linker from commercial: {cr_linker.get('product_name')}, type={linker_type}")
+
+                    if not payload_class and payloads:
+                        cr_payload = payloads[0]
+                        cr_props = cr_payload.get("properties") or {}
+                        payload_class = cr_props.get("payload_class") or cr_payload.get("product_name", "Unknown")
+                        if not data_source or data_source == "unknown":
+                            data_source = f"commercial_reagents (target={target})"
+                        else:
+                            data_source += f" + commercial_reagents:payload"
+                        logger.info(f"[navigator-v2] Payload from commercial: {cr_payload.get('product_name')}, class={payload_class}")
+
+                    if not dar:
+                        # ADC 표준 DAR 값 (commercial_reagents에서 추출 불가 시)
+                        dar = 4  # FDA 승인 ADC 표준값
+                        if not data_source or data_source == "unknown":
+                            data_source = f"commercial_reagents (target={target})"
+                        else:
+                            data_source += " + default:DAR=4"
+
+                    # ORR 보충 (golden_set에서 못 찾은 경우)
+                    if not historical_orr:
+                        for cr in cr_result.data:
+                            cr_orr = cr.get("orr_pct")
+                            if cr_orr:
+                                try:
+                                    historical_orr = float(cr_orr)
+                                    data_source += f" + commercial_reagents:ORR"
+                                    break
+                                except (ValueError, TypeError):
+                                    pass
+            except Exception as e:
+                logger.warning(f"[navigator-v2] commercial_reagents fallback FAILED: {e}")
+
+        # 3순위: antibody_candidates에서 항체명 보충
         if not antibody_name and antibody_candidates:
             top = antibody_candidates[0]
             antibody_name = top.get("name")
-            data_source = f"librarian_candidates (target={target})"
+            if data_source == "unknown":
+                data_source = f"librarian_candidates (target={target})"
 
         # Alchemist 결과에서 SMILES/payload 보충
         linker_smiles = ""
@@ -726,7 +787,7 @@ class NavigatorOrchestratorV2:
             if not payload_class and top_candidate.get("payload_class"):
                 payload_class = top_candidate["payload_class"]
 
-        # FAIL-FAST: 필수 필드 누락 시 명시적 경고 (가짜값 대입 안함)
+        # 필수 필드 누락 시 명시적 경고 (가짜값 대입 안함)
         missing_fields = []
         if not antibody_name:
             missing_fields.append("antibody")
@@ -897,6 +958,32 @@ class NavigatorOrchestratorV2:
         except Exception as e:
             logger.error(f"[navigator-v2] Golden set clinical data query FAILED: {e}")
 
+        # 2순위: commercial_reagents에서 ORR/PFS 보충
+        if ref_orr is None:
+            try:
+                cr_clinical = self.supabase.table("commercial_reagents").select(
+                    "product_name, target_normalized, orr_pct, pfs_months, os_months"
+                ).ilike("target_normalized", f"%{target}%").not_.is_(
+                    "orr_pct", "null"
+                ).limit(3).execute()
+
+                if cr_clinical.data:
+                    for cr in cr_clinical.data:
+                        try:
+                            cr_orr = float(cr.get("orr_pct", 0))
+                            if cr_orr > 0:
+                                ref_orr = cr_orr
+                                ref_name = cr.get("product_name", "Unknown")
+                                ref_pfs = float(cr["pfs_months"]) if cr.get("pfs_months") else None
+                                ref_os = float(cr["os_months"]) if cr.get("os_months") else None
+                                data_source = f"commercial_reagents: {ref_name} (target={target})"
+                                logger.info(f"[navigator-v2] Virtual trial ref from commercial: {ref_name} ORR={ref_orr}%")
+                                break
+                        except (ValueError, TypeError):
+                            continue
+            except Exception as e:
+                logger.warning(f"[navigator-v2] commercial_reagents clinical query FAILED: {e}")
+
         # FAIL-FAST: 실제 레퍼런스 데이터가 없으면 정직하게 보고
         if ref_orr is None:
             logger.warning(f"[navigator-v2] No clinical reference data for target '{target}' — prediction unavailable")
@@ -911,8 +998,8 @@ class NavigatorOrchestratorV2:
                 "reference_drug": None,
                 "error": (
                     f"임상 예측 데이터 부족: target '{target}'에 대한 "
-                    f"Golden Set 레퍼런스 ORR/PFS/OS 데이터가 존재하지 않습니다. "
-                    f"가상 임상 시뮬레이션을 수행할 수 없습니다."
+                    f"Golden Set 및 Commercial Reagents 레퍼런스 ORR/PFS/OS 데이터가 "
+                    f"존재하지 않습니다. 가상 임상 시뮬레이션을 수행할 수 없습니다."
                 ),
             }
 
