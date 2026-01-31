@@ -859,7 +859,7 @@ class NavigatorOrchestratorV2:
 
         try:
             gs_refs = self.supabase.table("golden_set_library").select(
-                "name, target_1, orr_pct, pfs_months, os_months, outcome_type, indication"
+                "name, target_1, orr_pct, pfs_months, os_months, outcome_type"
             ).eq("target_1", target).not_.is_("orr_pct", "null").order(
                 "orr_pct", desc=True
             ).limit(3).execute()
