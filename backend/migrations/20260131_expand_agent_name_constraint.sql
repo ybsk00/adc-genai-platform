@@ -46,3 +46,38 @@ END $$;
 -- Add comment for documentation
 COMMENT ON COLUMN navigator_sessions.critical_errors IS
     'Fail-Fast: Critical errors that prevented complete computation. No fake data was generated.';
+
+-- ============================================================================
+-- Fix navigator_sessions status constraint to allow 'completed_with_errors'
+-- ============================================================================
+ALTER TABLE navigator_sessions
+DROP CONSTRAINT IF EXISTS navigator_sessions_status_check;
+
+-- Some DBs use different constraint names; try common patterns
+ALTER TABLE navigator_sessions
+DROP CONSTRAINT IF EXISTS status_check;
+
+ALTER TABLE navigator_sessions
+DROP CONSTRAINT IF EXISTS check_status;
+
+-- Re-create with expanded status values
+DO $$
+BEGIN
+    -- Try adding constraint; if it fails because no constraint existed, that's fine
+    BEGIN
+        ALTER TABLE navigator_sessions
+        ADD CONSTRAINT navigator_sessions_status_check CHECK (
+            status IN (
+                'pending',
+                'running',
+                'completed',
+                'completed_with_errors',
+                'failed',
+                'cancelled'
+            )
+        );
+    EXCEPTION WHEN duplicate_object THEN
+        -- Constraint already exists, skip
+        NULL;
+    END;
+END $$;

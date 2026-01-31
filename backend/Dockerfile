@@ -26,6 +26,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install --with-deps chromium
 
+# RDKit 설치 검증 (빌드 시점에 확인 — 실패 시 Docker build 중단)
+RUN python -c "from rdkit import Chem; mol=Chem.MolFromSmiles('CCO'); assert mol is not None; print('RDKit OK:', Chem.rdBase.rdkitVersion)"
+
 # 앱 코드 복사
 COPY app/ ./app/
 COPY run_crawler.py .

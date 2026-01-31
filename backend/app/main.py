@@ -19,11 +19,24 @@ logger = logging.getLogger(__name__)
 from app.api import auth, jobs, admin, library, payment, scheduler, knowledge_base, design_runs, assay_results, design, uniprot, system, report
 from app.core.config import settings
 from app.services.scheduler_engine import scheduler_engine
+from app.services.sandbox_executor import get_sandbox_executor
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 앱 시작 시 스케줄러 가동
     scheduler_engine.start()
+
+    # Sandbox + RDKit 상태 검증 (Fat Container Health Check)
+    try:
+        sandbox = get_sandbox_executor()
+        ok, msg = await sandbox.verify_rdkit_available()
+        if ok:
+            logger.info(f"[startup] Sandbox RDKit verified: {msg}")
+        else:
+            logger.critical(f"[startup] Sandbox RDKit UNAVAILABLE: {msg}")
+    except Exception as e:
+        logger.critical(f"[startup] Sandbox verification failed: {e}")
+
     yield
     # 앱 종료 시 스케줄러 중지
     scheduler_engine.shutdown()

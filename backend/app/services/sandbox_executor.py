@@ -7,11 +7,13 @@ Constraint 7: Sandbox Library Version Lock
 - 프로덕션 모드: Docker 컨테이너 (Air-gapped, 보안 강화)
 """
 import os
+import sys
 import json
 import asyncio
 import tempfile
 import subprocess
 import logging
+import platform
 from typing import Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass
@@ -60,7 +62,10 @@ class SandboxExecutor:
     FORBIDDEN_KEYWORDS = [
         "os.system", "subprocess", "eval(", "exec(",
         "open(", "__import__", "importlib",
-        "socket", "urllib", "requests", "http"
+        "socket", "urllib", "requests", "http",
+        "shutil", "pathlib", "glob", "os.path",
+        "os.remove", "os.rmdir", "os.unlink",
+        "compile(", "getattr(", "setattr(",
     ]
 
     DEFAULT_TIMEOUT = 30  # seconds
@@ -145,13 +150,31 @@ class SandboxExecutor:
         else:
             return await self._execute_subprocess(code, timeout, session_id)
 
+    @staticmethod
+    def _get_preexec_fn():
+        """리소스 제한 (Linux only) — Fat Container 보안 강화"""
+        if platform.system() != "Linux":
+            return None
+
+        def _set_limits():
+            import resource
+            # 메모리 제한: 512MB
+            mem_limit = 512 * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+            # CPU 시간 제한: 60초
+            resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
+            # 프로세스 생성 제한: 자식 프로세스 금지
+            resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
+
+        return _set_limits
+
     async def _execute_subprocess(
         self,
         code: str,
         timeout: int,
         session_id: str = None
     ) -> ExecutionResult:
-        """subprocess로 직접 실행 (개발용)"""
+        """subprocess로 직접 실행 (Fat Container 방식)"""
         import time
         start_time = time.time()
 
@@ -166,15 +189,26 @@ class SandboxExecutor:
             script_path = f.name
 
         try:
-            # 실행
+            # 환경변수 전달 (PYTHONPATH, LD_LIBRARY_PATH 등 보장)
+            env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+
+            # sys.executable 사용 — Cloud Run에서 올바른 인터프리터 보장
             result = subprocess.run(
-                ["python", script_path],
+                [sys.executable, script_path],
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                env=env,
+                preexec_fn=self._get_preexec_fn(),
             )
 
             execution_time_ms = int((time.time() - start_time) * 1000)
+
+            if result.returncode != 0:
+                logger.warning(
+                    f"[sandbox] Script failed (exit={result.returncode}): "
+                    f"stderr={result.stderr[:500]}"
+                )
 
             return ExecutionResult(
                 success=result.returncode == 0,
@@ -313,6 +347,40 @@ class SandboxExecutor:
             return bool(result.stdout.strip())
         except Exception:
             return False
+
+
+    async def verify_rdkit_available(self) -> tuple[bool, str]:
+        """
+        RDKit 설치 상태 검증 (startup health check용)
+
+        Returns:
+            (is_available, message)
+        """
+        test_code = """
+import json
+try:
+    from rdkit import Chem
+    from rdkit.Chem import Descriptors, rdMolDescriptors
+    mol = Chem.MolFromSmiles('CCO')
+    assert mol is not None, "MolFromSmiles returned None"
+    mw = Descriptors.MolWt(mol)
+    result = {"ok": True, "rdkit_version": Chem.rdBase.rdkitVersion, "test_mw": round(mw, 2)}
+except Exception as e:
+    result = {"ok": False, "error": str(e)}
+print(json.dumps(result))
+"""
+        exec_result = await self.execute(test_code, timeout=15)
+        if exec_result.success:
+            try:
+                data = json.loads(exec_result.stdout)
+                if data.get("ok"):
+                    return True, f"RDKit {data.get('rdkit_version', '?')} — test MW(CCO)={data.get('test_mw')}"
+                else:
+                    return False, f"RDKit test failed: {data.get('error')}"
+            except json.JSONDecodeError:
+                return False, f"Unexpected output: {exec_result.stdout[:200]}"
+        else:
+            return False, f"RDKit verification script failed: {exec_result.stderr[:300]}"
 
 
 # 싱글톤 인스턴스

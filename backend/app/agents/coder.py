@@ -164,11 +164,12 @@ class CoderAgent(BaseDesignAgent):
         validations = ["lipinski_check", "mw_calc"]
 
         # 세션 타입에 따라 추가 검증
-        if state["session_type"] == "denovo":
+        session_type = state["session_type"]
+        if session_type in ("denovo", "navigator"):
             validations.extend(["pains_filter", "sa_score"])
-        elif state["session_type"] == "optimization":
+        elif session_type == "optimization":
             validations.extend(["tanimoto_similarity", "pains_filter"])
-        elif state["session_type"] == "audit":
+        elif session_type == "audit":
             validations.extend(["pains_filter", "sa_score", "tanimoto_similarity"])
 
         return validations
@@ -192,6 +193,11 @@ class CoderAgent(BaseDesignAgent):
                 # 코드 템플릿에서 placeholder 교체
                 template = snippet.get("code_template", "")
                 code_blocks.append(template)
+
+        # 스니펫이 하나도 없으면 인라인 폴백 코드 사용
+        if not code_blocks:
+            logger.warning("[coder] No snippets found in DB — using inline fallback code")
+            return self._get_inline_fallback_code(smiles)
 
         # 최종 코드 조합
         import_lines = []
@@ -222,6 +228,63 @@ except Exception as e:
 print(json.dumps(result))
 """
         return code
+
+    @staticmethod
+    def _get_inline_fallback_code(smiles: str) -> str:
+        """
+        DB 스니펫 없을 때 인라인 폴백 코드
+
+        실제 RDKit 연산만 수행 (추정값/가짜 데이터 없음 — Fail-Fast 원칙 준수)
+        """
+        return f'''
+import json
+
+smiles = "{smiles}"
+result = {{}}
+
+try:
+    from rdkit import Chem
+    from rdkit.Chem import Descriptors, rdMolDescriptors, Lipinski
+
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        result["error"] = "Invalid SMILES — RDKit could not parse"
+    else:
+        # Lipinski descriptors (실제 계산)
+        result["lipinski"] = {{
+            "mw": round(Descriptors.MolWt(mol), 2),
+            "logp": round(Descriptors.MolLogP(mol), 2),
+            "hbd": Lipinski.NumHDonors(mol),
+            "hba": Lipinski.NumHAcceptors(mol),
+        }}
+        result["mw"] = result["lipinski"]["mw"]
+        result["tpsa"] = round(Descriptors.TPSA(mol), 2)
+        result["rotatable_bonds"] = Lipinski.NumRotatableBonds(mol)
+
+        # PAINS filter
+        from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
+        params = FilterCatalogParams()
+        params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
+        catalog = FilterCatalog(params)
+        pains_match = catalog.HasMatch(mol)
+        result["pains_alert"] = pains_match
+
+        # SA Score
+        try:
+            from rdkit.Contrib.SA_Score import sascorer
+            result["sa_score"] = round(sascorer.calculateScore(mol), 2)
+        except Exception:
+            pass  # SA Score 모듈 없으면 skip (에러는 아님)
+
+        result["source"] = "inline_fallback_rdkit"
+
+except ImportError as e:
+    result["error"] = f"RDKit not available: {{e}}"
+except Exception as e:
+    result["error"] = f"Calculation failed: {{e}}"
+
+print(json.dumps(result))
+'''
 
     async def _execute_code(self, code: str, session_id: str) -> Dict[str, Any]:
         """
