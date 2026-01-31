@@ -158,13 +158,11 @@ class SandboxExecutor:
 
         def _set_limits():
             import resource
-            # 메모리 제한: 512MB
-            mem_limit = 512 * 1024 * 1024
-            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
             # CPU 시간 제한: 60초
             resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
-            # 프로세스 생성 제한: 자식 프로세스 금지
-            resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
+            # NOTE: RLIMIT_AS와 RLIMIT_NPROC는 제거
+            # - RLIMIT_AS=512MB: RDKit 로드 시 메모리 부족으로 crash
+            # - RLIMIT_NPROC=0: 프로세스 생성 차단이 Python 자체를 방해
 
         return _set_limits
 
